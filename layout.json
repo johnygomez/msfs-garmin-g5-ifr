@@ -61,6 +61,11 @@
       "date": 134155690192226520
     },
     {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/InputAcceleration.js",
+      "size": 1650,
+      "date": 134178533428715140
+    },
+    {
       "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/HorizontalCompass.js",
       "size": 11138,
       "date": 133719680840000000

@@ -72,14 +72,35 @@ class AS5 extends NavSystem {
         hdg = headingValue + '';
         return ("000".slice(hdg.length) + hdg + Avionics.Utils.DEGREE_SYMBOL);
     }
+    changeHeading(_sign) {
+        // Knob acceleration delegates to InputAcceleration.js (ported from
+        // @microsoft/msfs-sdk, see that file) instead of reimplementing the
+        // dt/decay math here. It's what drives the snappy spin-to-accelerate feel
+        // of the stock G1000/OBS knobs, and it isn't fooled by mouse-drag input
+        // arriving in batches rather than one event per instant of movement, since
+        // its ratchet only cares about tick count, not the gap between ticks.
+        let now = Date.now();
+        let dt = now - (this.lastHdgKnobTime || 0);
+        this.hdgKnobAccel = this.hdgKnobAccel || new InputAcceleration({ increment: 1 });
+        if (dt > 600 || _sign != this.lastHdgKnobSign) {
+            // knob was idle or reversed: resync with the sim and drop acceleration
+            this.hdgKnobTarget = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees());
+            this.hdgKnobAccel.resume();
+        }
+        this.lastHdgKnobTime = now;
+        this.lastHdgKnobSign = _sign;
+        let step = this.hdgKnobAccel.doStep();
+        this.hdgKnobTarget = (((this.hdgKnobTarget + _sign * step) % 360) + 360) % 360;
+        SimVar.SetSimVarValue("K:HEADING_BUG_SET", "number", this.hdgKnobTarget);
+    }
     incrementHeading() {
-        SimVar.SetSimVarValue("AUTOPILOT HEADING LOCK DIR", "degrees", (Simplane.getAutoPilotHeadingLockValueDegrees() + 1));
+        this.changeHeading(1);
     }
     decrementHeading() {
-        SimVar.SetSimVarValue("AUTOPILOT HEADING LOCK DIR", "degrees", (Simplane.getAutoPilotHeadingLockValueDegrees() - 1));
+        this.changeHeading(-1);
     }
     syncHeading() {
-        SimVar.SetSimVarValue("AUTOPILOT HEADING LOCK DIR", "degrees", (Math.round(Simplane.getHeadingMagnetic())));
+        SimVar.SetSimVarValue("K:HEADING_BUG_SET", "number", (Math.round(Simplane.getHeadingMagnetic())));
     }
     menuHeadingEnter() {
         this.selectionValueElement.setContext("Select Heading", this.getMenuHeadingText.bind(this), this.incrementHeading.bind(this), this.decrementHeading.bind(this), this.syncHeading.bind(this));
@@ -111,13 +132,13 @@ class AS5 extends NavSystem {
         return fastToFixed(SimVar.GetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet"), 0) + "ft";
     }
     incrementAltitude() {
-        SimVar.SetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet", (SimVar.GetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet") + 100));
+        SimVar.SetSimVarValue("K:AP_ALT_VAR_INC", "number", 100);
     }
     decrementAltitude() {
-        SimVar.SetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet", (SimVar.GetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet") - 100));
+        SimVar.SetSimVarValue("K:AP_ALT_VAR_DEC", "number", 100);
     }
     syncAltitude() {
-        SimVar.SetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet", (Math.round(Simplane.getAltitude() / 100) * 100));
+        SimVar.SetSimVarValue("K:AP_ALT_VAR_SET_ENGLISH", "number", (Math.round(Simplane.getAltitude() / 100) * 100));
     }
     menuAltitudeEnter() {
         this.selectionValueElement.setContext("Select Altitude", this.getMenuAltitudeText.bind(this), this.incrementAltitude.bind(this), this.decrementAltitude.bind(this), this.syncAltitude.bind(this));
