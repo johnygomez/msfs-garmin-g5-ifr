@@ -1,0 +1,325 @@
+<ModelBehaviors Compiled="True" Version="2" Revision="0">
+	<DynamicParameters>
+		<MFD_ID>1</MFD_ID>
+		<CIRCUIT_ID>1</CIRCUIT_ID>
+	</DynamicParameters>
+	<Components count="5">
+		<Component ID="AS5">
+			<Components Count="1"/>
+			<PartIDs Count="0"/>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_AS5_[MFD_ID]]" OwnerID="0">
+			<Components Count="3"/>
+			<PartIDs Count="0"/>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_AS5_[MFD_ID]_KNOB" Node="MFD_G5_KNOB_1" OwnerID="1">
+			<Animations Count="2"/>
+			<UpdateCodes Count="3"/>
+			<InputEvents Count="2"/>
+			<PartIDs Count="4">
+				<MFD_G5_KNOB_1/>
+				<MFD_G5_KNOB_11/>
+				<MFD_G5_KNOB_1/>
+				<MFD_G5_KNOB_11/>
+			</PartIDs>
+		</Component>
+		<Component ID="MFD_G5_SWITCH_ON_OFF_[MFD_ID]" Node="MFD_G5_SWITCH_ON_OFF_1" OwnerID="1">
+			<Animations Count="1"/>
+			<UpdateCodes Count="1"/>
+			<InputEvents Count="1"/>
+			<PartIDs Count="2">
+				<MFD_G5_SWITCH_ON_OFF_1/>
+				<MFD_G5_SWITCH_ON_OFF_11/>
+			</PartIDs>
+		</Component>
+		<Component ID="MFD_G5_SCREEN_[MFD_ID]_EMISSIVE" Node="MFD_G5_SCREEN_1" OwnerID="1">
+			<Materials Count="1"/>
+			<PartIDs Count="2">
+				<AS5_1/>
+				<AS5_11/>
+			</PartIDs>
+		</Component>
+	</Components>
+	<Mouserects>
+		<MouseRect OwnerID="2" HighlightNodeId="MFD_G5_KNOB_1" LockFlagsTemporary="LeftSingle">
+			<Callback Type="CallbackCode">
+				<IMCodeInstances>
+					<IMDefault StringID="8489693899981837289"/>
+					<IMDrag StringID="11323198475392682743"/>
+				</IMCodeInstances>
+				<DragData DragScalar="0.025000"/>
+			</Callback>
+			<IMCursorsInstances>
+				<IMDefault>
+					<CursorCenter>Hand</CursorCenter>
+					<CursorLeft>TurnLeft</CursorLeft>
+					<CursorRight>TurnRight</CursorRight>
+					<Cursor>Dynamic</Cursor>
+					<CursorCenterRadius>0.004000</CursorCenterRadius>
+				</IMDefault>
+				<IMDrag>
+					<CursorCenter>Hand</CursorCenter>
+					<Cursor>Grab</Cursor>
+					<CursorCenterRadius>0.004000</CursorCenterRadius>
+				</IMDrag>
+			</IMCursorsInstances>
+			<IMMouseFlagsInstances>
+				<IMDefault>WheelUp+Unlock+Lock+LeftSingle+LeftRelease+WheelDown</IMDefault>
+				<IMDrag>WheelUp+RightSingle+Unlock+RightDrag+Lock+LeftSingle+RightRelease+LeftDrag+LeftRelease+WheelDown</IMDrag>
+			</IMMouseFlagsInstances>
+			<IMTooltipsInstances>
+				<IMDefault>
+					<Animated/>
+				</IMDefault>
+				<IMDrag>
+					<TTTitle>COCKPIT.TOOLTIPSV2.AS5_KNOB_TITLE</TTTitle>
+					<TooltipEntries>
+						<TooltipEntry>AS5_[MFD_ID]_Knob</TooltipEntry>
+						<TooltipEntry>AS5_[MFD_ID]_Knob_Button</TooltipEntry>
+					</TooltipEntries>
+				</IMDrag>
+			</IMTooltipsInstances>
+		</MouseRect>
+		<MouseRect OwnerID="3" Lock="False" HighlightNodeId="MFD_G5_SWITCH_ON_OFF_1" LockFlagsTemporary="LeftSingle">
+			<Callback Type="CallbackCode">
+				<IMCodeInstances>
+					<IMDefault StringID="12022570010134859418"/>
+					<IMDrag StringID="12022570010134859418"/>
+				</IMCodeInstances>
+				<DragData DragUseAnimLag="True" DragScalar="0.025000"/>
+			</Callback>
+			<IMCursorsInstances>
+				<IMDefault>
+					<Cursor>Hand</Cursor>
+				</IMDefault>
+				<IMDrag>
+					<Cursor>Hand</Cursor>
+				</IMDrag>
+			</IMCursorsInstances>
+			<IMMouseFlagsInstances>
+				<IMDefault>LeftSingle</IMDefault>
+				<IMDrag>Lock</IMDrag>
+			</IMMouseFlagsInstances>
+			<IMTooltipsInstances>
+				<IMDefault>
+					<Animated/>
+				</IMDefault>
+				<IMDrag>
+					<TTTitle>COCKPIT.TOOLTIPSV2.AS5_BUTTON_TITLE</TTTitle>
+					<TooltipEntries>
+						<TooltipEntry>ELECTRICAL_CIRCUIT_[CIRCUIT_ID]</TooltipEntry>
+					</TooltipEntries>
+				</IMDrag>
+			</IMTooltipsInstances>
+		</MouseRect>
+	</Mouserects>
+	<Animations>
+		<Animation OwnerID="2" Name="INSTRUMENT_MFD_G5_Knob_1" Guid="{564F3C80-8F00-9E64-00A1-06D200C20FC4}" Length="100.000000" Autoplay="True" Type="Sim">
+			<Parameter Lag="100" Wrap="True">
+				<Code StringID="2869848318015977142"/>
+			</Parameter>
+			<AnimationTriggers>
+				<EventTrigger Count="36">
+					<SoundEvent WwiseEvent="AS5_KNOB"/>
+				</EventTrigger>
+			</AnimationTriggers>
+		</Animation>
+		<Animation OwnerID="2" Name="INSTRUMENT_MFD_G5_Knob_Push_1" Guid="{5D996C80-4EC0-1259-005C-16E6007A476D}" Length="100.000000" Autoplay="True" Type="Sim">
+			<Parameter Lag="400">
+				<Code StringID="9322824146186438678"/>
+			</Parameter>
+			<AnimationTriggers>
+				<EventTrigger NormalizedTime="0.100000" Direction="Forward">
+					<SoundEvent WwiseEvent="AS5_PUSH_BUTTON_ON"/>
+				</EventTrigger>
+				<EventTrigger NormalizedTime="0.500000" Direction="Backward">
+					<SoundEvent WwiseEvent="AS5_PUSH_BUTTON_OFF"/>
+				</EventTrigger>
+			</AnimationTriggers>
+		</Animation>
+		<Animation OwnerID="3" Name="INSTRUMENT_MFD_G5_On_Off_1" Guid="{32FB68C0-9E00-D4E4-906B-700700FF0AA6}" Length="100.000000" Autoplay="True" Type="Sim">
+			<Parameter Lag="400">
+				<Code StringID="5382485736248851408"/>
+			</Parameter>
+			<AnimationTriggers>
+				<EventTrigger NormalizedTime="0.100000" Direction="Backward">
+					<SoundEvent WwiseEvent="ELECTRICAL_CIRCUIT_SWITCH_ON"/>
+				</EventTrigger>
+				<EventTrigger NormalizedTime="0.500000" Direction="Forward">
+					<SoundEvent WwiseEvent="ELECTRICAL_CIRCUIT_SWITCH_OFF"/>
+				</EventTrigger>
+			</AnimationTriggers>
+		</Animation>
+	</Animations>
+	<Materials>
+		<Material OwnerID="4">
+			<EmissiveFactor>
+				<Parameter>
+					<Code StringID="14128170738945443690"/>
+				</Parameter>
+			</EmissiveFactor>
+		</Material>
+	</Materials>
+	<UpdateCodes>
+		<Update OwnerID="2" StringID="17665437713776213026" Frequency="10.000000"/>
+		<Update OwnerID="2" StringID="13090222211784660751" Frequency="10.000000" InteractionModel="Default"/>
+		<Update OwnerID="2" StringID="6875668430223133527" Frequency="10.000000" InteractionModel="Drag"/>
+		<Update OwnerID="3" StringID="7031497352855602369" Frequency="10.000000"/>
+	</UpdateCodes>
+	<InputEvents>
+		<Instances>
+			<InputEvent OwnerID="2" ID="AS5_[MFD_ID]_KNOB_BUTTON">
+				<Tooltip Inop="False">
+					<TTDescription>COCKPIT.TOOLTIPSV2.AS5_KNOB_ACTION_PUSH</TTDescription>
+					<TTValue>COCKPIT.TOOLTIPSV2.GT_STATE_NA</TTValue>
+					<Interaction>PRIMARY_DOWN+SECONDARY_DOWN</Interaction>
+					<Icon>PUSH</Icon>
+					<TTInteraction>COCKPIT.TOOLTIPSV3.INTERACTION_KEYBIND_HINT_BUTTON_ONLY</TTInteraction>
+					<InteractionLockable>PRIMARY_DOWN</InteractionLockable>
+					<IconLockable>PUSH</IconLockable>
+					<TTInteractionLockable>COCKPIT.TOOLTIPSV3.INTERACTION_KEYBIND_HINT_BUTTON_ONLY</TTInteractionLockable>
+				</Tooltip>
+				<Value/>
+				<Inc>
+					<Code StringID="7714275831914868064"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Inc>
+				<Dec>
+					<Code StringID="13943189266386180578"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Dec>
+				<Set>
+					<Code StringID="11988905068862467940"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+						<Param StringID="15744292536084662716" Type="Float"/>
+					</Parameters>
+				</Set>
+			</InputEvent>
+			<InputEvent OwnerID="2" ID="AS5_[MFD_ID]_KNOB">
+				<Tooltip Inop="False">
+					<TTDescription>COCKPIT.TOOLTIPSV2.AS5_KNOB_ACTION</TTDescription>
+					<TTValue>COCKPIT.TOOLTIPSV2.GT_STATE_NA</TTValue>
+					<Interaction>PRIMARY_DOWN+X_AXIS</Interaction>
+					<Icon>ROTATE</Icon>
+					<TTInteraction>COCKPIT.TOOLTIPSV3.INTERACTION_KEYBIND_HINT_DEFAULT</TTInteraction>
+					<InteractionLockable>X_AXIS</InteractionLockable>
+					<IconLockable>ROTATE</IconLockable>
+					<TTInteractionLockable>COCKPIT.TOOLTIPSV3.INTERACTION_KEYBIND_HINT_DEFAULT</TTInteractionLockable>
+				</Tooltip>
+				<Value/>
+				<Inc>
+					<Code StringID="6870354818840377484"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Inc>
+				<Dec>
+					<Code StringID="6278063302013936456"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Dec>
+				<Set>
+					<Code StringID="15901611330258484292"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Set>
+			</InputEvent>
+			<InputEvent OwnerID="3" ID="ELECTRICAL_CIRCUIT_[CIRCUIT_ID]">
+				<Tooltip Inop="False">
+					<TTDescription>COCKPIT.TOOLTIPSV2.AS5_BUTTON_ACTION</TTDescription>
+					<TTValue StringID="3384042193149486287"/>
+					<Interaction>PRIMARY_DOWN</Interaction>
+					<Icon>PUSH</Icon>
+					<TTInteraction>COCKPIT.TOOLTIPSV3.INTERACTION_KEYBIND_HINT_BUTTON_ONLY</TTInteraction>
+					<InteractionLockable>LOCK</InteractionLockable>
+					<IconLockable>PUSH</IconLockable>
+					<TTInteractionLockable>COCKPIT.TOOLTIPSV3.INTERACTION_KEYBIND_HINT_BUTTON_ONLY</TTInteractionLockable>
+				</Tooltip>
+				<Value>
+					<Code StringID="13676085467671329280"/>
+					<Units>Boolean</Units>
+					<Init StringID="15128141841693623539"/>
+					<WatchVars>
+						<Simvar ID="CIRCUIT SWITCH ON:[CIRCUIT_ID]"/>
+					</WatchVars>
+				</Value>
+				<Inc>
+					<Code StringID="6811673910485497535"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Inc>
+				<Dec>
+					<Code StringID="16166957974209290731"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Dec>
+				<Set>
+					<Code StringID="11047112678733854388"/>
+					<Parameters>
+						<Param StringID="10992749366997106479" Type="Float"/>
+					</Parameters>
+				</Set>
+			</InputEvent>
+		</Instances>
+		<Bindings>
+			<Aliases>
+				<Binding ID="AS5_[MFD_ID]_KNOB_BUTTON_PUSH" Type="Inc" InputEventID="0">
+					<Param>1</Param>
+				</Binding>
+				<Binding ID="AS5_[MFD_ID]_KNOB_BUTTON_RELEASE" Type="Dec" InputEventID="0">
+					<Param>0</Param>
+				</Binding>
+				<Binding ID="AS5_[MFD_ID]_KNOB_BUTTON_PUSH_LONG" Type="Set" InputEventID="0">
+					<Param>1</Param>
+					<Param>1</Param>
+				</Binding>
+				<Binding ID="ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_TOGGLE" Type="Set" InputEventID="2">
+					<Param StringID="686889038688911014"/>
+				</Binding>
+				<Binding ID="ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_ON" Type="Set" InputEventID="2">
+					<Param>1</Param>
+				</Binding>
+				<Binding ID="ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_OFF" Type="Set" InputEventID="2">
+					<Param>0</Param>
+				</Binding>
+			</Aliases>
+		</Bindings>
+	</InputEvents>
+	<Strings>
+		<8489693899981837289>(M:Event) &apos;WheelUp&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (M:Event) &apos;WheelDown&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } els{ (M:Event) &apos;LeftSingle&apos; scmi 0 == if{ (M:RelativeX) abs 0.004 &gt; if{ 0 (&gt;O:_ButtonPressed) (M:RelativeX) (&gt;O:_MouseDownRelativePosX) (E:SIMULATION TIME, seconds) 0.5 + (&gt;O:XMLVAR_Interacting_RepeatTime) (O:_MouseDownRelativePosX) 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (O:_MouseDownRelativePosX) 0 &lt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } } } els{ 0 (&gt;O:_MouseDownRelativePosX) 1 (&gt;O:_ButtonPressed) (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) } } els{ (M:Event) &apos;LeftRelease&apos; scmi 0 == if{ (O:_MouseDownRelativePosX) 0 != if{ } (O:_ButtonPressed) if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } 0 (&gt;O:_MouseDownRelativePosX) 0 (&gt;O:_ButtonPressed) } } } }</8489693899981837289>
+		<11323198475392682743>(M:InputType) 1 == if{ (M:Event) &apos;LeftSingle&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) quit } (M:Event) &apos;LeftRelease&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) quit } } els{ (M:Event) &apos;RightSingle&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) quit } (M:Event) &apos;RightRelease&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) quit } } (M:Event) &apos;WheelUp&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (M:Event) &apos;WheelDown&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } els{ (M:Event) &apos;Lock&apos; scmi 0 == if{ (M:RelativeX) (&gt;O:_LastX) (M:RelativeY) (&gt;O:_LastY) 1 (&gt;O:_Is_Interacting) } els{ (M:Event) &apos;Unlock&apos; scmi 0 == if{ 0 (&gt;O:_LastX) 0 (&gt;O:_LastY) (O:_PushLocked) if{ 0 (&gt;O:_PushLocked) } (O:_PullLocked) if{ 0 (&gt;O:_PullLocked) } 0 (&gt;O:_Is_Interacting) } els{ (M:Event) &apos;LeftDrag&apos; scmi 0 == if{ (M:RelativeX) (O:_LastX) - sp0 0.2 0.01 (M:InputType) 1 == ? (&gt;O:_InputThresholdX) l0 abs (O:_InputThresholdX) &gt; if{ l0 (O:_InputThresholdX) / abs flr sp1 l0 (O:_InputThresholdX) % abs sp2 :1 (* for loop *) l1 0 &lt;= if{ g2 } l1 -- sp1 l0 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } g1 :2 l0 0 &gt; if{ (M:RelativeX) l2 - (&gt;O:_LastX) } els{ (M:RelativeX) l2 + (&gt;O:_LastX) } } (M:RelativeY) (O:_LastY) - sp0 0.05 0.025 (M:InputType) 1 == ? (&gt;O:_InputThresholdY) l0 abs (O:_InputThresholdY) &gt; if{ l0 (O:_InputThresholdY) / abs flr sp1 l0 (O:_InputThresholdY) % abs sp2 :3 (* for loop *) l1 0 &lt;= if{ g4 } l1 -- sp1 l0 0 &gt; if{ (M:InputType) 1 == if{ (E:SIMULATION TIME, second) (&gt;O:_LastPushTime) } (O:_PushLocked) ! (M:InputType) 1 == and if{ 1 (&gt;O:_PushLocked) (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) } (O:_PullLocked) if{ 0 (&gt;O:_PullLocked) } } els{ (M:InputType) 1 == if{ (E:SIMULATION TIME, second) (&gt;O:_LastPullTime) } (O:_PullLocked) ! (M:InputType) 1 == and if{ 1 (&gt;O:_PullLocked) (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } (O:_PushLocked) if{ 0 (&gt;O:_PushLocked) } } g3 :4 l0 0 &gt; if{ (M:RelativeY) l2 - (&gt;O:_LastY) } els{ (M:RelativeY) l2 + (&gt;O:_LastY) } } } } } } } quit</11323198475392682743>
+		<12022570010134859418>1 (&gt;O:_ButtonAnimVar) (&gt;B:ELECTRICAL_Circuit_[CIRCUIT_ID]_Toggle)</12022570010134859418>
+		<2869848318015977142>(O:_KnobAnimVar) 3.6 /</2869848318015977142>
+		<9322824146186438678>(O:_PressTime) 0 &gt; if{ 100 (&gt;O:_PushAnimVar) } els{ (O:_PushAnimVar) 100 0.7 * - 0 max (&gt;O:_PushAnimVar) } (O:_PushAnimVar)</9322824146186438678>
+		<5382485736248851408>100 (O:_ButtonAnimVar) *</5382485736248851408>
+		<14128170738945443690>1 1 * 0.950000 * (A:AMBIENT LIGHT SENSOR, Number) 1 4000 0.001 1 (F:MapRange) * 0.05 + (A:CIRCUIT ON:[CIRCUIT_ID], Bool) *</14128170738945443690>
+		<17665437713776213026>(O:_PressTime) 0 &gt; if{ (O:_PressForDuration) 0 &gt; if{ (E:SIMULATION TIME, second) (O:_PressTime) (O:_PressForDuration) + &gt; if{ (O:_PressForDuration) 1 &gt;= if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } els{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } } els{ (E:SIMULATION TIME, second) (O:_PressTime) 1 + &gt; if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } }</17665437713776213026>
+		<13090222211784660751>(O:XMLVAR_Interacting_RepeatTime) (E:SIMULATION TIME, seconds) &lt; if{ (O:_MouseDownRelativePosX) 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (O:_MouseDownRelativePosX) 0 &lt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } } }</13090222211784660751>
+		<6875668430223133527>(O:_PushLocked) (O:_LastPushTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPushTime) - 0.15 &gt; if{ 0 (&gt;O:_PushLocked) 0 (&gt;O:_LastPushTime) } } (O:_PullLocked) (O:_LastPullTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPullTime) - 0.15 &gt; if{ 0 (&gt;O:_PullLocked) 0 (&gt;O:_LastPullTime) } }</6875668430223133527>
+		<7031497352855602369>(O:_ButtonAnimVar) 0 &gt; (O:ForcePush) 0 &gt; or if{ (O:_ButtonAnimVar) 0.1 0.5 / - (O:ForcePush) max (&gt;O:_ButtonAnimVar) }</7031497352855602369>
+		<7714275831914868064>1 (&gt;B:AS5_[MFD_ID]_Knob_Button_Set)</7714275831914868064>
+		<10992749366997106479>p0</10992749366997106479>
+		<13943189266386180578>0 (&gt;B:AS5_[MFD_ID]_Knob_Button_Set)</13943189266386180578>
+		<11988905068862467940>p0 sp0 l0 0 == if{ (O:_PressTime) 0 &gt; if{ (E:SIMULATION TIME, second) (O:_PressTime) - 1 &lt; if{ (&gt;H:AS5_[MFD_ID]_Knob_Push) 0 (&gt;O:_PressTime) } els{ (&gt;H:AS5_[MFD_ID]_Knob_Long_Push) 0 (&gt;O:_PressTime) } } } l0 1 == if{ (E:SIMULATION TIME, second) (&gt;O:_PressTime) p1 (&gt;O:_PressForDuration) }</11988905068862467940>
+		<15744292536084662716>p1</15744292536084662716>
+		<6870354818840377484>p0 (&gt;B:AS5_[MFD_ID]_Knob_Set)</6870354818840377484>
+		<6278063302013936456>p0 -1 * (&gt;B:AS5_[MFD_ID]_Knob_Set)</6278063302013936456>
+		<15901611330258484292>p0 p0 0 &gt; if{ (&gt;H:AS5_[MFD_ID]_Knob_Inc) } els{ (&gt;H:AS5_[MFD_ID]_Knob_Dec) } (O:_KnobAnimVar) 10 p0 * + dnor (&gt;O:_KnobAnimVar)</15901611330258484292>
+		<3384042193149486287>(B:ELECTRICAL_Circuit_[CIRCUIT_ID], Bool) if{ (R:1:COCKPIT.TOOLTIPSV2.GT_STATE_ON) } els{ (R:1:COCKPIT.TOOLTIPSV2.GT_STATE_OFF) }</3384042193149486287>
+		<13676085467671329280>(O:ELECTRICAL_Circuit_[CIRCUIT_ID]_Position) 1 ==</13676085467671329280>
+		<15128141841693623539>(A:CIRCUIT SWITCH ON:[CIRCUIT_ID], Bool) sp0 1 0 l0 ? (&gt;O:ELECTRICAL_Circuit_[CIRCUIT_ID]_Position)</15128141841693623539>
+		<6811673910485497535>(O:ELECTRICAL_Circuit_[CIRCUIT_ID]_Position) p0 + (&gt;B:ELECTRICAL_Circuit_[CIRCUIT_ID]_Set)</6811673910485497535>
+		<16166957974209290731>(O:ELECTRICAL_Circuit_[CIRCUIT_ID]_Position) p0 - (&gt;B:ELECTRICAL_Circuit_[CIRCUIT_ID]_Set)</16166957974209290731>
+		<11047112678733854388>p0 1 min 0 max (&gt;O:ELECTRICAL_Circuit_[CIRCUIT_ID]_Position) (A:CIRCUIT SWITCH ON:[CIRCUIT_ID], Bool) p0 != if{ [CIRCUIT_ID] (&gt;K:ELECTRICAL_CIRCUIT_TOGGLE) }</11047112678733854388>
+		<686889038688911014>0 1 (O:ELECTRICAL_Circuit_[CIRCUIT_ID]_Position) 1 == ?</686889038688911014>
+	</Strings>
+</ModelBehaviors>

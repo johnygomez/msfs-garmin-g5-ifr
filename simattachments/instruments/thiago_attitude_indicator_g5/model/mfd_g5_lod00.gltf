@@ -1,0 +1,1126 @@
+{
+	"accessors": [
+		{
+			"bufferView": 0,
+			"componentType": 5126,
+			"count": 2,
+			"min": [0.0],
+			"max": [0.0333333351],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 1,
+			"componentType": 5126,
+			"count": 2,
+			"type": "VEC3",
+			"name": "accessorAnimationPositions"
+		},
+		{
+			"bufferView": 0,
+			"byteOffset": 8,
+			"componentType": 5126,
+			"count": 2,
+			"min": [0.0],
+			"max": [0.0333333351],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 1,
+			"byteOffset": 24,
+			"componentType": 5126,
+			"count": 2,
+			"type": "VEC3",
+			"name": "accessorAnimationPositions"
+		},
+		{
+			"bufferView": 0,
+			"byteOffset": 16,
+			"componentType": 5126,
+			"count": 37,
+			"min": [0.0],
+			"max": [1.2],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 2,
+			"componentType": 5126,
+			"count": 37,
+			"type": "VEC4",
+			"name": "accessorAnimationRotations"
+		},
+		{
+			"bufferView": 0,
+			"byteOffset": 164,
+			"componentType": 5126,
+			"count": 2,
+			"min": [0.0],
+			"max": [0.0333333351],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 1,
+			"byteOffset": 48,
+			"componentType": 5126,
+			"count": 2,
+			"type": "VEC3",
+			"name": "accessorAnimationPositions"
+		},
+		{
+			"bufferView": 0,
+			"byteOffset": 172,
+			"componentType": 5126,
+			"count": 2,
+			"min": [0.0],
+			"max": [0.0333333351],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 1,
+			"byteOffset": 72,
+			"componentType": 5126,
+			"count": 2,
+			"type": "VEC3",
+			"name": "accessorAnimationPositions"
+		},
+		{
+			"bufferView": 0,
+			"byteOffset": 180,
+			"componentType": 5126,
+			"count": 2,
+			"min": [0.0],
+			"max": [0.0333333351],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 1,
+			"byteOffset": 96,
+			"componentType": 5126,
+			"count": 2,
+			"type": "VEC3",
+			"name": "accessorAnimationPositions"
+		},
+		{
+			"bufferView": 0,
+			"byteOffset": 188,
+			"componentType": 5126,
+			"count": 37,
+			"min": [0.0],
+			"max": [1.2],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 2,
+			"byteOffset": 592,
+			"componentType": 5126,
+			"count": 37,
+			"type": "VEC4",
+			"name": "accessorAnimationRotations"
+		},
+		{
+			"bufferView": 0,
+			"byteOffset": 336,
+			"componentType": 5126,
+			"count": 2,
+			"min": [0.0],
+			"max": [0.0333333351],
+			"type": "SCALAR",
+			"name": "accessorAnimationInput"
+		},
+		{
+			"bufferView": 1,
+			"byteOffset": 120,
+			"componentType": 5126,
+			"count": 2,
+			"type": "VEC3",
+			"name": "accessorAnimationPositions"
+		},
+		{
+			"bufferView": 3,
+			"componentType": 5126,
+			"count": 965,
+			"min": [-0.04120663180947304, 0.0, -0.04359126836061478],
+			"max": [0.04120663180947304, 0.017630357295274736, 0.04364409297704697],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Frame_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 12,
+			"componentType": 5120,
+			"count": 965,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Frame_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 16,
+			"componentType": 5120,
+			"count": 965,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Frame_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 20,
+			"componentType": 5122,
+			"count": 965,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Frame_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 24,
+			"componentType": 5122,
+			"count": 965,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Frame_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 28,
+			"componentType": 5123,
+			"count": 965,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Frame_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"componentType": 5123,
+			"count": 4374,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Frame_1_indices#0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34740,
+			"componentType": 5126,
+			"count": 4,
+			"min": [-0.007877141237258911, 0.0, -0.0015024843160063029],
+			"max": [0.00813913345336914, 0.0, 0.0015294849872589112],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Decal_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34752,
+			"componentType": 5120,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Decal_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34756,
+			"componentType": 5120,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Decal_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34760,
+			"componentType": 5122,
+			"count": 4,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Decal_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34764,
+			"componentType": 5122,
+			"count": 4,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Decal_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34768,
+			"componentType": 5123,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Decal_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"byteOffset": 8748,
+			"componentType": 5123,
+			"count": 6,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Decal_1_indices#0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34884,
+			"componentType": 5126,
+			"count": 4,
+			"min": [
+				-0.040587395429611209, -4.6279868826104578e-11, -0.035622917115688327
+			],
+			"max": [0.040587395429611209, 0.0, 0.03509353846311569],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Glass_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34896,
+			"componentType": 5120,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Glass_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34900,
+			"componentType": 5120,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Glass_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34904,
+			"componentType": 5122,
+			"count": 4,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Glass_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34908,
+			"componentType": 5122,
+			"count": 4,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Glass_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 34912,
+			"componentType": 5123,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Glass_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"byteOffset": 8760,
+			"componentType": 5123,
+			"count": 6,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Glass_1_indices#0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 35028,
+			"componentType": 5126,
+			"count": 470,
+			"min": [
+				-0.006062895059585571, -0.004386797547340393, -0.006062738597393036
+			],
+			"max": [0.006062407046556473, 0.011968202888965607, 0.006062567234039307],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Knob_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 35040,
+			"componentType": 5120,
+			"count": 470,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Knob_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 35044,
+			"componentType": 5120,
+			"count": 470,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Knob_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 35048,
+			"componentType": 5122,
+			"count": 470,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Knob_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 35052,
+			"componentType": 5122,
+			"count": 470,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Knob_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 35056,
+			"componentType": 5123,
+			"count": 470,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Knob_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"byteOffset": 8772,
+			"componentType": 5123,
+			"count": 1968,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Knob_1_indices#0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 51948,
+			"componentType": 5126,
+			"count": 49,
+			"min": [-0.0162094347178936, 0.016079844906926156, 0.03314097598195076],
+			"max": [-0.012095318175852299, 0.01651572249829769, 0.037255093455314639],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Light_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 51960,
+			"componentType": 5120,
+			"count": 49,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Light_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 51964,
+			"componentType": 5120,
+			"count": 49,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Light_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 51968,
+			"componentType": 5122,
+			"count": 49,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Light_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 51972,
+			"componentType": 5122,
+			"count": 49,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Light_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 51976,
+			"componentType": 5123,
+			"count": 49,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Light_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"byteOffset": 12708,
+			"componentType": 5123,
+			"count": 240,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Light_1_indices#0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53712,
+			"componentType": 5126,
+			"count": 4,
+			"min": [
+				-0.03408248722553253, -0.00004995334893465042, -0.0256948322057724
+			],
+			"max": [
+				0.03408248722553253, -0.00004995148628950119, 0.02569483034312725
+			],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Screen_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53724,
+			"componentType": 5120,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Screen_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53728,
+			"componentType": 5120,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Screen_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53732,
+			"componentType": 5122,
+			"count": 4,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Screen_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53736,
+			"componentType": 5122,
+			"count": 4,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Screen_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53740,
+			"componentType": 5123,
+			"count": 4,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Screen_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"byteOffset": 13188,
+			"componentType": 5123,
+			"count": 6,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Screen_1_indices#0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53856,
+			"componentType": 5126,
+			"count": 196,
+			"min": [
+				-0.004334377124905586, -0.0018684770911931992, -0.0043343715369701389
+			],
+			"max": [
+				0.004334375262260437, 0.0018682535737752915, 0.004334382712841034
+			],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Switch_On_Off_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53868,
+			"componentType": 5120,
+			"count": 196,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Switch_On_Off_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53872,
+			"componentType": 5120,
+			"count": 196,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Switch_On_Off_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53876,
+			"componentType": 5122,
+			"count": 196,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Switch_On_Off_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53880,
+			"componentType": 5122,
+			"count": 196,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Switch_On_Off_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 53884,
+			"componentType": 5123,
+			"count": 196,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Switch_On_Off_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"byteOffset": 13200,
+			"componentType": 5123,
+			"count": 864,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Switch_On_Off_1_indices#0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 60912,
+			"componentType": 5126,
+			"count": 18,
+			"min": [
+				-0.002556275576353073, -0.00002590753138065338, -0.002735137939453125
+			],
+			"max": [
+				0.002556268125772476, 0.000323539599776268, 0.0025562793016433717
+			],
+			"type": "VEC3",
+			"name": "x0_MFD_G5_Power_Decal_1_vertices#0_POSITION"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 60924,
+			"componentType": 5120,
+			"count": 18,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Power_Decal_1_vertices#0_TANGENT"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 60928,
+			"componentType": 5120,
+			"count": 18,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Power_Decal_1_vertices#0_NORMAL"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 60932,
+			"componentType": 5122,
+			"count": 18,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Power_Decal_1_vertices#0_TEXCOORD_0"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 60936,
+			"componentType": 5122,
+			"count": 18,
+			"type": "VEC2",
+			"name": "x0_MFD_G5_Power_Decal_1_vertices#0_TEXCOORD_1"
+		},
+		{
+			"bufferView": 3,
+			"byteOffset": 60940,
+			"componentType": 5123,
+			"count": 18,
+			"type": "VEC4",
+			"name": "x0_MFD_G5_Power_Decal_1_vertices#0_COLOR_0"
+		},
+		{
+			"bufferView": 4,
+			"byteOffset": 14928,
+			"componentType": 5123,
+			"count": 54,
+			"type": "SCALAR",
+			"name": "x0_MFD_G5_Power_Decal_1_indices#0"
+		}
+	],
+	"animations": [
+		{
+			"name": "INSTRUMENT_MFD_G5_On_Off",
+			"channels": [
+				{ "sampler": 0, "target": { "node": 8, "path": "translation" } },
+				{ "sampler": 1, "target": { "node": 10, "path": "translation" } }
+			],
+			"samplers": [
+				{ "input": 0, "output": 1, "interpolation": "LINEAR" },
+				{ "input": 2, "output": 3, "interpolation": "LINEAR" }
+			]
+		},
+		{
+			"name": "INSTRUMENT_MFD_G5_Knob",
+			"channels": [
+				{ "sampler": 0, "target": { "node": 5, "path": "rotation" } }
+			],
+			"samplers": [{ "input": 4, "output": 5, "interpolation": "LINEAR" }]
+		},
+		{
+			"name": "INSTRUMENT_MFD_G5_Knob_Push",
+			"channels": [
+				{ "sampler": 0, "target": { "node": 4, "path": "translation" } }
+			],
+			"samplers": [{ "input": 6, "output": 7, "interpolation": "LINEAR" }]
+		},
+		{
+			"name": "INSTRUMENT_MFD_G5_On_Off_1",
+			"channels": [
+				{ "sampler": 0, "target": { "node": 8, "path": "translation" } },
+				{ "sampler": 1, "target": { "node": 10, "path": "translation" } }
+			],
+			"samplers": [
+				{ "input": 8, "output": 9, "interpolation": "LINEAR" },
+				{ "input": 10, "output": 11, "interpolation": "LINEAR" }
+			]
+		},
+		{
+			"name": "INSTRUMENT_MFD_G5_Knob_1",
+			"channels": [
+				{ "sampler": 0, "target": { "node": 5, "path": "rotation" } }
+			],
+			"samplers": [{ "input": 12, "output": 13, "interpolation": "LINEAR" }]
+		},
+		{
+			"name": "INSTRUMENT_MFD_G5_Knob_Push_1",
+			"channels": [
+				{ "sampler": 0, "target": { "node": 4, "path": "translation" } }
+			],
+			"samplers": [{ "input": 14, "output": 15, "interpolation": "LINEAR" }]
+		}
+	],
+	"asset": {
+		"generator": "MSFS 2024 renormalizer - v1.0",
+		"version": "2.0",
+		"extensions": {
+			"ASOBO_asset_optimized": {
+				"BoundingBoxMax": [
+					0.043200016021728519, 0.045700859278440478, 0.013083086349070073
+				],
+				"BoundingBoxMin": [
+					-0.04320001229643822, -0.045754529535770419, -0.020626047626137735
+				],
+				"MajorVersion": 4,
+				"MinorVersion": 6,
+				"UseCheckerboardMaterialForMissingTextures": true,
+				"UseOnlyFilenameForImageURI": true
+			},
+			"ASOBO_normal_map_convention": { "tangent_space_convention": "DirectX" }
+		}
+	},
+	"bufferViews": [
+		{
+			"buffer": 0,
+			"byteLength": 344,
+			"name": "bufferViewAnimationFloatScalar"
+		},
+		{
+			"buffer": 0,
+			"byteLength": 144,
+			"byteOffset": 344,
+			"name": "bufferViewAnimationFloatVec3"
+		},
+		{
+			"buffer": 0,
+			"byteLength": 1184,
+			"byteOffset": 488,
+			"name": "bufferViewAnimationFloatVec4"
+		},
+		{
+			"buffer": 0,
+			"byteLength": 61560,
+			"byteStride": 36,
+			"byteOffset": 1672,
+			"target": 34962,
+			"name": "BufferViewVertexND"
+		},
+		{
+			"buffer": 0,
+			"byteLength": 15036,
+			"byteOffset": 63232,
+			"target": 34963,
+			"name": "BufferViewIndexU16"
+		}
+	],
+	"extensionsRequired": ["MSFT_texture_dds"],
+	"materials": [
+		{
+			"name": "G5_Frame",
+			"pbrMetallicRoughness": {
+				"baseColorTexture": { "index": 0 },
+				"metallicRoughnessTexture": { "index": 1 }
+			},
+			"extensions": {
+				"ASOBO_material_detail_map": {
+					"UVScale": 10.0,
+					"detailNormalTexture": { "index": 2, "scale": 0.2 }
+				}
+			}
+		},
+		{
+			"name": "MFD_G5_Text",
+			"alphaMode": "BLEND",
+			"pbrMetallicRoughness": {
+				"metallicFactor": 0.0,
+				"roughnessFactor": 0.2,
+				"baseColorTexture": { "index": 3 }
+			},
+			"extensions": {
+				"ASOBO_material_blend_gbuffer": {
+					"emissiveBlendFactor": 0.0,
+					"occlusionBlendFactor": 0.0
+				}
+			}
+		},
+		{
+			"name": "G5_Glass",
+			"alphaMode": "BLEND",
+			"pbrMetallicRoughness": {
+				"baseColorFactor": [1.0, 1.0, 1.0, 0.01],
+				"metallicFactor": 0.0,
+				"roughnessFactor": 0.0
+			},
+			"extensions": {
+				"ASOBO_material_kitty_glass": { "glassReflectionMaskFactor": 1.0 }
+			}
+		},
+		{
+			"name": "G5_Screen_1",
+			"emissiveFactor": [2000.0, 2000.0, 2000.0],
+			"pbrMetallicRoughness": { "metallicFactor": 0.0, "roughnessFactor": 0.0 },
+			"extensions": { "ASOBO_tags": { "tags": ["Collision"] } }
+		}
+	],
+	"meshes": [
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 21,
+						"NORMAL": 18,
+						"POSITION": 16,
+						"TANGENT": 17,
+						"TEXCOORD_0": 19,
+						"TEXCOORD_1": 20
+					},
+					"indices": 22,
+					"material": 0,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 1458,
+							"UV2Length": 0.6949375867843628,
+							"UVLength": 0.6949375867843628,
+							"VertexCount": 965,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Frame_1"
+		},
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 28,
+						"NORMAL": 25,
+						"POSITION": 23,
+						"TANGENT": 24,
+						"TEXCOORD_0": 26,
+						"TEXCOORD_1": 27
+					},
+					"indices": 29,
+					"material": 1,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 2,
+							"UV2Length": 0.5289371609687805,
+							"UVLength": 0.5289371609687805,
+							"VertexCount": 4,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Decal_1"
+		},
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 35,
+						"NORMAL": 32,
+						"POSITION": 30,
+						"TANGENT": 31,
+						"TEXCOORD_0": 33,
+						"TEXCOORD_1": 34
+					},
+					"indices": 36,
+					"material": 2,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 2,
+							"UV2Length": 0.7071067690849304,
+							"UVLength": 0.7071067690849304,
+							"VertexCount": 4,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Glass_1"
+		},
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 42,
+						"NORMAL": 39,
+						"POSITION": 37,
+						"TANGENT": 38,
+						"TEXCOORD_0": 40,
+						"TEXCOORD_1": 41
+					},
+					"indices": 43,
+					"material": 0,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 656,
+							"UV2Length": 0.20518937706947328,
+							"UVLength": 0.20518937706947328,
+							"VertexCount": 470,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Knob_1"
+		},
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 49,
+						"NORMAL": 46,
+						"POSITION": 44,
+						"TANGENT": 45,
+						"TEXCOORD_0": 47,
+						"TEXCOORD_1": 48
+					},
+					"indices": 50,
+					"material": 0,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 80,
+							"UV2Length": 0.024082526564598085,
+							"UVLength": 0.024082526564598085,
+							"VertexCount": 49,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Light_1"
+		},
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 56,
+						"NORMAL": 53,
+						"POSITION": 51,
+						"TANGENT": 52,
+						"TEXCOORD_0": 54,
+						"TEXCOORD_1": 55
+					},
+					"indices": 57,
+					"material": 3,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 2,
+							"UV2Length": 0.70710688829422,
+							"UVLength": 0.70710688829422,
+							"VertexCount": 4,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Screen_1"
+		},
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 63,
+						"NORMAL": 60,
+						"POSITION": 58,
+						"TANGENT": 59,
+						"TEXCOORD_0": 61,
+						"TEXCOORD_1": 62
+					},
+					"indices": 64,
+					"material": 0,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 288,
+							"UV2Length": 0.20638546347618104,
+							"UVLength": 0.20638546347618104,
+							"VertexCount": 196,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Switch_On_Off_1"
+		},
+		{
+			"primitives": [
+				{
+					"attributes": {
+						"COLOR_0": 70,
+						"NORMAL": 67,
+						"POSITION": 65,
+						"TANGENT": 66,
+						"TEXCOORD_0": 68,
+						"TEXCOORD_1": 69
+					},
+					"indices": 71,
+					"material": 1,
+					"mode": 4,
+					"extras": {
+						"ASOBO_primitive": {
+							"PrimitiveCount": 18,
+							"UV2Length": 0.32229939103126528,
+							"UVLength": 0.32229939103126528,
+							"VertexCount": 18,
+							"VertexType": "VTX",
+							"VertexVersion": 2
+						}
+					}
+				}
+			],
+			"name": "x0_MFD_G5_Power_Decal_1"
+		}
+	],
+	"nodes": [
+		{
+			"extensions": { "ASOBO_unique_id": { "id": "CONTAINER_MFD_G5_1" } },
+			"name": "CONTAINER_MFD_G5_1",
+			"children": [1, 9]
+		},
+		{
+			"translation": [2.766709e-11, 8.567058e-7, 0.0130830742],
+			"rotation": [-5.3385083e-8, -0.7071068, 0.7071068, -5.3385083e-8],
+			"scale": [1.048375, 1.048375, 1.048375],
+			"mesh": 0,
+			"extensions": { "ASOBO_unique_id": { "id": "x0_MFD_G5_Frame_1810787" } },
+			"name": "MFD_G5_Frame_1",
+			"children": [2, 3, 4, 6, 7, 8]
+		},
+		{
+			"translation": [0.000223460142, 0.0162158, -0.0359752774],
+			"rotation": [1.77635684e-15, 3.17637355e-22, 1.42108547e-14, 1.0],
+			"mesh": 1,
+			"extensions": { "ASOBO_unique_id": { "id": "x0_MFD_G5_Decal_1803565" } },
+			"name": "MFD_G5_Decal_1"
+		},
+		{
+			"translation": [0.00006318325, 0.01597786, -0.006896258],
+			"rotation": [1.77635684e-15, 3.17637355e-22, 1.42108547e-14, 1.0],
+			"mesh": 2,
+			"extensions": { "ASOBO_unique_id": { "id": "x0_MFD_G5_Glass_1423654" } },
+			"name": "MFD_G5_Glass_1"
+		},
+		{
+			"translation": [0.02634937, 0.0201854669, 0.0358796678],
+			"rotation": [-3.09086126e-8, -0.7071068, 0.7071068, -3.09086374e-8],
+			"extensions": {
+				"ASOBO_unique_id": { "id": "x0_MFD_G5_Knob_Push_1854106" }
+			},
+			"name": "MFD_G5_Knob_Push_1",
+			"children": [5]
+		},
+		{
+			"rotation": [-5.33850937e-8, -0.7071068, 0.7071068, -5.33850972e-8],
+			"mesh": 3,
+			"extensions": { "ASOBO_unique_id": { "id": "x0_MFD_G5_Knob_141547" } },
+			"name": "MFD_G5_Knob_1"
+		},
+		{
+			"translation": [2.32830533e-10, 9.313226e-10, 9.313794e-10],
+			"rotation": [1.77635684e-15, 3.17637355e-22, 1.42108547e-14, 1.0],
+			"mesh": 4,
+			"extensions": { "ASOBO_unique_id": { "id": "x0_MFD_G5_Light_1229697" } },
+			"name": "MFD_G5_Light_1"
+		},
+		{
+			"translation": [-1.25728556e-8, 0.01539421, -0.00353685138],
+			"rotation": [1.77635684e-15, 3.17637355e-22, 1.42108547e-14, 1.0],
+			"mesh": 5,
+			"extensions": { "ASOBO_unique_id": { "id": "x0_MFD_G5_Screen_15804" } },
+			"name": "MFD_G5_Screen_1"
+		},
+		{
+			"translation": [-0.0299569387, 0.0182647742, 0.03534174],
+			"rotation": [1.77635684e-15, 3.17637355e-22, 1.42108547e-14, 1.0],
+			"mesh": 6,
+			"extensions": {
+				"ASOBO_unique_id": { "id": "x0_MFD_G5_Switch_On_Off_1849538" }
+			},
+			"name": "MFD_G5_Switch_On_Off_1"
+		},
+		{
+			"translation": [2.766709e-11, 8.567058e-7, 0.0130830742],
+			"rotation": [-5.3385083e-8, -0.7071068, 0.7071068, -5.3385083e-8],
+			"scale": [1.048375, 1.048375, 1.048375],
+			"extensions": { "ASOBO_unique_id": { "id": "x1_MFD_G5_Frame_193684" } },
+			"name": "MFD_G5_FRAME_1_1",
+			"children": [10]
+		},
+		{
+			"translation": [-0.0299569387, 0.0182647742, 0.03534174],
+			"rotation": [1.77635684e-15, 3.17637355e-22, 1.42108547e-14, 1.0],
+			"extensions": {
+				"ASOBO_unique_id": { "id": "x1_MFD_G5_Switch_On_Off_1174477" }
+			},
+			"name": "MFD_G5_SWITCH_ON_OFF_1_1",
+			"children": [11]
+		},
+		{
+			"translation": [2.98023224e-8, 0.00175514771, 0.0],
+			"rotation": [1.77635684e-15, 3.17637355e-22, 1.42108547e-14, 1.0],
+			"mesh": 7,
+			"extensions": {
+				"ASOBO_unique_id": { "id": "x0_MFD_G5_Power_Decal_1338480" }
+			},
+			"name": "MFD_G5_Power_Decal_1"
+		}
+	],
+	"scene": 0,
+	"scenes": [{ "nodes": [0] }],
+	"textures": [
+		{ "extensions": { "MSFT_texture_dds": { "source": 0 } } },
+		{ "extensions": { "MSFT_texture_dds": { "source": 1 } } },
+		{ "extensions": { "MSFT_texture_dds": { "source": 2 } } },
+		{ "extensions": { "MSFT_texture_dds": { "source": 3 } } }
+	],
+	"extensionsUsed": [
+		"ASOBO_normal_map_convention",
+		"ASOBO_unique_id",
+		"ASOBO_material_detail_map",
+		"ASOBO_material_blend_gbuffer",
+		"ASOBO_material_glass",
+		"ASOBO_tags",
+		"ASOBO_material_kitty_glass",
+		"MSFT_texture_dds",
+		"ASOBO_asset_optimized"
+	],
+	"buffers": [{ "byteLength": 78268, "uri": "MFD_G5_LOD00.bin" }],
+	"images": [
+		{ "uri": "G5_FRAME_ALBD.PNG.KTX2", "extras": "ASOBO_image_converted_meta" },
+		{ "uri": "G5_FRAME_COMP.PNG.KTX2", "extras": "ASOBO_image_converted_meta" },
+		{
+			"uri": "GRAINY_PLASTIC.PNG.KTX2",
+			"extras": "ASOBO_image_converted_meta"
+		},
+		{ "uri": "G5_DECALS_ALBD.PNG.KTX2", "extras": "ASOBO_image_converted_meta" }
+	]
+}

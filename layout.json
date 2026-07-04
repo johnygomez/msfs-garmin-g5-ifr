@@ -1,0 +1,169 @@
+{
+  "content": [
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/AS5/AS5.html",
+      "size": 114,
+      "date": 134175699028202518
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/AirspeedIndicator.js",
+      "size": 45261,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/Altimeter.js",
+      "size": 59207,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/APInfoBar.js",
+      "size": 7406,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/AS5.css",
+      "size": 16878,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/AS5.html",
+      "size": 4761,
+      "date": 134178533428715140
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/AS5.js",
+      "size": 13423,
+      "date": 134178514477555253
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/AttitudeIndicator.js",
+      "size": 38040,
+      "date": 134176143438561806
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/CDI.js",
+      "size": 8858,
+      "date": 134178445347466575
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/CommonPFD_MFD.js",
+      "size": 199944,
+      "date": 134178464039277686
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/ContextualMenu.js",
+      "size": 6949,
+      "date": 134155690187455800
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/highlight.js",
+      "size": 17451,
+      "date": 134155690192226520
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/HorizontalCompass.js",
+      "size": 11138,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/HSIndicator.js",
+      "size": 81602,
+      "date": 134178524853232838
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/NavSystem.js",
+      "size": 121051,
+      "date": 134155690171980557
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/PFD_Airspeed_Enhanced.js",
+      "size": 9008,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/Images/BACK_ARROW.png",
+      "size": 12388,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/Images/MFD.png",
+      "size": 27375,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/Images/PFD.png",
+      "size": 14649,
+      "date": 133719680840000000
+    },
+    {
+      "path": "html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5/Images/SETUP.png",
+      "size": 18407,
+      "date": 133719680840000000
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/config/systems.cfg.bkp",
+      "size": 1488,
+      "date": 134154525947476284
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/input/action.actiondb",
+      "size": 3819,
+      "date": 134154138442039842
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/input/replace.replacedb",
+      "size": 115,
+      "date": 134092615337833563
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/input/inputprofiles/all/keyboard.xml",
+      "size": 267,
+      "date": 134092615337833563
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/input/inputprofiles/all/mouse.xml",
+      "size": 264,
+      "date": 134092615337833563
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/model/mfd_g5.actiondb",
+      "size": 3715,
+      "date": 134154138383176680
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/model/mfd_g5.behavior.xml",
+      "size": 17663,
+      "date": 134154159323851876
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/model/mfd_g5.behavior.xml.tmp",
+      "size": 895,
+      "date": 134152209524498764
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/model/mfd_g5.xml",
+      "size": 1283,
+      "date": 134151765502308865
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/model/mfd_g5_lod00.bin",
+      "size": 78268,
+      "date": 134151458300262163
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/model/mfd_g5_lod00.gltf",
+      "size": 26732,
+      "date": 134152010571052559
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/panel/panel.cfg",
+      "size": 424,
+      "date": 134122333679699205
+    },
+    {
+      "path": "simattachments/instruments/thiago_attitude_indicator_g5/texture/texture.cfg",
+      "size": 172,
+      "date": 134102085896781580
+    }
+  ]
+}

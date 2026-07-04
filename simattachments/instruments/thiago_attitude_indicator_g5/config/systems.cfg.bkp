@@ -1,0 +1,17 @@
+[VERSION]
+major = 1
+minor = 0
+
+[DynamicParameters]
+param.0="MFD_ID, 1"
+param.1="BUS_NAME, MAIN_BUS"
+
+[ELECTRICAL]
+consumer.1 = Name:ConsumerCircuitD_G5_[MFD_ID]# Voltage:12 # Wattage:25
+circuit.1 = Type:CIRCUIT_MFD # ConsumerCfg:ConsumerCircuitD_G5_[MFD_ID] # Name:G5_[MFD_ID]#WearAndTearCollision:NoseDamageHigh,TailTopDamageHigh,TailBottomDamageHigh,LeftWingDamageLow,RightWingDamageLow
+bus.1 = Name:G5_[MFD_ID]_BUS#WearAndTearCollision:NoseDamageHigh,TailTopDamageHigh,TailBottomDamageHigh,LeftWingDamageLow,RightWingDamageLow
+breaker.1 = Name:Breaker_5A_G5_[MFD_ID] # RatedCurrent:5#WearAndTearCollision:NoseDamageHigh,TailTopDamageHigh,TailBottomDamageHigh,LeftWingDamageLow,RightWingDamageLow
+connection.1 = Name:ConA_G5_[MFD_ID]#WearAndTearCollision:NoseDamageHigh,TailTopDamageHigh,TailBottomDamageHigh,LeftWingDamageLow,RightWingDamageLow
+connection.2 = Name:Con_CB_5A_G5_[MFD_ID] # Components:Breaker_5A_G5_[MFD_ID]#WearAndTearCollision:NoseDamageHigh,TailTopDamageHigh,TailBottomDamageHigh,LeftWingDamageLow,RightWingDamageLow
+line.1 = Name:[BUS_NAME]_To_G5_[MFD_ID]_BUS # Connection:Con_CB_5A_G5_[MFD_ID]([BUS_NAME],G5_[MFD_ID]_BUS)#WearAndTearCollision:NoseDamageHigh,TailTopDamageHigh,TailBottomDamageHigh,LeftWingDamageLow,RightWingDamageLow
+line.2 = Name:G5_[MFD_ID]_BUS_To_G5_[MFD_ID] # Connection:ConA_G5_[MFD_ID](G5_[MFD_ID]_BUS,G5_[MFD_ID])#WearAndTearCollision:NoseDamageHigh,TailTopDamageHigh,TailBottomDamageHigh,LeftWingDamageLow,RightWingDamageLow

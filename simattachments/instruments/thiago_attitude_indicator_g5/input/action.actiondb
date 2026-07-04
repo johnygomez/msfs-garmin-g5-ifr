@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ActionDefinition>
+  <Contexts>
+    <Context ID="INPUT_EVENTS" />
+  </Contexts>
+  <Actions Source="SimAttachments\Instruments\asobo_attitude_indicator_g5">
+		<Action Name="AS5_[MFD_ID]_KNOB_BUTTON_INC">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_INC</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_INC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_INC_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="AS5_[MFD_ID]_KNOB_BUTTON_DEC">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_DEC</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_DEC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_DEC_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="AS5_[MFD_ID]_KNOB_BUTTON_SET">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_SET</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_SET_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_KNOB_BUTTON_SET_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="AS5_[MFD_ID]_KNOB_INC">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_KNOB_INC</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_KNOB_INC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_KNOB_INC_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="AS5_[MFD_ID]_KNOB_DEC">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_KNOB_DEC</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_KNOB_DEC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_KNOB_DEC_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="AS5_[MFD_ID]_KNOB_SET">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_KNOB_SET</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_KNOB_SET_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_KNOB_SET_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_INC">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_INC</TT_Name>
+			<TT_Description>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_INC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_INC_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_DEC">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_DEC</TT_Name>
+			<TT_Description>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_DEC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_DEC_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+		<Action Name="ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_SET">
+			<Context>INPUT_EVENTS</Context>
+			<Type>DIGITAL</Type>
+			<TT_Name>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_SET</TT_Name>
+			<TT_Description>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_SET_DESC</TT_Description>
+			<TT_Function>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_ID]_SET_FUNC</TT_Function>
+			<TT_Category_Main/>
+			<TT_Category_Sub/>
+			<TT_Tag/>
+		</Action>
+  </Actions>
+</ActionDefinition>

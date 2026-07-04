@@ -1,0 +1,5 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<DefaulftInput Primary="1" PlatformAvailability="ALL">
+  <Version Num="1" />
+  <Device DeviceName="Keyboard" GUID="884b96c3-56ef-11d1-bc8c-00a0c91405dd" ProductID="884B" CompositeID="0" HWVer="1.0.0.0" />
+</DefaulftInput>
