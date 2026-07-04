@@ -21,7 +21,7 @@ class AS5 extends NavSystem {
             case "Knob_Inc":
                 if (this.currentInteractionState == 2) {
                     this.computeEvent("NavigationSmallInc");
-                } else if (this.pageGroups && this.pageGroups[0].pageIndex == 1) {
+                } else if (this.pageGroups && this.pageGroups[0].pageIndex == 1 && !popUpWasOpen) {
                     this.incrementHeading();
                 } else if (!popUpWasOpen) {
                     this.computeEvent("BARO_INC");
@@ -30,7 +30,7 @@ class AS5 extends NavSystem {
             case "Knob_Dec":
                 if (this.currentInteractionState == 2) {
                     this.computeEvent("NavigationSmallDec");
-                } else if (this.pageGroups && this.pageGroups[0].pageIndex == 1) {
+                } else if (this.pageGroups && this.pageGroups[0].pageIndex == 1 && !popUpWasOpen) {
                     this.decrementHeading();
                 } else if (!popUpWasOpen) {
                     this.computeEvent("BARO_DEC");
