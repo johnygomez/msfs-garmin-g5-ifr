@@ -6,6 +6,7 @@ garmin-g5-enhanced/PackageSources/**/AS5.js
 garmin-g5-enhanced/PackageSources/**/AS5.css
 garmin-g5-enhanced/PackageSources/**/msfssdk.js
 garmin-g5-enhanced/Packages/
+garmin-g5-enhanced/_PackageInt/
 
 # Agentic AI
 .claude
