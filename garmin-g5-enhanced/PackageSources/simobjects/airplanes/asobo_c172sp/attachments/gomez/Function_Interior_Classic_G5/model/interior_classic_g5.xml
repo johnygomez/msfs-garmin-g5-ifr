@@ -1,0 +1,7 @@
+<ModelInfo>
+	<LODS Template="..\..\..\asobo\Function_Interior_Classic\model\INTERIOR_CLASSIC.xml">
+	</LODS>
+	<Behaviors Compiled="True" Version="2" Revision="0">
+		<IncludeBase RelativeFile="..\..\..\asobo\Function_Interior_Classic\model\INTERIOR_CLASSIC.behavior.xml"/>
+	</Behaviors>
+</ModelInfo>

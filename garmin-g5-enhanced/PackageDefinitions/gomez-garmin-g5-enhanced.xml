@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AssetPackage Version="0.1.0" Name="gomez-garmin-g5-enhanced">
+	<ItemSettings>
+		<ContentType>MISC</ContentType>
+		<Title>Garmin G5 Enhanced</Title>
+		<Manufacturer/>
+		<Creator>Jan Gamec</Creator>
+	</ItemSettings>
+	<PackageOrderHint>CUSTOM_SIMOBJECTS</PackageOrderHint>
+	<Flags>
+		<VisibleInStore>false</VisibleInStore>
+		<CanBeReferenced>false</CanBeReferenced>
+		<Flag Name="globally_overriden_base_sim_files">
+			<FlagValue>html_ui/Pages/VCockpit/Instruments/NavSystems/AS5/AS5.html</FlagValue>
+		</Flag>
+	</Flags>
+	<AssetGroups>
+		<AssetGroup Name="ContentInfo">
+			<Type Version="0">ContentInfo</Type>
+			<Flags>
+				<FSXCompatibility>false</FSXCompatibility>
+			</Flags>
+			<AssetDir>PackageDefinitions\gomez-garmin-g5-enhanced\ContentInfo</AssetDir>
+			<OutputDir>ContentInfo\gomez-garmin-g5-enhanced</OutputDir>
+		</AssetGroup>
+		<AssetGroup Name="html_ui">
+			<Type Version="0">Copy</Type>
+			<Flags>
+				<FSXCompatibility>false</FSXCompatibility>
+			</Flags>
+			<AssetDir>PackageSources\html_ui\</AssetDir>
+			<OutputDir>html_ui\</OutputDir>
+		</AssetGroup>
+		<AssetGroup Name="simattachments">
+			<Type Version="0">Copy</Type>
+			<Flags>
+				<FSXCompatibility>false</FSXCompatibility>
+			</Flags>
+			<AssetDir>PackageSources\simattachments\</AssetDir>
+			<OutputDir>simattachments\</OutputDir>
+		</AssetGroup>
+		<AssetGroup Name="simobjects-c172-g5">
+			<Type Version="0">Copy</Type>
+			<Flags>
+				<FSXCompatibility>false</FSXCompatibility>
+			</Flags>
+			<AssetDir>PackageSources\simobjects\</AssetDir>
+			<OutputDir>simobjects\</OutputDir>
+		</AssetGroup>
+	</AssetGroups>
+</AssetPackage>
+

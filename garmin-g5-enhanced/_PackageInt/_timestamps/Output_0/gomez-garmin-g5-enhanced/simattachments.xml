@@ -1,0 +1,16 @@
+<Timestamps>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\input\inputprofiles\all\mouse.xml" Timestamp="13427757360"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\model\mfd_g5.behavior.xml" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\model\mfd_g5.behavior.xml.tmp" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\input\inputprofiles\all\keyboard.xml" Timestamp="13427757360"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\input\replace.replacedb" Timestamp="13427757360"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\panel\panel.cfg" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\model\mfd_g5.actiondb" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\model\mfd_g5.xml" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\model\mfd_g5_lod00.gltf" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\input\action.actiondb" Timestamp="13427757360"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\model\mfd_g5_lod00.bin" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\config\systems.cfg.bkp" Timestamp="13427757361"/>
+	<Entry Path="instruments\gomez_attitude_indicator_g5\texture\texture.cfg" Timestamp="13427757361"/>
+</Timestamps>
+

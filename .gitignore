@@ -1,8 +1,11 @@
 node_modules/
-dist/
 .oxc/
 .rollup.cache/
 tsconfig.tsbuildinfo
+garmin-g5-enhanced/PackageSources/**/AS5.js
+garmin-g5-enhanced/PackageSources/**/AS5.css
+garmin-g5-enhanced/PackageSources/**/msfssdk.js
+garmin-g5-enhanced/Packages/
 
 # Agentic AI
 .claude
