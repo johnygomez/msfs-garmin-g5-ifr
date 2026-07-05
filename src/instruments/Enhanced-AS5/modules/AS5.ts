@@ -13,7 +13,7 @@ import {
 } from './ContextualMenu'
 import { PFD_AutopilotDisplay, PFD_Attitude, PFD_Altimeter, PFD_Compass } from './CommonPFD_MFD'
 import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
-import { InputAcceleration } from './InputAcceleration'
+import { InputAcceleration } from '@microsoft/msfs-sdk'
 
 export class AS5 extends NavSystem {
     pagesContainer: any

@@ -4,6 +4,7 @@
 /// <reference types="@microsoft/msfs-types/js/simvar" />
 /// <reference types="@microsoft/msfs-types/js/simplane" />
 /// <reference types="@microsoft/msfs-types/js/avionics" />
+/// <reference types="@microsoft/msfs-types/js/common" />
 /// <reference types="@microsoft/msfs-types/pages/vcockpit/core/vcockpit" />
 
 declare function diffAndSetAttribute(_element: any, _attribute: string, _newValue: any): void
@@ -11,14 +12,8 @@ declare function diffAndSetText(_element: any, _value: any): void
 declare function diffAndSetHTML(_element: any, _value: any): void
 declare function diffAndSetStyle(_element: any, _property: number, _newValue: any): void
 
-declare namespace StyleProperty {
-    const display: number
-}
-
-declare function fastToFixed(_val: any, _fraction: any): string
 declare function registerInstrument(_name: string, _class: any): void
 
-declare var EmptyCallback: { Void: () => void }
 declare var ApproachType: any
 declare var EWeatherRadar: any
 declare var EngineType: any
@@ -62,8 +57,7 @@ declare namespace Utils {
     var EmptyCallback: { Void: () => void }
 }
 
-declare class TemplateElement extends HTMLElement {
-    getElementsByClassName(className: string): HTMLElement[]
+declare class TemplateElement {
     static callNoBinding(_el: any, _func: any, ..._args: any[]): void
 }
 

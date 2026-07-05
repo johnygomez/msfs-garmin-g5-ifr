@@ -4,8 +4,8 @@
   "description": "Garmin G5 Enhanced avionics for MSFS 2024",
   "type": "module",
   "scripts": {
-    "build": "node esbuild.config.mjs",
-    "watch": "node esbuild.config.mjs --watch",
+    "build": "rollup -c rollup.config.mjs",
+    "watch": "rollup -c rollup.config.mjs --watch",
     "lint": "oxlint src/",
     "lint:fix": "oxlint --fix src/",
     "format": "oxfmt src/",
@@ -16,9 +16,12 @@
   "devDependencies": {
     "@microsoft/msfs-sdk": "^2.3.3",
     "@microsoft/msfs-types": "^1.14.6",
-    "esbuild": "^0.28.1",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
     "oxfmt": "^0.57.0",
     "oxlint": "^1.72.0",
+    "rollup": "^4.62.2",
+    "tslib": "^2.8.1",
     "typescript": "^6.0.0"
   }
 }

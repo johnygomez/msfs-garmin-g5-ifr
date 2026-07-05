@@ -1,5 +1,4 @@
 import './modules/highlight'
-import './modules/InputAcceleration'
 import './modules/AirspeedIndicator'
 import './modules/Altimeter'
 import './modules/APInfoBar'
