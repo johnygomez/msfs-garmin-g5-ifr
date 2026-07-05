@@ -1,0 +1,24 @@
+{
+  "name": "gomez-garmin-g5",
+  "version": "0.3.0",
+  "description": "Garmin G5 Enhanced avionics for MSFS 2024",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "lint": "oxlint src/",
+    "lint:fix": "oxlint --fix src/",
+    "format": "oxfmt src/",
+    "check": "npm run format && npm run lint && npm run build"
+  },
+  "author": "Jan Gamec",
+  "license": "MIT",
+  "devDependencies": {
+    "@microsoft/msfs-sdk": "^2.3.3",
+    "@microsoft/msfs-types": "^1.14.6",
+    "esbuild": "^0.28.1",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
+    "typescript": "^6.0.0"
+  }
+}

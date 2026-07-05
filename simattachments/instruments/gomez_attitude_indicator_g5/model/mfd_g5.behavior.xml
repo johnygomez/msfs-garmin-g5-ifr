@@ -203,7 +203,7 @@
 			<InputEvent OwnerID="2" ID="AS5_[MFD_ID]_KNOB">
 				<Tooltip Inop="False">
 					<TTDescription>COCKPIT.TOOLTIPSV2.AS5_KNOB_ACTION</TTDescription>
-					<TTValue>COCKPIT.TOOLTIPSV2.GT_STATE_NA</TTValue>
+					<TTValue>%((L:AS5_[MFD_ID]_Knob_Value, number))%!d!</TTValue>
 					<Interaction>PRIMARY_DOWN+X_AXIS</Interaction>
 					<Icon>ROTATE</Icon>
 					<TTInteraction>COCKPIT.TOOLTIPSV3.INTERACTION_KEYBIND_HINT_DEFAULT</TTInteraction>

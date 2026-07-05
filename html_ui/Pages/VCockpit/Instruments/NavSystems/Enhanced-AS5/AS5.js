@@ -51,6 +51,31 @@ class AS5 extends NavSystem {
         else
             this.SwitchToPageName("Main", "PFD");
     }
+    onUpdate(_deltaTime) {
+        this.updateKnobTooltipValue();
+    }
+    updateKnobTooltipValue() {
+        // Mirrors whatever the physical knob currently controls into L: vars so
+        // the model behavior's "hold to lock" tooltip (mfd_g5.behavior.xml) can
+        // show a real value instead of N/A -- that tooltip is defined on the 3D
+        // model, which has no visibility into which page/popup this HTML gauge is
+        // currently showing. Unit codes: 0 = degrees, 1 = feet, 2 = inHg.
+        let value, unit;
+        if (this.popUpElement === this.selectionValueWindow && this.selectionValueElement.rawValue) {
+            value = this.selectionValueElement.rawValue();
+            unit = this.selectionValueElement.unit;
+        }
+        else if (this.pageGroups && this.pageGroups[0].pageIndex == 1) {
+            value = this.getMenuHeadingRawValue();
+            unit = 0;
+        }
+        else {
+            value = SimVar.GetSimVarValue("KOHLSMAN SETTING HG:1", "inches of mercury");
+            unit = 2;
+        }
+        SimVar.SetSimVarValue("L:AS5_" + this.instrumentIndex + "_Knob_Value", "number", value);
+        SimVar.SetSimVarValue("L:AS5_" + this.instrumentIndex + "_Knob_Unit", "number", unit);
+    }
     UpdateSlider(_slider, _cursor, _index, _nbElem, _maxElems) {
         if (_nbElem > _maxElems) {
             let cursorWidth = (_maxElems * 100) / _nbElem;
@@ -71,6 +96,10 @@ class AS5 extends NavSystem {
         }
         hdg = headingValue + '';
         return ("000".slice(hdg.length) + hdg + Avionics.Utils.DEGREE_SYMBOL);
+    }
+    getMenuHeadingRawValue() {
+        let heading = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees());
+        return heading == 0 ? 360 : heading;
     }
     changeHeading(_sign) {
         // Knob acceleration delegates to InputAcceleration.js (ported from
@@ -104,6 +133,8 @@ class AS5 extends NavSystem {
     }
     menuHeadingEnter() {
         this.selectionValueElement.setContext("Select Heading", this.getMenuHeadingText.bind(this), this.incrementHeading.bind(this), this.decrementHeading.bind(this), this.syncHeading.bind(this));
+        this.selectionValueElement.rawValue = this.getMenuHeadingRawValue.bind(this);
+        this.selectionValueElement.unit = 0;
         this.switchToPopUpPage(this.selectionValueWindow);
     }
     getMenuCrsText() {
@@ -114,6 +145,10 @@ class AS5 extends NavSystem {
         }
         crs = crsValue + '';
         return ("000".slice(crs.length) + crs + Avionics.Utils.DEGREE_SYMBOL);
+    }
+    getMenuCrsRawValue() {
+        let crs = Math.round(Simplane.getNavObs(1));
+        return crs == 0 ? 360 : crs;
     }
     incrementCrs() {
         SimVar.SetSimVarValue("K:VOR1_OBI_INC", "number", 0);
@@ -126,10 +161,15 @@ class AS5 extends NavSystem {
     }
     menuCrsEnter() {
         this.selectionValueElement.setContext("Select Course", this.getMenuCrsText.bind(this), this.incrementCrs.bind(this), this.decrementCrs.bind(this), this.syncCrs.bind(this));
+        this.selectionValueElement.rawValue = this.getMenuCrsRawValue.bind(this);
+        this.selectionValueElement.unit = 0;
         this.switchToPopUpPage(this.selectionValueWindow);
     }
     getMenuAltitudeText() {
         return fastToFixed(SimVar.GetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet"), 0) + "ft";
+    }
+    getMenuAltitudeRawValue() {
+        return SimVar.GetSimVarValue("AUTOPILOT ALTITUDE LOCK VAR", "feet");
     }
     incrementAltitude() {
         SimVar.SetSimVarValue("K:AP_ALT_VAR_INC", "number", 100);
@@ -142,6 +182,8 @@ class AS5 extends NavSystem {
     }
     menuAltitudeEnter() {
         this.selectionValueElement.setContext("Select Altitude", this.getMenuAltitudeText.bind(this), this.incrementAltitude.bind(this), this.decrementAltitude.bind(this), this.syncAltitude.bind(this));
+        this.selectionValueElement.rawValue = this.getMenuAltitudeRawValue.bind(this);
+        this.selectionValueElement.unit = 1;
         this.switchToPopUpPage(this.selectionValueWindow);
     }
 }

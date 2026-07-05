@@ -1,0 +1,12 @@
+node_modules/
+PackageSources/**/AS5.js
+PackageSources/**/AS5.css
+Packages/
+dist/
+*.js.map
+.oxc/
+
+# Agentic AI
+.claude
+.specs/
+AGENTS.md

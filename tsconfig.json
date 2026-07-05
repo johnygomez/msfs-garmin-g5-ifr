@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "incremental": true,
+    "target": "es2017",
+    "module": "es2015",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "moduleResolution": "node",
+    "jsx": "react",
+    "jsxFactory": "FSComponent.buildComponent",
+    "jsxFragmentFactory": "FSComponent.Fragment",
+    "lib": ["DOM", "DOM.Iterable", "ES2017"],
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "PackageSources", "dist"]
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript"],
+  "env": {
+    "browser": true,
+    "es2017": true
+  },
+  "categories": {
+    "correctness": "warn"
+  },
+  "rules": {
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-debugger": "error",
+    "eqeqeq": "off",
+    "no-var": "off",
+    "prefer-const": "warn",
+    "typescript/no-explicit-any": "off",
+    "typescript/no-non-null-assertion": "off",
+    "typescript/ban-ts-comment": "error",
+    "typescript/explicit-function-return-type": "off",
+    "typescript/explicit-module-boundary-types": "off",
+    "typescript/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "args": "after-used"
+      }
+    ]
+  },
+  "ignorePatterns": ["node_modules", "PackageSources", "Packages", "dist"]
+}
