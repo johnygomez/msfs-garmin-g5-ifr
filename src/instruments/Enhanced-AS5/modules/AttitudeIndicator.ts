@@ -1,3 +1,4 @@
+import { SimVarValueType } from '@microsoft/msfs-sdk';
 export enum SlipSkidDisplayMode {
     ROUND = 0,
     DEFAULT = 1,
@@ -122,7 +123,7 @@ export class AttitudeIndicator extends HTMLElement {
                 this.buildGraduations()
                 break
             case 'low-bank-mode':
-                this.lowBankModeVisible = SimVar.GetSimVarValue('AUTOPILOT MAX BANK ID', 'Bool')
+                this.lowBankModeVisible = SimVar.GetSimVarValue('AUTOPILOT MAX BANK ID', SimVarValueType.Bool)
                 this.lowMaxBankAngle = parseFloat(newValue)
                 break
             default:

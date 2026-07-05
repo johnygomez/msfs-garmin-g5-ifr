@@ -13,7 +13,7 @@ import {
 } from './ContextualMenu'
 import { PFD_AutopilotDisplay, PFD_Attitude, PFD_Altimeter, PFD_Compass } from './CommonPFD_MFD'
 import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
-import { InputAcceleration } from '@microsoft/msfs-sdk'
+import { InputAcceleration, SimVarValueType } from '@microsoft/msfs-sdk'
 
 export class AS5 extends NavSystem {
     pagesContainer: any
@@ -99,11 +99,11 @@ export class AS5 extends NavSystem {
             value = this.getMenuHeadingRawValue()
             unit = 0
         } else {
-            value = SimVar.GetSimVarValue('KOHLSMAN SETTING HG:1', 'inches of mercury')
+            value = SimVar.GetSimVarValue('KOHLSMAN SETTING HG:1', SimVarValueType.InHG)
             unit = 2
         }
-        SimVar.SetSimVarValue('L:AS5_' + this.instrumentIndex + '_Knob_Value', 'number', value)
-        SimVar.SetSimVarValue('L:AS5_' + this.instrumentIndex + '_Knob_Unit', 'number', unit)
+        SimVar.SetSimVarValue('L:AS5_' + this.instrumentIndex + '_Knob_Value', SimVarValueType.Number, value)
+        SimVar.SetSimVarValue('L:AS5_' + this.instrumentIndex + '_Knob_Unit', SimVarValueType.Number, unit)
     }
     UpdateSlider(_slider, _cursor, _index, _nbElem, _maxElems) {
         if (_nbElem > _maxElems) {
@@ -152,7 +152,7 @@ export class AS5 extends NavSystem {
         this.lastHdgKnobSign = _sign
         const step = this.hdgKnobAccel.doStep()
         this.hdgKnobTarget = (((this.hdgKnobTarget + _sign * step) % 360) + 360) % 360
-        SimVar.SetSimVarValue('K:HEADING_BUG_SET', 'number', this.hdgKnobTarget)
+        SimVar.SetSimVarValue('K:HEADING_BUG_SET', SimVarValueType.Number, this.hdgKnobTarget)
     }
     incrementHeading() {
         this.changeHeading(1)
@@ -163,7 +163,7 @@ export class AS5 extends NavSystem {
     syncHeading() {
         SimVar.SetSimVarValue(
             'K:HEADING_BUG_SET',
-            'number',
+            SimVarValueType.Number,
             Math.round(Simplane.getHeadingMagnetic())
         )
     }
@@ -193,10 +193,10 @@ export class AS5 extends NavSystem {
         return crs == 0 ? 360 : crs
     }
     incrementCrs() {
-        SimVar.SetSimVarValue('K:VOR1_OBI_INC', 'number', 0)
+        SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0)
     }
     decrementCrs() {
-        SimVar.SetSimVarValue('K:VOR1_OBI_DEC', 'number', 0)
+        SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0)
     }
     menuCrsEnter() {
         this.selectionValueElement.setContext(
@@ -211,21 +211,21 @@ export class AS5 extends NavSystem {
         this.switchToPopUpPage(this.selectionValueWindow)
     }
     getMenuAltitudeText() {
-        return fastToFixed(SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', 'feet'), 0) + 'ft'
+        return fastToFixed(SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet), 0) + 'ft'
     }
     getMenuAltitudeRawValue() {
-        return SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', 'feet')
+        return SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet)
     }
     incrementAltitude() {
-        SimVar.SetSimVarValue('K:AP_ALT_VAR_INC', 'number', 100)
+        SimVar.SetSimVarValue('K:AP_ALT_VAR_INC', SimVarValueType.Number, 100)
     }
     decrementAltitude() {
-        SimVar.SetSimVarValue('K:AP_ALT_VAR_DEC', 'number', 100)
+        SimVar.SetSimVarValue('K:AP_ALT_VAR_DEC', SimVarValueType.Number, 100)
     }
     syncAltitude() {
         SimVar.SetSimVarValue(
             'K:AP_ALT_VAR_SET_ENGLISH',
-            'number',
+            SimVarValueType.Number,
             Math.round(Simplane.getAltitude() / 100) * 100
         )
     }
@@ -379,7 +379,7 @@ export class AS5_PFD_CDI extends NavSystemElement {
 
     onEnter() {}
     onUpdate(_deltaTime) {
-        const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', 'Bool')
+        const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
             ? 3
             : Simplane.getAutoPilotSelectedNav()
         switch (cdiSource) {
@@ -393,7 +393,7 @@ export class AS5_PFD_CDI extends NavSystemElement {
                 diffAndSetAttribute(
                     this.cdi,
                     'deviation',
-                    SimVar.GetSimVarValue('NAV CDI:' + cdiSource, 'number') / 127 + ''
+                    SimVar.GetSimVarValue('NAV CDI:' + cdiSource, SimVarValueType.Number) / 127 + ''
                 )
                 diffAndSetAttribute(this.cdi, 'deviation-mode', 'VLOC')
                 break
@@ -401,12 +401,12 @@ export class AS5_PFD_CDI extends NavSystemElement {
                 diffAndSetStyle(
                     this.cdi,
                     StyleProperty.display,
-                    SimVar.GetSimVarValue('GPS WP NEXT ID', 'string') != '' ? 'inherit' : 'none'
+                    SimVar.GetSimVarValue('GPS WP NEXT ID', SimVarValueType.String) != '' ? 'inherit' : 'none'
                 )
                 diffAndSetAttribute(
                     this.cdi,
                     'deviation',
-                    SimVar.GetSimVarValue('GPS WP CROSS TRK', 'nautical mile')
+                    SimVar.GetSimVarValue('GPS WP CROSS TRK', SimVarValueType.NM)
                 )
                 diffAndSetAttribute(this.cdi, 'deviation-mode', 'GPS')
                 break
@@ -454,9 +454,9 @@ export class AS5_MFD_HSI extends PFD_Compass {
                         diffAndSetAttribute(this.waypointDistanceValue, 'mode', 'VOR')
                         break
                     case 3:
-                        if (SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', 'bool') == true)
+                        if (SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) == true)
                             distanceText = fastToFixed(
-                                SimVar.GetSimVarValue('GPS WP DISTANCE', 'nautical mile'),
+                                SimVar.GetSimVarValue('GPS WP DISTANCE', SimVarValueType.NM),
                                 1
                             )
                         diffAndSetText(this.waypointDistanceValue, distanceText)

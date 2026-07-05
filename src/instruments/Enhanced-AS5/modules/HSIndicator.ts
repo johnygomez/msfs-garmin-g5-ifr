@@ -1,3 +1,4 @@
+import { SimVarValueType } from '@microsoft/msfs-sdk';
 export enum HSIndicatorDisplayType {
     GlassCockpit = 0,
     HUD = 1,
@@ -147,8 +148,8 @@ export class HSIndicator extends HTMLElement {
     }
 
     init() {
-        this.logic_brg1Source = SimVar.GetSimVarValue('L:PFD_BRG1_Source', 'number')
-        this.logic_brg2Source = SimVar.GetSimVarValue('L:PFD_BRG2_Source', 'number')
+        this.logic_brg1Source = SimVar.GetSimVarValue('L:PFD_BRG1_Source', SimVarValueType.Number)
+        this.logic_brg2Source = SimVar.GetSimVarValue('L:PFD_BRG2_Source', SimVarValueType.Number)
         if (this.logic_brg1Source != 0) {
             this.setAttribute('show_bearing1', 'true')
         }
@@ -414,7 +415,7 @@ export class HSIndicator extends HTMLElement {
                             diffAndSetAttribute(this.flightPhaseBg, 'visibility', 'visible')
                             diffAndSetAttribute(this.toIndicator, 'fill', 'magenta')
                             diffAndSetAttribute(this.fromIndicator, 'fill', 'magenta')
-                            SimVar.SetSimVarValue('L:PFD_CDI_Source', 'number', 3)
+                            SimVar.SetSimVarValue('L:PFD_CDI_Source', SimVarValueType.Number, 3)
                             break
                         case 'VOR1':
                         case 'LOC1':
@@ -436,7 +437,7 @@ export class HSIndicator extends HTMLElement {
                             diffAndSetAttribute(this.crossTrackErrorBg, 'visibility', 'hidden')
                             diffAndSetAttribute(this.toIndicator, 'fill', 'lime')
                             diffAndSetAttribute(this.fromIndicator, 'fill', 'lime')
-                            SimVar.SetSimVarValue('L:PFD_CDI_Source', 'number', 1)
+                            SimVar.SetSimVarValue('L:PFD_CDI_Source', SimVarValueType.Number, 1)
                             break
                         case 'VOR2':
                         case 'LOC2':
@@ -455,7 +456,7 @@ export class HSIndicator extends HTMLElement {
                             diffAndSetAttribute(this.crossTrackErrorBg, 'visibility', 'hidden')
                             diffAndSetAttribute(this.toIndicator, 'fill', 'lime')
                             diffAndSetAttribute(this.fromIndicator, 'fill', 'lime')
-                            SimVar.SetSimVarValue('L:PFD_CDI_Source', 'number', 2)
+                            SimVar.SetSimVarValue('L:PFD_CDI_Source', SimVarValueType.Number, 2)
                             break
                     }
                 }
@@ -662,22 +663,22 @@ export class HSIndicator extends HTMLElement {
             case 'CRS_INC':
                 if (!this.noAffectSimRadioNav) {
                     if (this.logic_cdiSource == 1) {
-                        SimVar.SetSimVarValue('K:VOR1_OBI_INC', 'number', 0)
+                        SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0)
                     } else if (this.logic_cdiSource == 2) {
-                        SimVar.SetSimVarValue('K:VOR2_OBI_INC', 'number', 0)
-                    } else if (SimVar.GetSimVarValue('GPS OBS ACTIVE', 'boolean')) {
-                        SimVar.SetSimVarValue('K:GPS_OBS_INC', 'number', 0)
+                        SimVar.SetSimVarValue('K:VOR2_OBI_INC', SimVarValueType.Number, 0)
+                    } else if (SimVar.GetSimVarValue('GPS OBS ACTIVE', SimVarValueType.Bool)) {
+                        SimVar.SetSimVarValue('K:GPS_OBS_INC', SimVarValueType.Number, 0)
                     }
                 }
                 break
             case 'CRS_DEC':
                 if (!this.noAffectSimRadioNav) {
                     if (this.logic_cdiSource == 1) {
-                        SimVar.SetSimVarValue('K:VOR1_OBI_DEC', 'number', 0)
+                        SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0)
                     } else if (this.logic_cdiSource == 2) {
-                        SimVar.SetSimVarValue('K:VOR2_OBI_DEC', 'number', 0)
-                    } else if (SimVar.GetSimVarValue('GPS OBS ACTIVE', 'boolean')) {
-                        SimVar.SetSimVarValue('K:GPS_OBS_DEC', 'number', 0)
+                        SimVar.SetSimVarValue('K:VOR2_OBI_DEC', SimVarValueType.Number, 0)
+                    } else if (SimVar.GetSimVarValue('GPS OBS ACTIVE', SimVarValueType.Bool)) {
+                        SimVar.SetSimVarValue('K:GPS_OBS_DEC', SimVarValueType.Number, 0)
                     }
                 }
                 break
@@ -686,14 +687,14 @@ export class HSIndicator extends HTMLElement {
                     if (this.logic_cdiSource == 1) {
                         SimVar.SetSimVarValue(
                             'K:VOR1_SET',
-                            'number',
-                            (180 + SimVar.GetSimVarValue('NAV RADIAL:1', 'degree')) % 360
+                            SimVarValueType.Number,
+                            (180 + SimVar.GetSimVarValue('NAV RADIAL:1', SimVarValueType.Degree)) % 360
                         )
                     } else if (this.logic_cdiSource == 2) {
                         SimVar.SetSimVarValue(
                             'K:VOR2_SET',
-                            'number',
-                            (180 + SimVar.GetSimVarValue('NAV RADIAL:2', 'degree')) % 360
+                            SimVarValueType.Number,
+                            (180 + SimVar.GetSimVarValue('NAV RADIAL:2', SimVarValueType.Degree)) % 360
                         )
                     }
                 }
@@ -703,7 +704,7 @@ export class HSIndicator extends HTMLElement {
                 if (!this.noAffectSimRadioNav) {
                     SimVar.SetSimVarValue(
                         'L:PFD_DME_Displayed',
-                        'number',
+                        SimVarValueType.Number,
                         this.logic_dmeDisplayed ? 1 : 0
                     )
                 }
@@ -716,9 +717,9 @@ export class HSIndicator extends HTMLElement {
             case 'SoftKeys_PFD_BRG1':
             case 'BRG1Switch':
                 this.logic_brg1Source =
-                    (SimVar.GetSimVarValue('L:PFD_BRG1_Source', 'number') + 1) % 5
+                    (SimVar.GetSimVarValue('L:PFD_BRG1_Source', SimVarValueType.Number) + 1) % 5
                 if (!this.noAffectSimRadioNav) {
-                    SimVar.SetSimVarValue('L:PFD_BRG1_Source', 'number', this.logic_brg1Source)
+                    SimVar.SetSimVarValue('L:PFD_BRG1_Source', SimVarValueType.Number, this.logic_brg1Source)
                 }
                 if (this.logic_brg1Source == 0) {
                     diffAndSetAttribute(this, 'show_bearing1', 'false')
@@ -729,9 +730,9 @@ export class HSIndicator extends HTMLElement {
             case 'SoftKeys_PFD_BRG2':
             case 'BRG2Switch':
                 this.logic_brg2Source =
-                    (SimVar.GetSimVarValue('L:PFD_BRG2_Source', 'number') + 1) % 5
+                    (SimVar.GetSimVarValue('L:PFD_BRG2_Source', SimVarValueType.Number) + 1) % 5
                 if (!this.noAffectSimRadioNav) {
-                    SimVar.SetSimVarValue('L:PFD_BRG2_Source', 'number', this.logic_brg2Source)
+                    SimVar.SetSimVarValue('L:PFD_BRG2_Source', SimVarValueType.Number, this.logic_brg2Source)
                 }
                 if (this.logic_brg2Source == 0) {
                     diffAndSetAttribute(this, 'show_bearing2', 'false')
@@ -742,16 +743,16 @@ export class HSIndicator extends HTMLElement {
             case 'SoftKey_CDI':
             case 'NavSourceSwitch':
                 this.logic_cdiSource = (this.logic_cdiSource % 3) + 1
-                const isGPSDrived = SimVar.GetSimVarValue('GPS DRIVES NAV1', 'Bool')
+                const isGPSDrived = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
                 if (
                     this.logic_cdiSource == 2 &&
-                    !SimVar.GetSimVarValue('NAV AVAILABLE:2', 'Bool')
+                    !SimVar.GetSimVarValue('NAV AVAILABLE:2', SimVarValueType.Bool)
                 ) {
                     this.logic_cdiSource = 3
                 }
                 if (!this.noAffectSimRadioNav) {
                     if ((this.logic_cdiSource == 3) != isGPSDrived) {
-                        SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', 'Bool', 0)
+                        SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Bool, 0)
                     }
                     if (this.logic_cdiSource != 3) {
                         Simplane.setAutoPilotSelectedNav(this.logic_cdiSource)
@@ -1418,7 +1419,7 @@ export class HSIndicator extends HTMLElement {
         diffAndSetAttribute(this, 'heading_bug_rotation', roundedHeading)
         diffAndSetAttribute(this, 'current_track', '' + Simplane.getTrackAngle())
         this.logic_cdiSource = 3
-        const isGPSDriven = SimVar.GetSimVarValue('GPS DRIVES NAV1', 'Bool')
+        const isGPSDriven = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
         const apprHold = Simplane.getAutoPilotAPPRHold()
         const approachType = Simplane.getAutoPilotApproachType()
         if (
@@ -1428,7 +1429,7 @@ export class HSIndicator extends HTMLElement {
             apprHold != this._lastAPPRHold
         ) {
             if (isGPSDriven) {
-                SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', 'Bool', 0)
+                SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Bool, 0)
             }
         }
         this._lastAPPRHold = apprHold
@@ -1442,13 +1443,13 @@ export class HSIndicator extends HTMLElement {
             this.displayStyle === HSIndicatorDisplayType.HUD ||
             this.displayStyle === HSIndicatorDisplayType.HUD_Simplified
         ) {
-            this.logic_brg1Source = SimVar.GetSimVarValue('L:PFD_BRG1_Source', 'number')
+            this.logic_brg1Source = SimVar.GetSimVarValue('L:PFD_BRG1_Source', SimVarValueType.Number)
             if (this.logic_brg1Source == 0) {
                 diffAndSetAttribute(this, 'show_bearing1', 'false')
             } else {
                 diffAndSetAttribute(this, 'show_bearing1', 'true')
             }
-            this.logic_brg2Source = SimVar.GetSimVarValue('L:PFD_BRG2_Source', 'number')
+            this.logic_brg2Source = SimVar.GetSimVarValue('L:PFD_BRG2_Source', SimVarValueType.Number)
             if (this.logic_brg2Source == 0) {
                 diffAndSetAttribute(this, 'show_bearing2', 'false')
             } else {
@@ -1572,9 +1573,9 @@ export class HSIndicator extends HTMLElement {
             case 3:
                 diffAndSetAttribute(this, 'nav_source', 'GPS')
                 const gpsNextWpIdValid =
-                    SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', 'bool') == true ? 1 : 0
-                const gpsNextWpDesiredTrk = SimVar.GetSimVarValue('GPS WP DESIRED TRACK', 'degree')
-                const gpsNextWpXTrk = SimVar.GetSimVarValue('GPS WP CROSS TRK', 'nautical mile')
+                    SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) == true ? 1 : 0
+                const gpsNextWpDesiredTrk = SimVar.GetSimVarValue('GPS WP DESIRED TRACK', SimVarValueType.Degree)
+                const gpsNextWpXTrk = SimVar.GetSimVarValue('GPS WP CROSS TRK', SimVarValueType.NM)
                 this.addValueInFrames(+gpsNextWpIdValid, this.gpsNextWpIdValidFrames, 20)
                 this.addValueInFrames(gpsNextWpDesiredTrk, this.gpsNextWpDesiredTrkFrames, 20)
                 this.addValueInFrames(gpsNextWpXTrk, this.gpsNextWpXTrkFrames, 20)
@@ -1589,7 +1590,7 @@ export class HSIndicator extends HTMLElement {
                 diffAndSetAttribute(
                     this,
                     'display_deviation',
-                    SimVar.GetSimVarValue('HSI CDI NEEDLE VALID', 'Bool') ? 'True' : 'False'
+                    SimVar.GetSimVarValue('HSI CDI NEEDLE VALID', SimVarValueType.Bool) ? 'True' : 'False'
                 )
                 if (
                     !(Avionics.Utils as any).isValueOutlier(
@@ -1611,8 +1612,8 @@ export class HSIndicator extends HTMLElement {
                         this.gpsNextWpIdValid ? gpsNextWpXTrk + '' : '0'
                     )
                 diffAndSetAttribute(this, 'to_from', '1')
-                this.curPhase = SimVar.GetSimVarValue('L:GPS_Current_Phase', 'number')
-                this.curDeviation = SimVar.GetSimVarValue('GPS CDI SCALING', 'nautical mile')
+                this.curPhase = SimVar.GetSimVarValue('L:GPS_Current_Phase', SimVarValueType.Number)
+                this.curDeviation = SimVar.GetSimVarValue('GPS CDI SCALING', SimVarValueType.NM)
                 const DEFAULT_CROSSTRACK_ERROR = '2.0'
                 const phases: any = {
                     0: 'OCN',
@@ -1637,7 +1638,7 @@ export class HSIndicator extends HTMLElement {
                     'crosstrack_full_error',
                     this.curPhase in phases ? this.curDeviation + '' : DEFAULT_CROSSTRACK_ERROR
                 )
-                if (SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', 'bool') == false)
+                if (SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) == false)
                     diffAndSetAttribute(this, 'flight_phase', 'ENR')
                 this.updateHSIDeviation()
                 break
@@ -1807,21 +1808,21 @@ export class HSIndicator extends HTMLElement {
         //diffAndSetAttribute(this.CDI, "transform", "translate(" + this.crossTrackCurrent + " 0)");
     }
     updateHSIDeviation() {
-        const HSIneedleValue = SimVar.GetSimVarValue('HSI CDI NEEDLE', 'number') || 0
+        const HSIneedleValue = SimVar.GetSimVarValue('HSI CDI NEEDLE', SimVarValueType.Number) || 0
         const HSIclampedPosition = (HSIneedleValue / 127) * 30
         diffAndSetAttribute(this.CDI, 'transform', `translate(${HSIclampedPosition}, 0)`)
-        const gsiNeedleValue = SimVar.GetSimVarValue('HSI GSI NEEDLE', 'number') || 0
+        const gsiNeedleValue = SimVar.GetSimVarValue('HSI GSI NEEDLE', SimVarValueType.Number) || 0
         const clampedValue = Math.min(Math.max(gsiNeedleValue, -127), 127)
         const pos = (clampedValue / 127) * 35
         diffAndSetAttribute(this.chevronBug2, 'transform', `translate(0, ${pos})`)
         diffAndSetAttribute(this.diamondBug2, 'transform', `translate(0, ${pos})`)
-        if (SimVar.GetSimVarValue('AUTOPILOT NAV SELECTED', 'number') == 1) {
-            const nav1gsiNeedleValue = SimVar.GetSimVarValue('NAV GSI:1', 'number') || 0
+        if (SimVar.GetSimVarValue('AUTOPILOT NAV SELECTED', SimVarValueType.Number) == 1) {
+            const nav1gsiNeedleValue = SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) || 0
             const nav1clampedValue = Math.min(Math.max(nav1gsiNeedleValue, -127), 127)
             const nav1pos = (nav1clampedValue / 127) * 35
             diffAndSetAttribute(this.hollowDiamondBug2, 'transform', `translate(0, ${nav1pos})`)
-        } else if (SimVar.GetSimVarValue('AUTOPILOT NAV SELECTED', 'number') == 2) {
-            const nav2gsiNeedleValue = SimVar.GetSimVarValue('NAV GSI:2', 'number') || 0
+        } else if (SimVar.GetSimVarValue('AUTOPILOT NAV SELECTED', SimVarValueType.Number) == 2) {
+            const nav2gsiNeedleValue = SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) || 0
             const nav2clampedValue = Math.min(Math.max(nav2gsiNeedleValue, -127), 127)
             const nav2pos = (nav2clampedValue / 127) * 35
             diffAndSetAttribute(this.hollowDiamondBug2, 'transform', `translate(0, ${nav2pos})`)

@@ -1,6 +1,7 @@
 import { NavSystemElement } from './NavSystem'
 import { DynamicReferenceSpeed } from './CommonPFD_MFD'
 import { AirspeedIndicator } from './AirspeedIndicator'
+import { SimVarValueType } from '@microsoft/msfs-sdk';
 
 export class PFD_Airspeed_Enhanced extends NavSystemElement {
     lastIndicatedSpeed: number
@@ -162,16 +163,16 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
             this.lastTrueSpeed = trueSpeed
         }
         if (
-            SimVar.GetSimVarValue('AUTOPILOT FLIGHT LEVEL CHANGE', 'Boolean') ||
-            SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', 'Boolean') ||
+            SimVar.GetSimVarValue('AUTOPILOT FLIGHT LEVEL CHANGE', SimVarValueType.Bool) ||
+            SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', SimVarValueType.Bool) ||
             this.alwaysDisplaySpeed
         ) {
             if (
-                SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', 'Boolean') ||
-                SimVar.GetSimVarValue('AUTOPILOT MANAGED SPEED IN MACH', 'Boolean')
+                SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', SimVarValueType.Bool) ||
+                SimVar.GetSimVarValue('AUTOPILOT MANAGED SPEED IN MACH', SimVarValueType.Bool)
             ) {
                 diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'Mach')
-                const refMach = SimVar.GetSimVarValue('AUTOPILOT MACH HOLD VAR', 'mach')
+                const refMach = SimVar.GetSimVarValue('AUTOPILOT MACH HOLD VAR', SimVarValueType.Mach)
                 diffAndSetAttribute(
                     this.airspeedElement,
                     'ref-speed-mach',
@@ -180,14 +181,14 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
                 diffAndSetAttribute(
                     this.airspeedElement,
                     'ref-speed',
-                    SimVar.GetGameVarValue('FROM MACH TO KIAS', 'number', refMach)
+                    SimVar.GetGameVarValue('FROM MACH TO KIAS', SimVarValueType.Number, refMach)
                 )
             } else {
                 diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'True')
                 diffAndSetAttribute(
                     this.airspeedElement,
                     'ref-speed',
-                    fastToFixed(SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', 'knots'), 0)
+                    fastToFixed(SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots), 0)
                 )
             }
         } else {
@@ -214,9 +215,9 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
         this.lastSpeed = indicatedSpeed
         diffAndSetAttribute(this.airspeedElement, 'airspeed-trend', this.acceleration + '')
         let speedMach = -1
-        const crossSpeed = SimVar.GetGameVarValue('AIRCRAFT CROSSOVER SPEED', 'Knots')
+        const crossSpeed = SimVar.GetGameVarValue('AIRCRAFT CROSSOVER SPEED', SimVarValueType.Knots)
         if (crossSpeed != 0) {
-            const cruiseMach = SimVar.GetGameVarValue('AIRCRAFT CRUISE MACH', 'mach')
+            const cruiseMach = SimVar.GetGameVarValue('AIRCRAFT CRUISE MACH', SimVarValueType.Mach)
             const crossAltitude = Simplane.getCrossoverAltitude(crossSpeed, cruiseMach)
             const crossSpeedFactor = Simplane.getCrossoverSpeedFactor(crossSpeed, cruiseMach)
             diffAndSetAttribute(

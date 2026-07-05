@@ -1,3 +1,4 @@
+import { SimVarValueType } from '@microsoft/msfs-sdk';
 export class CDI extends HTMLElement {
     static get observedAttributes() {
         return ['deviation', 'deviation-mode', 'scale', 'toFrom', 'active', 'gpsxtk']
@@ -204,17 +205,17 @@ export class CDI extends HTMLElement {
         }
     }
     updateFromSimVars() {
-        const active = SimVar.GetSimVarValue('HSI CDI NEEDLE VALID', 'Bool') ? 'True' : 'False'
-        const scale = SimVar.GetSimVarValue('GPS CDI SCALING', 'nautical mile')
-        const deviation = SimVar.GetSimVarValue('HSI CDI NEEDLE', 'number')
-        const gpsxtk = SimVar.GetSimVarValue('GPS WP CROSS TRK', 'nautical mile')
+        const active = SimVar.GetSimVarValue('HSI CDI NEEDLE VALID', SimVarValueType.Bool) ? 'True' : 'False'
+        const scale = SimVar.GetSimVarValue('GPS CDI SCALING', SimVarValueType.NM)
+        const deviation = SimVar.GetSimVarValue('HSI CDI NEEDLE', SimVarValueType.Number)
+        const gpsxtk = SimVar.GetSimVarValue('GPS WP CROSS TRK', SimVarValueType.NM)
         this.setAttribute('active', active)
         this.setAttribute('scale', scale)
         this.setAttribute('deviation', deviation)
         this.setAttribute('gpsxtk', gpsxtk)
     }
     updateDeviation() {
-        const needleValue = SimVar.GetSimVarValue('HSI CDI NEEDLE', 'number') || 0
+        const needleValue = SimVar.GetSimVarValue('HSI CDI NEEDLE', SimVarValueType.Number) || 0
         const clampedPosition = (needleValue / 127) * 45
         // diffAndSetAttribute(this.deviationIndicator, "transform", "translate(" + Math.max(-40, Math.min(40, 40 * this.deviation / this.scale)) + ", 0)" + (this.isFrom ? " scale(1,-1)" : ""));
         diffAndSetAttribute(

@@ -1,3 +1,4 @@
+import { SimVarValueType } from '@microsoft/msfs-sdk';
 export class NavSystem extends BaseInstrument {
     static _iterations: number = 0
     static maxTimeUpdateAllTime: number = 0
@@ -2304,8 +2305,8 @@ export class Annunciations extends NavSystemElement {
                 }
             }
         }
-        if (!SimVar.GetSimVarValue('L:Annunciations_Manager_Initialized', 'Bool')) {
-            SimVar.SetSimVarValue('L:Annunciations_Manager_Initialized', 'Bool', true)
+        if (!SimVar.GetSimVarValue('L:Annunciations_Manager_Initialized', SimVarValueType.Bool)) {
+            SimVar.SetSimVarValue('L:Annunciations_Manager_Initialized', SimVarValueType.Bool, true)
             this.isAnnunciationsManager = true
         }
     }
@@ -2436,11 +2437,11 @@ export class Cabin_Annunciations extends Annunciations {
         this.FrameCounterForAlternation++
         const masterWarningAcknowledged = SimVar.GetSimVarValue(
             'MASTER WARNING ACKNOWLEDGED',
-            'Bool'
+            SimVarValueType.Bool
         )
         const masterCautionAcknowledged = SimVar.GetSimVarValue(
             'MASTER CAUTION ACKNOWLEDGED',
-            'Bool'
+            SimVarValueType.Bool
         )
         for (let i = 0; i < this.allMessages.length; i++) {
             const message = this.allMessages[i]
@@ -2550,30 +2551,30 @@ export class Cabin_Annunciations extends Annunciations {
             }
             this.warningTone = warningOn > 0
             if (this.isAnnunciationsManager) {
-                const masterWarningActive = SimVar.GetSimVarValue('MASTER WARNING ACTIVE', 'Bool')
+                const masterWarningActive = SimVar.GetSimVarValue('MASTER WARNING ACTIVE', SimVarValueType.Bool)
                 if (this.displayWarning.length > 0 != masterWarningActive || warningOn) {
                     SimVar.SetSimVarValue(
                         'K:MASTER_WARNING_SET',
-                        'Bool',
+                        SimVarValueType.Bool,
                         this.displayWarning.length > 0
                     )
                 }
                 if (this.displayWarning.length > 0 && !warningOn) {
-                    SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', 'Bool', 1)
+                    SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 }
-                const masterCautionActive = SimVar.GetSimVarValue('MASTER CAUTION ACTIVE', 'Bool')
+                const masterCautionActive = SimVar.GetSimVarValue('MASTER CAUTION ACTIVE', SimVarValueType.Bool)
                 if (this.displayCaution.length > 0 != masterCautionActive || cautionOn) {
                     SimVar.SetSimVarValue(
                         'K:MASTER_CAUTION_SET',
-                        'Bool',
+                        SimVarValueType.Bool,
                         this.displayCaution.length > 0
                     )
                 }
                 if (this.displayCaution.length > 0 && !cautionOn) {
-                    SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', 'Bool', 1)
+                    SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 }
-                SimVar.SetSimVarValue('L:Generic_Master_Warning_Active', 'Bool', warningOn)
-                SimVar.SetSimVarValue('L:Generic_Master_Caution_Active', 'Bool', cautionOn)
+                SimVar.SetSimVarValue('L:Generic_Master_Warning_Active', SimVarValueType.Bool, warningOn)
+                SimVar.SetSimVarValue('L:Generic_Master_Caution_Active', SimVarValueType.Bool, cautionOn)
             }
             if (this.annunciations) diffAndSetHTML(this.annunciations, messages)
             this.needReload = false
@@ -2586,10 +2587,10 @@ export class Cabin_Annunciations extends Annunciations {
     onEvent(_event) {
         switch (_event) {
             case 'Master_Caution_Push':
-                SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', 'Bool', 1)
+                SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 break
             case 'Master_Warning_Push':
-                SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', 'Bool', 1)
+                SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 break
         }
     }
@@ -2611,10 +2612,10 @@ export class Cabin_Annunciations extends Annunciations {
         this.displayWarning = []
         this.displayAdvisory = []
         if (this.isAnnunciationsManager) {
-            SimVar.SetSimVarValue('K:MASTER_WARNING_OFF', 'Bool', 1)
-            SimVar.SetSimVarValue('K:MASTER_CAUTION_OFF', 'Bool', 1)
-            SimVar.SetSimVarValue('L:Generic_Master_Warning_Active', 'Bool', 0)
-            SimVar.SetSimVarValue('L:Generic_Master_Caution_Active', 'Bool', 0)
+            SimVar.SetSimVarValue('K:MASTER_WARNING_OFF', SimVarValueType.Bool, 1)
+            SimVar.SetSimVarValue('K:MASTER_CAUTION_OFF', SimVarValueType.Bool, 1)
+            SimVar.SetSimVarValue('L:Generic_Master_Warning_Active', SimVarValueType.Bool, 0)
+            SimVar.SetSimVarValue('L:Generic_Master_Caution_Active', SimVarValueType.Bool, 0)
         }
         this.firstAcknowledge = true
         this.needReload = true
