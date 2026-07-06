@@ -1,12 +1,21 @@
 import typescript from "@rollup/plugin-typescript"
 import resolve from "@rollup/plugin-node-resolve"
-import { copyFileSync } from "node:fs"
+import { copyFileSync, mkdirSync, cpSync, existsSync } from "node:fs"
 import { resolve as pathResolve } from "node:path"
 
-const outDir = "garmin-g5-enhanced/Packages/gomez-garmin-g5-enhanced/html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5"
+const baseOutDir = "garmin-g5-enhanced/PackageSources/html_ui/Pages/VCockpit/Instruments/NavSystems"
+const outDir = pathResolve(baseOutDir, "Enhanced-AS5")
+const shimOutDir = pathResolve(baseOutDir, "AS5")
 
 export default {
     input: "src/instruments/Enhanced-AS5/index.ts",
+    watch: {
+        include: "src/**",
+        chokidar: {
+            usePolling: true,
+            interval: 500,
+        },
+    },
     output: {
         file: pathResolve(outDir, "AS5.js"),
         format: "iife",
@@ -23,11 +32,21 @@ export default {
             outputToFilesystem: false,
         }),
         {
-            name: "copy-css",
+            name: "copy-static",
             writeBundle() {
-                const src = "src/instruments/Enhanced-AS5/style.css"
-                const dest = pathResolve(outDir, "AS5.css")
-                copyFileSync(src, dest)
+                copyFileSync("src/instruments/Enhanced-AS5/style.css", pathResolve(outDir, "AS5.css"))
+
+                copyFileSync("src/instruments/Enhanced-AS5/AS5.html", pathResolve(outDir, "AS5.html"))
+
+                const imagesSrc = "src/instruments/Enhanced-AS5/Images"
+                if (existsSync(imagesSrc)) {
+                    cpSync(imagesSrc, pathResolve(outDir, "Images"), { recursive: true })
+                }
+
+                if (!existsSync(shimOutDir)) {
+                    mkdirSync(shimOutDir, { recursive: true })
+                }
+                copyFileSync("src/instruments/AS5/AS5.html", pathResolve(shimOutDir, "AS5.html"))
             },
         },
     ],
