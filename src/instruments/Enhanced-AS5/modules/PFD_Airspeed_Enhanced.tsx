@@ -1,7 +1,5 @@
 import { NavSystemElement } from './NavSystem'
-import { DynamicReferenceSpeed } from './CommonPFD_MFD'
-import { AirspeedIndicator } from './AirspeedIndicator'
-import { SimVarValueType } from '@microsoft/msfs-sdk';
+import { SimVarValueType } from '@microsoft/msfs-sdk'
 
 export class PFD_Airspeed_Enhanced extends NavSystemElement {
     lastIndicatedSpeed: number
@@ -11,7 +9,7 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
     alwaysDisplaySpeed: boolean
     dynamicReferenceSpeeds: any[]
     speedType: any
-    airspeedElement: HTMLElement
+    airspeedElement: Element | undefined
     maxSpeed: number
     lastgroundSpeed: number
 
@@ -26,118 +24,11 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
         this.speedType = _speedType
     }
 
-    init(_root) {
-        this.airspeedElement = this.gps.getChildById('Airspeed')
-        const cockpitSettings = SimVar.GetGameVarValue('', 'GlassCockpitSettings')
-        const designSpeeds = Simplane.getDesignSpeeds()
-        if (cockpitSettings && cockpitSettings.AirSpeed.Initialized) {
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'min-speed',
-                cockpitSettings.AirSpeed.lowLimit + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'green-begin',
-                cockpitSettings.AirSpeed.greenStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'green-end',
-                cockpitSettings.AirSpeed.greenEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'flaps-begin',
-                cockpitSettings.AirSpeed.whiteStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'flaps-end',
-                cockpitSettings.AirSpeed.whiteEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'yellow-begin',
-                cockpitSettings.AirSpeed.yellowStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'yellow-end',
-                cockpitSettings.AirSpeed.yellowEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'red-begin',
-                cockpitSettings.AirSpeed.redStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'red-end',
-                cockpitSettings.AirSpeed.redEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'max-speed',
-                cockpitSettings.AirSpeed.highLimit + ''
-            )
-            this.maxSpeed = cockpitSettings.AirSpeed.highLimit
-        } else {
-            diffAndSetAttribute(this.airspeedElement, 'green-begin', designSpeeds.VS1 + '')
-            diffAndSetAttribute(this.airspeedElement, 'green-end', designSpeeds.VNo + '')
-            diffAndSetAttribute(this.airspeedElement, 'flaps-begin', designSpeeds.VS0 + '')
-            diffAndSetAttribute(this.airspeedElement, 'flaps-end', designSpeeds.VFe + '')
-            diffAndSetAttribute(this.airspeedElement, 'yellow-begin', designSpeeds.VNo + '')
-            diffAndSetAttribute(this.airspeedElement, 'yellow-end', designSpeeds.VNe + '')
-            diffAndSetAttribute(this.airspeedElement, 'red-begin', designSpeeds.VNe + '')
-            diffAndSetAttribute(this.airspeedElement, 'red-end', designSpeeds.VMax + '')
-            diffAndSetAttribute(this.airspeedElement, 'max-speed', designSpeeds.VNe + '')
-            this.maxSpeed = designSpeeds.VNe
-        }
-        if (designSpeeds) {
-            if (isFinite(designSpeeds.Vyse)) {
-                diffAndSetAttribute(this.airspeedElement, 'vyse-speed', designSpeeds.Vyse + '')
-            }
-            if (isFinite(designSpeeds.Vmc)) {
-                diffAndSetAttribute(this.airspeedElement, 'vmc-speed', designSpeeds.Vmc + '')
-            }
-        }
-        if (this.gps.instrumentXmlConfig) {
-            const autoThrottleElem =
-                this.gps.instrumentXmlConfig.getElementsByTagName('AutoThrottle')
-            if (autoThrottleElem.length > 0) {
-                this.alwaysDisplaySpeed = autoThrottleElem[0].textContent == 'True'
-            }
-            const dynamicReferenceSpeedElem =
-                this.gps.instrumentXmlConfig.getElementsByTagName('DynamicReferenceSpeeds')
-            if (dynamicReferenceSpeedElem.length > 0) {
-                for (const child of dynamicReferenceSpeedElem[0].children) {
-                    const referenceSpeed = new DynamicReferenceSpeed(
-                        child.tagName,
-                        child.textContent
-                    )
-                    if (referenceSpeed.isValid()) {
-                        this.dynamicReferenceSpeeds.push(referenceSpeed)
-                    } else if (child.textContent) {
-                        console.warn(
-                            "Can not add following dynamic reference speed '" +
-                                child.tagName +
-                                "': " +
-                                (!referenceSpeed.isKeyValid()
-                                    ? "TagName '" + child.tagName + "' is not recognized. "
-                                    : '') +
-                                (!referenceSpeed.isValueValid()
-                                    ? "Value '" + child.textContent + "' is not recognized."
-                                    : '')
-                        )
-                    }
-                }
-            }
-        }
-    }
+    init(_root) {}
 
     onEnter() {}
     onUpdate(_deltaTime) {
+        if (!this.airspeedElement) return
         if (this.dynamicReferenceSpeeds.length > 0) {
             this.updateDynamicReferenceSpeeds()
         }
@@ -172,7 +63,10 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
                 SimVar.GetSimVarValue('AUTOPILOT MANAGED SPEED IN MACH', SimVarValueType.Bool)
             ) {
                 diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'Mach')
-                const refMach = SimVar.GetSimVarValue('AUTOPILOT MACH HOLD VAR', SimVarValueType.Mach)
+                const refMach = SimVar.GetSimVarValue(
+                    'AUTOPILOT MACH HOLD VAR',
+                    SimVarValueType.Mach
+                )
                 diffAndSetAttribute(
                     this.airspeedElement,
                     'ref-speed-mach',
@@ -188,7 +82,10 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
                 diffAndSetAttribute(
                     this.airspeedElement,
                     'ref-speed',
-                    fastToFixed(SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots), 0)
+                    fastToFixed(
+                        SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots),
+                        0
+                    )
                 )
             }
         } else {
@@ -247,9 +144,10 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
     onEvent(_event) {}
 
     updateDynamicReferenceSpeeds() {
+        const validAttrs = ['airspeed', 'airspeed-trend', 'min-speed', 'green-begin', 'green-end', 'flaps-begin', 'flaps-end', 'yellow-begin', 'yellow-end', 'red-begin', 'red-end', 'max-speed', 'true-airspeed', 'no-true-airspeed', 'display-ref-speed', 'ref-speed', 'ref-speed-mach', 'display-mach', 'mach-speed', 'vyse-speed', 'vmc-speed', 'ground-airspeed'];
         for (const speed of this.dynamicReferenceSpeeds) {
             if (speed.isValid() && this.airspeedElement) {
-                if (AirspeedIndicator.observedAttributes.includes(speed.attribute)) {
+                if (validAttrs.includes(speed.attribute)) {
                     diffAndSetAttribute(this.airspeedElement, speed.attribute, speed.value + '')
                 }
             }
