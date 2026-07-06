@@ -9,10 +9,6 @@ import {
     SoftKeysMenu,
 } from './NavSystem'
 import { ContextualMenu, ContextualMenuElement } from './ContextualMenu'
-import { AirspeedIndicator } from './AirspeedIndicator'
-import './HSIndicator'
-import './Altimeter'
-import './AttitudeIndicator'
 import { SimVarValueType } from '@microsoft/msfs-sdk';
 
 export class PFD_VSpeed extends NavSystemElement {
@@ -89,7 +85,7 @@ export class PFD_Airspeed extends NavSystemElement {
     alwaysDisplaySpeed: boolean
     dynamicReferenceSpeeds: any[]
     speedType: any
-    airspeedElement: HTMLElement
+    airspeedElement: Element
     maxSpeed: number
 
     constructor(_speedType = 'airspeed') {
@@ -103,115 +99,7 @@ export class PFD_Airspeed extends NavSystemElement {
         this.speedType = _speedType
     }
 
-    init(_root) {
-        this.airspeedElement = this.gps.getChildById('Airspeed')
-        const cockpitSettings = SimVar.GetGameVarValue('', 'GlassCockpitSettings')
-        const designSpeeds = Simplane.getDesignSpeeds()
-        if (cockpitSettings && cockpitSettings.AirSpeed.Initialized) {
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'min-speed',
-                cockpitSettings.AirSpeed.lowLimit + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'green-begin',
-                cockpitSettings.AirSpeed.greenStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'green-end',
-                cockpitSettings.AirSpeed.greenEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'flaps-begin',
-                cockpitSettings.AirSpeed.whiteStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'flaps-end',
-                cockpitSettings.AirSpeed.whiteEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'yellow-begin',
-                cockpitSettings.AirSpeed.yellowStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'yellow-end',
-                cockpitSettings.AirSpeed.yellowEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'red-begin',
-                cockpitSettings.AirSpeed.redStart + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'red-end',
-                cockpitSettings.AirSpeed.redEnd + ''
-            )
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'max-speed',
-                cockpitSettings.AirSpeed.highLimit + ''
-            )
-            this.maxSpeed = cockpitSettings.AirSpeed.highLimit
-        } else {
-            diffAndSetAttribute(this.airspeedElement, 'green-begin', designSpeeds.VS1 + '')
-            diffAndSetAttribute(this.airspeedElement, 'green-end', designSpeeds.VNo + '')
-            diffAndSetAttribute(this.airspeedElement, 'flaps-begin', designSpeeds.VS0 + '')
-            diffAndSetAttribute(this.airspeedElement, 'flaps-end', designSpeeds.VFe + '')
-            diffAndSetAttribute(this.airspeedElement, 'yellow-begin', designSpeeds.VNo + '')
-            diffAndSetAttribute(this.airspeedElement, 'yellow-end', designSpeeds.VNe + '')
-            diffAndSetAttribute(this.airspeedElement, 'red-begin', designSpeeds.VNe + '')
-            diffAndSetAttribute(this.airspeedElement, 'red-end', designSpeeds.VMax + '')
-            diffAndSetAttribute(this.airspeedElement, 'max-speed', designSpeeds.VNe + '')
-            this.maxSpeed = designSpeeds.VNe
-        }
-        if (designSpeeds) {
-            if (isFinite(designSpeeds.Vyse)) {
-                diffAndSetAttribute(this.airspeedElement, 'vyse-speed', designSpeeds.Vyse + '')
-            }
-            if (isFinite(designSpeeds.Vmc)) {
-                diffAndSetAttribute(this.airspeedElement, 'vmc-speed', designSpeeds.Vmc + '')
-            }
-        }
-        if (this.gps.instrumentXmlConfig) {
-            const autoThrottleElem =
-                this.gps.instrumentXmlConfig.getElementsByTagName('AutoThrottle')
-            if (autoThrottleElem.length > 0) {
-                this.alwaysDisplaySpeed = autoThrottleElem[0].textContent == 'True'
-            }
-            const dynamicReferenceSpeedElem =
-                this.gps.instrumentXmlConfig.getElementsByTagName('DynamicReferenceSpeeds')
-            if (dynamicReferenceSpeedElem.length > 0) {
-                for (const child of dynamicReferenceSpeedElem[0].children) {
-                    const referenceSpeed = new DynamicReferenceSpeed(
-                        child.tagName,
-                        child.textContent
-                    )
-                    if (referenceSpeed.isValid()) {
-                        this.dynamicReferenceSpeeds.push(referenceSpeed)
-                    } else if (child.textContent) {
-                        console.warn(
-                            "Can not add following dynamic reference speed '" +
-                                child.tagName +
-                                "': " +
-                                (!referenceSpeed.isKeyValid()
-                                    ? "TagName '" + child.tagName + "' is not recognized. "
-                                    : '') +
-                                (!referenceSpeed.isValueValid()
-                                    ? "Value '" + child.textContent + "' is not recognized."
-                                    : '')
-                        )
-                    }
-                }
-            }
-        }
-    }
+    init(_root) {}
 
     onEnter() {}
     onUpdate(_deltaTime) {
@@ -318,9 +206,10 @@ export class PFD_Airspeed extends NavSystemElement {
     onEvent(_event) {}
 
     updateDynamicReferenceSpeeds() {
+        const validAttrs = ['airspeed', 'airspeed-trend', 'min-speed', 'green-begin', 'green-end', 'flaps-begin', 'flaps-end', 'yellow-begin', 'yellow-end', 'red-begin', 'red-end', 'max-speed', 'true-airspeed', 'no-true-airspeed', 'display-ref-speed', 'ref-speed', 'ref-speed-mach', 'display-mach', 'mach-speed', 'vyse-speed', 'vmc-speed', 'ground-airspeed'];
         for (const speed of this.dynamicReferenceSpeeds) {
             if (speed.isValid() && this.airspeedElement) {
-                if (AirspeedIndicator.observedAttributes.includes(speed.attribute)) {
+                if (validAttrs.includes(speed.attribute)) {
                     diffAndSetAttribute(this.airspeedElement, speed.attribute, speed.value + '')
                 }
             }
@@ -337,7 +226,7 @@ export class PFD_Altimeter extends NavSystemElement {
     altimeterIndex: number
     readyToSet: boolean
     altitudeType: any
-    altimeterElement: HTMLElement
+    altimeterElement: Element | undefined
 
     constructor(_altitudeType = 'indicatedAltimeter') {
         super()
@@ -352,19 +241,11 @@ export class PFD_Altimeter extends NavSystemElement {
         this.altitudeType = _altitudeType
     }
 
-    init(_root) {
-        this.altimeterElement = this.gps.getChildById('Altimeter')
-        if (this.gps.instrumentXmlConfig) {
-            const altimeterIndexElems =
-                this.gps.instrumentXmlConfig.getElementsByTagName('AltimeterIndex')
-            if (altimeterIndexElems.length > 0) {
-                this.altimeterIndex = parseInt(altimeterIndexElems[0].textContent) + 1
-            }
-        }
-    }
+    init(_root) {}
 
     onEnter() {}
     onUpdate(_deltaTime) {
+        if (!this.altimeterElement) return
         let altitude
         if (this.altitudeType == 'indicatedAltimeter') {
             altitude = SimVar.GetSimVarValue('INDICATED ALTITUDE:' + this.altimeterIndex, SimVarValueType.Feet)
@@ -528,6 +409,7 @@ export class PFD_Altimeter extends NavSystemElement {
                 break
             case 3:
                 if (
+                    this.gps.currFlightPlanManager &&
                     this.gps.currFlightPlanManager.isActiveApproach() &&
                     Simplane.getAutoPilotApproachType() == ApproachType.APPROACH_TYPE_RNAV
                 ) {
@@ -594,19 +476,18 @@ export class PFD_Altimeter extends NavSystemElement {
 }
 export class PFD_Attitude extends NavSystemElement {
     vDir: Vec2
-    svg: HTMLElement
+    svg: Element | undefined
 
     constructor() {
         super()
         this.vDir = new Vec2()
     }
 
-    init(_root) {
-        this.svg = this.gps.getChildById('Horizon')
-    }
+    init(_root) {}
 
     onEnter() {}
     onUpdate(_deltaTime) {
+        if (!this.svg) return
         const xyz = Simplane.getOrientationAxis()
         if (xyz) {
             diffAndSetAttribute(this.svg, 'pitch', (xyz.pitch / Math.PI) * 180 + '')
@@ -765,21 +646,22 @@ export class PFD_Compass extends NavSystemElement {
         } else {
             SimVar.SetSimVarValue('L:GPS_Current_Phase', SimVarValueType.Number, 3)
         }
-        if (this.ifTimer <= 0) {
-            this.ifTimer = 2000
-            if (this.gps.currFlightPlanManager.isActiveApproach()) {
-                this.gps.currFlightPlanManager.getApproachIfIcao(value => {
-                    this.ifIcao = value
-                })
+        if (this.gps.currFlightPlanManager) {
+            if (this.ifTimer <= 0) {
+                this.ifTimer = 2000
+                if (this.gps.currFlightPlanManager.isActiveApproach()) {
+                    this.gps.currFlightPlanManager.getApproachIfIcao(value => {
+                        this.ifIcao = value
+                    })
+                }
+            } else {
+                this.ifTimer -= this.gps.deltaTime
             }
-        } else {
-            this.ifTimer -= this.gps.deltaTime
-        }
-        if (
-            this.gps.currFlightPlanManager.isActiveApproach() &&
-            this.gps.currFlightPlanManager.getActiveWaypointIndex() != -1 &&
-            Simplane.getAutoPilotApproachType() == ApproachType.APPROACH_TYPE_ILS
-        ) {
+            if (
+                this.gps.currFlightPlanManager.isActiveApproach() &&
+                this.gps.currFlightPlanManager.getActiveWaypointIndex() != -1 &&
+                Simplane.getAutoPilotApproachType() == ApproachType.APPROACH_TYPE_ILS
+            ) {
             const approachWPNb = this.gps.currFlightPlanManager.getApproachWaypoints().length
             const activeWP = this.gps.currFlightPlanManager.getActiveWaypoint()
             if (
@@ -826,6 +708,7 @@ export class PFD_Compass extends NavSystemElement {
         } else {
             this.hasLocBeenEntered = false
             this.hasLocBeenActivated = false
+        }
         }
     }
     onExit() {}
@@ -1902,15 +1785,15 @@ export class PFD_AutopilotDisplay extends NavSystemElement {
     apStatusDisplay: number
     yellowFlashBegin: number
     apManualDisconnected: boolean
-    AP_LateralActive: HTMLElement
-    AP_LateralArmed: HTMLElement
-    AP_Status: HTMLElement
-    AP_YDStatus: HTMLElement
-    AP_FDIndicatorArrow: HTMLElement
-    AP_VerticalActive: HTMLElement
-    AP_ModeReference: HTMLElement
-    AP_Armed: HTMLElement
-    AP_ArmedReference: HTMLElement
+    AP_LateralActive: Element | undefined
+    AP_LateralArmed: Element | undefined
+    AP_Status: Element | undefined
+    AP_YDStatus: Element | undefined
+    AP_FDIndicatorArrow: Element | undefined
+    AP_VerticalActive: Element | undefined
+    AP_ModeReference: Element | undefined
+    AP_Armed: Element | undefined
+    AP_ArmedReference: Element | undefined
 
     constructor() {
         super()
@@ -1919,17 +1802,7 @@ export class PFD_AutopilotDisplay extends NavSystemElement {
         this.apManualDisconnected = false
     }
 
-    init(_root) {
-        this.AP_LateralActive = this.gps.getChildById('AP_LateralActive')
-        this.AP_LateralArmed = this.gps.getChildById('AP_LateralArmed')
-        this.AP_Status = this.gps.getChildById('AP_Status')
-        this.AP_YDStatus = this.gps.getChildById('AP_YDStatus')
-        this.AP_FDIndicatorArrow = this.gps.getChildById('AP_FDIndicatorArrow')
-        this.AP_VerticalActive = this.gps.getChildById('AP_VerticalActive')
-        this.AP_ModeReference = this.gps.getChildById('AP_ModeReference')
-        this.AP_Armed = this.gps.getChildById('AP_Armed')
-        this.AP_ArmedReference = this.gps.getChildById('AP_ArmedReference')
-    }
+    init(_root) {}
 
     onEnter() {}
     onUpdate(_deltaTime) {
@@ -2634,7 +2507,7 @@ export class MFD_ActiveFlightPlan_Element extends NavSystemElement {
             } else {
                 diffAndSetAttribute(this.CurrentLegArrow, 'd', '')
             }
-        } else {
+        } else if (this.gps.currFlightPlanManager) {
             let realIndex
             let lastIndex
             if (this.gps.currFlightPlanManager.isActiveApproach(true)) {
@@ -4326,11 +4199,12 @@ export class MFD_Procedures extends NavSystemElement {
         this.gps.ActiveSelection(this.defaultSelectables)
     }
     onUpdate(_deltaTime) {
-        this.activateApproach_SE.setActive(
-            this.gps.currFlightPlanManager.isLoadedApproach() &&
-                !this.gps.currFlightPlanManager.isActiveApproach()
-        )
-        const approach = this.gps.currFlightPlanManager.getAirportApproach()
+        if (this.gps.currFlightPlanManager) {
+            this.activateApproach_SE.setActive(
+                this.gps.currFlightPlanManager.isLoadedApproach() &&
+                    !this.gps.currFlightPlanManager.isActiveApproach()
+            )
+            const approach = this.gps.currFlightPlanManager.getAirportApproach()
         if (approach) {
             diffAndSetText(this.loadedApproach, approach.name)
         } else {
@@ -4348,6 +4222,7 @@ export class MFD_Procedures extends NavSystemElement {
         } else {
             diffAndSetText(this.loadedArrival, '____-')
         }
+        }
     }
     onExit() {
         diffAndSetAttribute(this.root, 'state', 'Inactive')
@@ -4356,7 +4231,7 @@ export class MFD_Procedures extends NavSystemElement {
     onEvent(_event) {}
 
     activateApproach_CB(_event) {
-        if (_event == 'ENT_Push') {
+        if (_event == 'ENT_Push' && this.gps.currFlightPlanManager) {
             this.gps.currFlightPlanManager.activateApproach()
             this.gps.closePopUpElement()
         }

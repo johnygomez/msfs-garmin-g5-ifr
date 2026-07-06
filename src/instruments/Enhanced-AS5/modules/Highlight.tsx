@@ -1,150 +1,67 @@
-export class Highlight extends HTMLElement {
-    static get observedAttributes() {
-        return ['active', 'elements', 'background-opacity']
-    }
+import { DisplayComponent, FSComponent, VNode, ComponentProps } from '@microsoft/msfs-sdk';
 
-    built: boolean
-    backgroundOpacity: string
-    root: Element
-    offsetX: number
-    offsetY: number
-    height: number
-    width: number
-    background: Element
-    rectangles: Element
+export interface HighlightElementRefs {
+    root: SVGElement;
+    background: SVGElement;
+    rectangles: SVGElement;
+}
 
-    constructor() {
-        super()
-        this.built = false
-        this.backgroundOpacity = '0.30'
-        this.root = document.createElementNS(Avionics.SVG.NS, 'svg')
-    }
+export interface HighlightProps extends ComponentProps {
+    onApi: (refs: HighlightElementRefs) => void;
+}
 
-    attributeChangedCallback(name, oldValue, newValue) {
-        this.tryBuild()
-        if (oldValue == newValue) return
-        switch (name) {
-            case 'active':
-                if (newValue == 'true') {
-                    diffAndSetAttribute(this.root, 'display', 'inherit')
-                    this.classList.add('fade')
-                } else {
-                    diffAndSetAttribute(this.root, 'display', 'none')
-                    this.classList.remove('fade')
-                }
-                break
-            case 'elements':
-                const d = `M 0 0 L ${this.width} 0 L ${this.width} ${this.height} L 0 ${this.height} L 0 0`
-                const paths = []
-                const elems = newValue.split(';')
-                for (let i = 0; i < elems.length; i++) {
-                    const coords = elems[i].split(' ')
-                    if (coords.length < 1 || coords[0] === '') {
-                        continue
-                    }
-                    paths.push(new drawPath(elems[i]))
-                }
-                for (let i = 0; i < paths.length; i++) {
-                    paths[i].offsetOrigin(-this.offsetX, -this.offsetY)
-                }
-                for (let i = 0; i < paths.length; i++) {
-                    paths[i].trimPoints(0, this.width, 0, this.height)
-                }
-                for (let i = 0; i < paths.length; i++) {
-                    for (let j = 0; j < paths.length; j++) {
-                        if (i != j && paths[i].isOverlapping(paths[j])) {
-                            paths[i] = paths[i].merge(paths[j])
-                            paths.splice(j, 1)
-                            j--
-                        }
-                    }
-                }
-                for (let i = 0; i < paths.length; i++) {
-                    for (let j = 0; j < paths.length; j++) {
-                        if (i != j) {
-                            if (paths[i].isPathInside(paths[j])) {
-                                paths[j].isInteriorPath = true
-                            } else if (paths[j].isPathInside(paths[i])) {
-                                paths[i].isInteriorPath = true
-                            }
-                        }
-                    }
-                }
-                let rectanglePath = ''
-                let bgPath = ''
-                for (let i = 0; i < paths.length; i++) {
-                    let pathString = `M ${paths[i].points[0].x} ${paths[i].points[0].y}`
-                    for (let j = 1; j < paths[i].points.length; j++) {
-                        pathString += ` L ${paths[i].points[j].x} ${paths[i].points[j].y}`
-                    }
-                    pathString += ` L ${paths[i].points[0].x} ${paths[i].points[0].y}`
-                    rectanglePath += pathString
-                    if (!paths[i].isInteriorPath) {
-                        bgPath += pathString
-                    }
-                }
-                if (this.background) {
-                    diffAndSetAttribute(this.background, 'd', d + bgPath)
-                }
-                if (this.rectangles) {
-                    diffAndSetAttribute(this.rectangles, 'd', rectanglePath)
-                }
-                break
-            case 'background-opacity':
-                this.backgroundOpacity = newValue
-                diffAndSetAttribute(this.background, 'fill-opacity', this.backgroundOpacity)
-                break
+export class HighlightComponent extends DisplayComponent<HighlightProps> {
+    private readonly rootRef = FSComponent.createRef<SVGElement>();
+    private readonly backgroundRef = FSComponent.createRef<SVGPathElement>();
+    private readonly rectanglesRef = FSComponent.createRef<SVGPathElement>();
+
+    onAfterRender(): void {
+        const { z, w } = globalPanelData.daInstruments[0].vPosAndSize;
+        const width = z;
+        const height = w;
+        const root = this.rootRef.getOrDefault();
+        diffAndSetAttribute(root, 'width', width.toFixed(0));
+        diffAndSetAttribute(root, 'height', height.toFixed(0));
+        diffAndSetAttribute(root, 'display', 'none');
+        diffAndSetAttribute(root, 'viewBox', `0 0 ${width} ${height}`);
+        const d = `M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} L 0 0`;
+        diffAndSetAttribute(this.backgroundRef.getOrDefault(), 'd', d);
+        diffAndSetAttribute(this.rectanglesRef.getOrDefault(), 'd', '');
+
+        if (this.props.onApi) {
+            this.props.onApi({
+                root,
+                background: this.backgroundRef.getOrDefault(),
+                rectangles: this.rectanglesRef.getOrDefault(),
+            });
         }
     }
-    connectedCallback() {
-        this.tryBuild()
-    }
 
-    tryBuild() {
-        const { x, y, z, w } = globalPanelData.daInstruments[0].vPosAndSize
-        this.offsetX = x
-        this.offsetY = y
-        this.height = w
-        this.width = z
-        if (!this.built && this.height != 0) {
-            this.built = true
-            diffAndSetAttribute(this.root, 'width', this.width.toFixed(0))
-            diffAndSetAttribute(this.root, 'height', this.height.toFixed(0))
-            diffAndSetAttribute(this.root, 'display', 'none')
-            const vbox = `0 0 ${this.width} ${this.height}`
-            diffAndSetAttribute(this.root, 'viewBox', vbox)
-            this.appendChild(this.root)
-            this.background = document.createElementNS(Avionics.SVG.NS, 'path')
-            const d = `M 0 0 L ${this.width} 0 L ${this.width} ${this.height} L 0 ${this.height} L 0 0`
-            diffAndSetAttribute(this.background, 'd', d)
-            diffAndSetAttribute(this.background, 'fill', 'black')
-            diffAndSetAttribute(this.background, 'fill-opacity', this.backgroundOpacity)
-            diffAndSetAttribute(this.background, 'fill-rule', 'evenodd')
-            this.root.appendChild(this.background)
-            this.rectangles = document.createElementNS(Avionics.SVG.NS, 'path')
-            diffAndSetAttribute(this.rectangles, 'd', '')
-            diffAndSetAttribute(this.rectangles, 'stroke', '#01b0f1')
-            diffAndSetAttribute(this.rectangles, 'stroke-width', '6')
-            diffAndSetAttribute(this.rectangles, 'fill', 'none')
-            diffAndSetAttribute(this.rectangles, 'stroke-linecap', 'square')
-            this.root.appendChild(this.rectangles)
-        }
+    render(): VNode {
+        return (
+            <svg ref={this.rootRef} class="highlight" width="0" height="0" viewBox="0 0 0 0" display="none">
+                <path ref={this.backgroundRef} d="" fill="black" fill-opacity="0.30" fill-rule="evenodd" />
+                <path ref={this.rectanglesRef} d="" stroke="#01b0f1" stroke-width="6" fill="none" stroke-linecap="square" />
+            </svg>
+        );
     }
 }
+
 export class drawPoint {
     x: number
     y: number
 
-    constructor(_x, _y) {
+    constructor(_x: number, _y: number) {
         this.x = _x
         this.y = _y
     }
 }
+
 export class drawPath {
     points: drawPoint[]
     isInteriorPath: boolean
 
-    constructor(_points) {
+    constructor(_points: string) {
         this.points = []
         if (_points != '') {
             const coords = _points.split(' ')
@@ -156,19 +73,19 @@ export class drawPath {
         }
     }
 
-    trimPoints(minX, maxX, minY, maxY) {
+    trimPoints(minX: number, maxX: number, minY: number, maxY: number) {
         for (let i = 0; i < this.points.length; i++) {
             this.points[i].x = Math.min(maxX, Math.max(minX, this.points[i].x))
             this.points[i].y = Math.min(maxY, Math.max(minY, this.points[i].y))
         }
     }
-    offsetOrigin(offsetX, offsetY) {
+    offsetOrigin(offsetX: number, offsetY: number) {
         for (let i = 0; i < this.points.length; i++) {
             this.points[i].x += offsetX
             this.points[i].y += offsetY
         }
     }
-    isPointInside(_point) {
+    isPointInside(_point: drawPoint) {
         let nbIntersections = 0
         for (let i = 0; i < this.points.length; i++) {
             if (
@@ -181,7 +98,7 @@ export class drawPath {
         }
         return nbIntersections % 2 == 1
     }
-    isPathInside(_path) {
+    isPathInside(_path: drawPath) {
         for (let i = 0; i < _path.points.length; i++) {
             if (!this.isPointInside(_path.points[i])) {
                 return false
@@ -189,7 +106,7 @@ export class drawPath {
         }
         return true
     }
-    getDestinationIndex(_point) {
+    getDestinationIndex(_point: drawPoint) {
         for (let i = 0; i < this.points.length; i++) {
             if (
                 (this.points[i].y == _point.y &&
@@ -207,7 +124,7 @@ export class drawPath {
         }
         return NaN
     }
-    getIntersectionIndex(_p1, _p2) {
+    getIntersectionIndex(_p1: drawPoint, _p2: drawPoint) {
         let elem = -1
         let dist = (_p1.x != _p2.x ? Math.abs(_p2.x - _p1.x) : Math.abs(_p1.y - _p2.y)) + 1
         for (let i = 0; i < this.points.length; i++) {
@@ -249,7 +166,7 @@ export class drawPath {
         }
         return elem
     }
-    isOverlapping(_other) {
+    isOverlapping(_other: drawPath) {
         for (let i = 0; i < _other.points.length; i++) {
             if (
                 this.getIntersectionIndex(
@@ -262,7 +179,7 @@ export class drawPath {
         }
         return false
     }
-    merge(_other) {
+    merge(_other: drawPath) {
         const newPath = new drawPath('')
         let index = 0
         let isOnOther = false
@@ -408,4 +325,3 @@ export class drawPath {
         return newPath
     }
 }
-customElements.define('glasscockpit-highlight', Highlight)

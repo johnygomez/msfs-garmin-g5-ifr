@@ -1,4 +1,4 @@
-import { SimVarValueType } from '@microsoft/msfs-sdk';
+import { SimVarValueType } from '@microsoft/msfs-sdk'
 export class NavSystem extends BaseInstrument {
     static _iterations: number = 0
     static maxTimeUpdateAllTime: number = 0
@@ -102,7 +102,7 @@ export class NavSystem extends BaseInstrument {
         this.contextualMenuElements = this.getChildById('ContextualMenuElements')
         this.menuSlider = this.getChildById('SliderMenu')
         this.menuSliderCursor = this.getChildById('SliderMenuCursor')
-        if (this.manageFlightPlan) {
+        if (this.manageFlightPlan && typeof FlightPlanManager !== 'undefined') {
             this.currFlightPlanManager = new FlightPlanManager(this)
         }
     }
@@ -408,6 +408,9 @@ export class NavSystem extends BaseInstrument {
         if (this.popUpElement) {
             this.popUpElement.onUpdate(this.deltaTime)
         }
+        if (!this.pagesContainer) {
+            this.pagesContainer = this.getChildById('PageContainer')
+        }
         if (this.pagesContainer) {
             diffAndSetAttribute(this.pagesContainer, 'state', this.getCurrentPage().htmlElemId)
         }
@@ -669,6 +672,7 @@ export class NavSystem extends BaseInstrument {
         this.overridePage = null
     }
     SwitchToPageName(_menu, _page, _savelastReleventICAO = false) {
+        if (!this.pageGroups.length) return
         if (!_savelastReleventICAO) {
             this.lastRelevantICAO = null
             this.lastRelevantICAOType = null
@@ -693,6 +697,7 @@ export class NavSystem extends BaseInstrument {
         this.pageGroups[this.currentPageGroupIndex].goToPage(_page, true)
     }
     SwitchToMenuName(_name) {
+        if (!this.pageGroups.length) return
         this.lastRelevantICAO = null
         this.lastRelevantICAOType = null
         this.pageGroups[this.currentPageGroupIndex].onExit()
@@ -2557,7 +2562,10 @@ export class Cabin_Annunciations extends Annunciations {
             }
             this.warningTone = warningOn > 0
             if (this.isAnnunciationsManager) {
-                const masterWarningActive = SimVar.GetSimVarValue('MASTER WARNING ACTIVE', SimVarValueType.Bool)
+                const masterWarningActive = SimVar.GetSimVarValue(
+                    'MASTER WARNING ACTIVE',
+                    SimVarValueType.Bool
+                )
                 if (this.displayWarning.length > 0 != masterWarningActive || warningOn) {
                     SimVar.SetSimVarValue(
                         'K:MASTER_WARNING_SET',
@@ -2568,7 +2576,10 @@ export class Cabin_Annunciations extends Annunciations {
                 if (this.displayWarning.length > 0 && !warningOn) {
                     SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 }
-                const masterCautionActive = SimVar.GetSimVarValue('MASTER CAUTION ACTIVE', SimVarValueType.Bool)
+                const masterCautionActive = SimVar.GetSimVarValue(
+                    'MASTER CAUTION ACTIVE',
+                    SimVarValueType.Bool
+                )
                 if (this.displayCaution.length > 0 != masterCautionActive || cautionOn) {
                     SimVar.SetSimVarValue(
                         'K:MASTER_CAUTION_SET',
@@ -2579,8 +2590,16 @@ export class Cabin_Annunciations extends Annunciations {
                 if (this.displayCaution.length > 0 && !cautionOn) {
                     SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 }
-                SimVar.SetSimVarValue('L:Generic_Master_Warning_Active', SimVarValueType.Bool, warningOn)
-                SimVar.SetSimVarValue('L:Generic_Master_Caution_Active', SimVarValueType.Bool, cautionOn)
+                SimVar.SetSimVarValue(
+                    'L:Generic_Master_Warning_Active',
+                    SimVarValueType.Bool,
+                    warningOn
+                )
+                SimVar.SetSimVarValue(
+                    'L:Generic_Master_Caution_Active',
+                    SimVarValueType.Bool,
+                    cautionOn
+                )
             }
             if (this.annunciations) diffAndSetHTML(this.annunciations, messages)
             this.needReload = false

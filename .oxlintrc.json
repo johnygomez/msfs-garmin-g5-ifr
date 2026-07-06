@@ -19,12 +19,12 @@
     "typescript/ban-ts-comment": "error",
     "typescript/explicit-function-return-type": "off",
     "typescript/explicit-module-boundary-types": "off",
-    "typescript/no-unused-vars": [
+    "eslint/no-unused-vars": [
       "warn",
       {
         "argsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_",
-        "args": "after-used"
+        "varsIgnorePattern": "^FSComponent$"
       }
     ]
   },
