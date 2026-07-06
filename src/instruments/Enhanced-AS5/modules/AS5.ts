@@ -339,12 +339,6 @@ export class AS5_MFD extends NavSystemPage {
                 '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png',
                 false
             ),
-            new ContextualMenuElementImage(
-                'Setup',
-                null,
-                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/SETUP.png',
-                true
-            ),
         ])
     }
 }

@@ -185,6 +185,9 @@ export class NavSystem extends BaseInstrument {
                         if (this.popUpElement) {
                             defaultMenu = this.popUpElement.getDefaultMenu()
                         }
+                        if (!defaultMenu) {
+                            defaultMenu = this.getCurrentPage().defaultMenu
+                        }
                         if (defaultMenu != null) {
                             this.ShowContextualMenu(defaultMenu)
                         }
@@ -252,6 +255,9 @@ export class NavSystem extends BaseInstrument {
                         let defaultMenu
                         if (this.popUpElement) {
                             defaultMenu = this.popUpElement.getDefaultMenu()
+                        }
+                        if (!defaultMenu) {
+                            defaultMenu = this.getCurrentPage().defaultMenu
                         }
                         if (defaultMenu != null) {
                             this.ShowContextualMenu(defaultMenu)
