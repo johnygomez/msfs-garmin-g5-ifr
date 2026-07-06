@@ -2,7 +2,9 @@
 	<CheckedOutPackages>
 		<Package Name="gomez-garmin-g5-enhanced"/>
 	</CheckedOutPackages>
-	<SelectedPackages/>
+	<SelectedPackages>
+		<Package Name="gomez-garmin-g5-enhanced"/>
+	</SelectedPackages>
 	<Filter/>
 	<ShowOnlyEdited>false</ShowOnlyEdited>
 </UserSettings>

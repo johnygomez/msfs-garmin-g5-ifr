@@ -6,19 +6,22 @@
 		<Manufacturer/>
 		<Creator>Jan Gamec</Creator>
 	</ItemSettings>
-	<PackageOrderHint>CUSTOM_SIMOBJECTS</PackageOrderHint>
 	<Flags>
 		<VisibleInStore>false</VisibleInStore>
 		<CanBeReferenced>false</CanBeReferenced>
 	</Flags>
+	<PackageOrderHint>CUSTOM_SIMOBJECTS</PackageOrderHint>
+	<GloballyOverridenBaseSimFiles>
+		<GloballyOverridenBaseSimFile>html_ui/Pages/VCockpit/Instruments/NavSystems/AS5/AS5.html</GloballyOverridenBaseSimFile>
+	</GloballyOverridenBaseSimFiles>
 	<AssetGroups>
 		<AssetGroup Name="ContentInfo">
 			<Type Version="0">ContentInfo</Type>
 			<Flags>
 				<FSXCompatibility>false</FSXCompatibility>
 			</Flags>
-			<AssetDir>PackageDefinitions\gomez-garmin-g5-enhanced\ContentInfo</AssetDir>
-			<OutputDir>ContentInfo\gomez-garmin-g5-enhanced</OutputDir>
+			<AssetDir>PackageDefinitions\gomez-garmin-g5-enhanced\ContentInfo\</AssetDir>
+			<OutputDir>ContentInfo\gomez-garmin-g5-enhanced\</OutputDir>
 		</AssetGroup>
 		<AssetGroup Name="html_ui">
 			<Type Version="0">Copy</Type>

@@ -3,7 +3,7 @@ import resolve from "@rollup/plugin-node-resolve"
 import { copyFileSync } from "node:fs"
 import { resolve as pathResolve } from "node:path"
 
-const outDir = "garmin-g5-enhanced/PackageSources/html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5"
+const outDir = "garmin-g5-enhanced/Packages/gomez-garmin-g5-enhanced/html_ui/Pages/VCockpit/Instruments/NavSystems/Enhanced-AS5"
 
 export default {
     input: "src/instruments/Enhanced-AS5/index.ts",
@@ -20,6 +20,7 @@ export default {
         resolve(),
         typescript({
             tsconfig: "./tsconfig.json",
+            outputToFilesystem: false,
         }),
         {
             name: "copy-css",
