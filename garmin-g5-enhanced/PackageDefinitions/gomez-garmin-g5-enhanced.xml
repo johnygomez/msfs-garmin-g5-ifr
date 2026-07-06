@@ -10,9 +10,6 @@
 	<Flags>
 		<VisibleInStore>false</VisibleInStore>
 		<CanBeReferenced>false</CanBeReferenced>
-		<Flag Name="globally_overriden_base_sim_files">
-			<FlagValue>html_ui/Pages/VCockpit/Instruments/NavSystems/AS5/AS5.html</FlagValue>
-		</Flag>
 	</Flags>
 	<AssetGroups>
 		<AssetGroup Name="ContentInfo">
