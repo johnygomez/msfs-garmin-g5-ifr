@@ -1,5 +1,5 @@
 import { NavSystemElement } from './NavSystem'
-import { SimVarValueType } from '@microsoft/msfs-sdk'
+import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
 
 export class PFD_Airspeed_Enhanced extends NavSystemElement {
     lastIndicatedSpeed: number
@@ -9,9 +9,20 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
     alwaysDisplaySpeed: boolean
     dynamicReferenceSpeeds: any[]
     speedType: any
-    airspeedElement: Element | undefined
     maxSpeed: number
     lastgroundSpeed: number
+
+    indicatedAirspeedSub = Subject.create(0)
+    trueAirspeedSub = Subject.create(0)
+    groundSpeedSub = Subject.create(0)
+    machSpeedSub = Subject.create(0)
+    displayRefSpeedSub = Subject.create('False')
+    refSpeedMachSub = Subject.create(0)
+    refSpeedSub = Subject.create(0)
+    airspeedTrendSub = Subject.create(0)
+    maxSpeedSub = Subject.create(0)
+    displayMachSub = Subject.create(false)
+    noTrueAirspeedSub = Subject.create(false)
 
     constructor(_speedType = 'airspeed') {
         super()
@@ -28,7 +39,6 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
 
     onEnter() {}
     onUpdate(_deltaTime) {
-        if (!this.airspeedElement) return
         if (this.dynamicReferenceSpeeds.length > 0) {
             this.updateDynamicReferenceSpeeds()
         }
@@ -39,18 +49,18 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
             indicatedSpeed = Simplane.getGroundSpeed()
         }
         if (indicatedSpeed != this.lastIndicatedSpeed) {
-            diffAndSetAttribute(this.airspeedElement, 'airspeed', fastToFixed(indicatedSpeed, 1))
+            this.indicatedAirspeedSub.set(indicatedSpeed)
             this.lastIndicatedSpeed = indicatedSpeed
         }
         const groundSpeed = Simplane.getGroundSpeed()
         if (groundSpeed != this.lastgroundSpeed) {
-            diffAndSetAttribute(this.airspeedElement, 'ground-airspeed', groundSpeed + '')
+            this.groundSpeedSub.set(groundSpeed)
             this.lastgroundSpeed = groundSpeed
         }
 
         const trueSpeed = Simplane.getTrueSpeed()
         if (trueSpeed != this.lastTrueSpeed) {
-            diffAndSetAttribute(this.airspeedElement, 'true-airspeed', trueSpeed + '')
+            this.trueAirspeedSub.set(trueSpeed)
             this.lastTrueSpeed = trueSpeed
         }
         if (
@@ -62,34 +72,23 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
                 SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', SimVarValueType.Bool) ||
                 SimVar.GetSimVarValue('AUTOPILOT MANAGED SPEED IN MACH', SimVarValueType.Bool)
             ) {
-                diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'Mach')
+                this.displayRefSpeedSub.set('Mach')
                 const refMach = SimVar.GetSimVarValue(
                     'AUTOPILOT MACH HOLD VAR',
                     SimVarValueType.Mach
                 )
-                diffAndSetAttribute(
-                    this.airspeedElement,
-                    'ref-speed-mach',
-                    'M' + (refMach < 1 ? fastToFixed(refMach, 3).slice(1) : fastToFixed(refMach, 3))
-                )
-                diffAndSetAttribute(
-                    this.airspeedElement,
-                    'ref-speed',
+                this.refSpeedMachSub.set(refMach)
+                this.refSpeedSub.set(
                     SimVar.GetGameVarValue('FROM MACH TO KIAS', SimVarValueType.Number, refMach)
                 )
             } else {
-                diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'True')
-                diffAndSetAttribute(
-                    this.airspeedElement,
-                    'ref-speed',
-                    fastToFixed(
-                        SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots),
-                        0
-                    )
+                this.displayRefSpeedSub.set('True')
+                this.refSpeedSub.set(
+                    SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots)
                 )
             }
         } else {
-            diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'False')
+            this.displayRefSpeedSub.set('False')
         }
         if (isNaN(this.acceleration)) {
             this.acceleration = 0
@@ -110,18 +109,14 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
                 Math.min(_deltaTime, smoothFactor) * instantAcceleration) /
             smoothFactor
         this.lastSpeed = indicatedSpeed
-        diffAndSetAttribute(this.airspeedElement, 'airspeed-trend', this.acceleration + '')
+        this.airspeedTrendSub.set(this.acceleration)
         let speedMach = -1
         const crossSpeed = SimVar.GetGameVarValue('AIRCRAFT CROSSOVER SPEED', SimVarValueType.Knots)
         if (crossSpeed != 0) {
             const cruiseMach = SimVar.GetGameVarValue('AIRCRAFT CRUISE MACH', SimVarValueType.Mach)
             const crossAltitude = Simplane.getCrossoverAltitude(crossSpeed, cruiseMach)
             const crossSpeedFactor = Simplane.getCrossoverSpeedFactor(crossSpeed, cruiseMach)
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'max-speed',
-                (Math.min(crossSpeedFactor, 1) * this.maxSpeed).toString()
-            )
+            this.maxSpeedSub.set(Math.min(crossSpeedFactor, 1) * this.maxSpeed)
             const mach = Simplane.getMachSpeed()
             const altitude = Simplane.getAltitude()
             if (mach >= cruiseMach && altitude >= crossAltitude) {
@@ -129,26 +124,20 @@ export class PFD_Airspeed_Enhanced extends NavSystemElement {
             }
         }
         if (speedMach > 0) {
-            diffAndSetAttribute(this.airspeedElement, 'display-mach', 'True')
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'mach-speed',
-                'M ' +
-                    (speedMach < 1 ? fastToFixed(speedMach, 3).slice(1) : fastToFixed(speedMach, 3))
-            )
+            this.displayMachSub.set(true)
+            this.machSpeedSub.set(speedMach)
         } else {
-            diffAndSetAttribute(this.airspeedElement, 'display-mach', 'False')
+            this.displayMachSub.set(false)
         }
     }
     onExit() {}
     onEvent(_event) {}
 
     updateDynamicReferenceSpeeds() {
-        const validAttrs = ['airspeed', 'airspeed-trend', 'min-speed', 'green-begin', 'green-end', 'flaps-begin', 'flaps-end', 'yellow-begin', 'yellow-end', 'red-begin', 'red-end', 'max-speed', 'true-airspeed', 'no-true-airspeed', 'display-ref-speed', 'ref-speed', 'ref-speed-mach', 'display-mach', 'mach-speed', 'vyse-speed', 'vmc-speed', 'ground-airspeed'];
         for (const speed of this.dynamicReferenceSpeeds) {
-            if (speed.isValid() && this.airspeedElement) {
-                if (validAttrs.includes(speed.attribute)) {
-                    diffAndSetAttribute(this.airspeedElement, speed.attribute, speed.value + '')
+            if (speed.isValid()) {
+                if (speed.attribute === 'airspeed') {
+                    this.indicatedAirspeedSub.set(speed.value)
                 }
             }
         }

@@ -11,118 +11,281 @@ import {
     ContextualMenuElementImage,
     ContextualMenuElementValue,
 } from './ContextualMenu'
-import { PFD_AutopilotDisplay, PFD_Attitude, PFD_Altimeter, PFD_Compass } from './CommonPFD_MFD'
+import {
+    PFD_AutopilotDisplay,
+    PFD_Attitude,
+    PFD_Altimeter,
+    PFD_Compass,
+    AltimeterSubjects,
+} from './CommonPFD_MFD'
 import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
-import { FSComponent, DisplayComponent, VNode, ComponentProps, InputAcceleration, SimVarValueType } from '@microsoft/msfs-sdk'
-import { HorizontalCompassComponent, HorizontalCompassElementRefs } from './HorizontalCompass'
-import { CDIComponent, CDIElementRefs } from './CDI'
-import { HSIComponent, HSIElementRefs, HSIndicatorDisplayType } from './HSIndicator'
+import {
+    FSComponent,
+    DisplayComponent,
+    VNode,
+    ComponentProps,
+    InputAcceleration,
+    SimVarValueType,
+    Subject,
+    Subscription,
+} from '@microsoft/msfs-sdk'
+import { HorizontalCompassComponent } from './HorizontalCompass'
+import { CDIComponent } from './CDI'
+import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
 import { HighlightComponent, HighlightElementRefs } from './Highlight'
-import { APInfoBarComponent, APInfoBarElementRefs } from './APInfoBar'
-import { AttitudeIndicatorComponent, AttitudeIndicatorElementRefs, SlipSkidDisplayMode } from './AttitudeIndicator'
-import { AltimeterComponent, AltimeterElementRefs } from './Altimeter'
-import { AirspeedIndicatorComponent, AirspeedIndicatorElementRefs } from './AirspeedIndicator'
+import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
+import { AttitudeIndicatorComponent, SlipSkidDisplayMode } from './AttitudeIndicator'
+import { AltimeterComponent } from './Altimeter'
+import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 
-interface PfdRefs {
-    ap: APInfoBarElementRefs
-    attitude: AttitudeIndicatorElementRefs
-    altimeter: AltimeterElementRefs
-    airspeed: AirspeedIndicatorElementRefs
-    compass: HorizontalCompassElementRefs
-    cdi: CDIElementRefs
+export interface AttitudeSubjects {
+    pitch: Subject<number>
+    bank: Subject<number>
+    slipSkid: Subject<number>
+    fdActive: Subject<boolean>
+    fdPitch: Subject<number>
+    fdBark: Subject<number>
+    lowBankMode: Subject<boolean>
+}
+
+export interface AirspeedSubjects {
+    indicatedAirspeed: Subject<number>
+    trueAirspeed: Subject<number>
+    groundSpeed: Subject<number>
+    machSpeed: Subject<number>
+    displayRefSpeed: Subject<string>
+    refSpeedMach: Subject<number>
+    refSpeed: Subject<number>
+    airspeedTrend: Subject<number>
+    maxSpeed: Subject<number>
+    displayMach: Subject<boolean>
+    noTrueAirspeed: Subject<boolean>
+}
+
+export interface HSISubjects {
+    heading: Subject<number>
+    course: Subject<number>
+    cdiDeviation: Subject<number>
+    bearing1: Subject<number>
+    bearing2: Subject<number>
+    dmeDistance: Subject<number>
+    turnRate: Subject<number>
+    headingValue: Subject<string>
+    groundSpeedValue: Subject<string>
+    waypointDistanceValue: Subject<string>
+    waypointMode: Subject<string>
 }
 
 interface PfdContentProps extends ComponentProps {
-    onApi: (refs: PfdRefs) => void
+    apSubjects: APInfoBarSubjects
+    attitude: AttitudeSubjects
+    altimeter: AltimeterSubjects
+    airspeed: AirspeedSubjects
+    cdiSource: Subject<number>
+    cdiDeviation: Subject<number>
+    cdiVisible: Subject<boolean>
+    compassHeading: Subject<number>
+    compassTrack: Subject<number>
+    compassCourse: Subject<number>
 }
 
 class PfdContent extends DisplayComponent<PfdContentProps> {
-    onAfterRender() {
-        this.props.onApi({
-            ap: this.apRefs!,
-            attitude: this.attRefs!,
-            altimeter: this.altRefs!,
-            airspeed: this.spdRefs!,
-            compass: this.cmpRefs!,
-            cdi: this.cdiRefs!,
-        })
-    }
-
-    private apRefs: APInfoBarElementRefs
-    private attRefs: AttitudeIndicatorElementRefs
-    private altRefs: AltimeterElementRefs
-    private spdRefs: AirspeedIndicatorElementRefs
-    private cmpRefs: HorizontalCompassElementRefs
-    private cdiRefs: CDIElementRefs
-
     render(): VNode {
+        const att = this.props.attitude
+        const spd = this.props.airspeed
+        const alt = this.props.altimeter
         return (
             <>
-                <div id="AP"><APInfoBarComponent onApi={r => this.apRefs = r} /></div>
-                <div id="Horizon"><AttitudeIndicatorComponent verticalCenter={true} bottomY={215} slipSkidDisplayMode={SlipSkidDisplayMode.ROUND} showTurnRate={true} bankSizeRatio={-12} isBackup={false} onApi={r => this.attRefs = r} /></div>
-                <div id="Altimeter"><AltimeterComponent height={1020} VSStyle="Compact" onApi={r => this.altRefs = r} /></div>
-                <div id="Airspeed"><AirspeedIndicatorComponent height={850} noColor={false} onApi={r => this.spdRefs = r} /></div>
-                <div id="Compass"><HorizontalCompassComponent truncateLeft={50} truncateRight={78} spacing={50} groundTrackActive={true} onApi={r => this.cmpRefs = r} /></div>
-                <div id="CDI"><CDIComponent noScale={true} indicatorShape="Diamond" onApi={r => this.cdiRefs = r} /></div>
+                <div id="AP">
+                    <APInfoBarComponent {...this.props.apSubjects} />
+                </div>
+                <div id="Horizon">
+                    <AttitudeIndicatorComponent
+                        verticalCenter={true}
+                        bottomY={215}
+                        slipSkidDisplayMode={SlipSkidDisplayMode.ROUND}
+                        showTurnRate={true}
+                        bankSizeRatio={-12}
+                        isBackup={false}
+                        pitch={att.pitch}
+                        bank={att.bank}
+                        slipSkid={att.slipSkid}
+                        fdActive={att.fdActive}
+                        fdPitch={att.fdPitch}
+                        fdBark={att.fdBark}
+                        lowBankMode={att.lowBankMode}
+                    />
+                </div>
+                <div id="Altimeter">
+                    <AltimeterComponent
+                        height={1020}
+                        VSStyle="Compact"
+                        indicatedAltitude={alt.indicatedAltitude}
+                        baroPressure={alt.baroPressure}
+                        verticalSpeed={alt.verticalSpeed}
+                        referenceAltitude={alt.referenceAltitude}
+                        altitudeAlertState={alt.altitudeAlertState}
+                        referenceVspeed={alt.referenceVspeed}
+                        verticalDeviationMode={alt.verticalDeviationMode}
+                        verticalDeviationValue={alt.verticalDeviationValue}
+                    />
+                </div>
+                <div id="Airspeed">
+                    <AirspeedIndicatorComponent
+                        height={850}
+                        noColor={false}
+                        indicatedAirspeed={spd.indicatedAirspeed}
+                        trueAirspeed={spd.trueAirspeed}
+                        groundSpeed={spd.groundSpeed}
+                        machSpeed={spd.machSpeed}
+                        displayRefSpeed={spd.displayRefSpeed}
+                        refSpeedMach={spd.refSpeedMach}
+                        refSpeed={spd.refSpeed}
+                        airspeedTrend={spd.airspeedTrend}
+                        maxSpeed={spd.maxSpeed}
+                        displayMach={spd.displayMach}
+                        noTrueAirspeed={spd.noTrueAirspeed}
+                    />
+                </div>
+                <div id="Compass">
+                    <HorizontalCompassComponent
+                        truncateLeft={50}
+                        truncateRight={78}
+                        spacing={50}
+                        groundTrackActive={true}
+                        heading={this.props.compassHeading}
+                        track={this.props.compassTrack}
+                        course={this.props.compassCourse}
+                    />
+                </div>
+                <div id="CDI">
+                    <CDIComponent
+                        noScale={true}
+                        indicatorShape="Diamond"
+                        cdiSource={this.props.cdiSource}
+                        cdiDeviation={this.props.cdiDeviation}
+                        isVisible={this.props.cdiVisible}
+                    />
+                </div>
             </>
-        );
+        )
     }
-}
-
-interface MfdRefs {
-    hsi: HSIElementRefs
-    selectedHeadingValue: HTMLElement
-    groundSpeedValue: HTMLElement
-    waypointDistanceValue: HTMLElement
 }
 
 interface MfdContentProps extends ComponentProps {
-    onApi: (refs: MfdRefs) => void
+    hsi: HSISubjects
+    groundSpeedEl: Subject<HTMLElement | null>
+    waypointDistanceEl: Subject<HTMLElement | null>
+    headingValueEl: Subject<HTMLElement | null>
 }
 
 class MfdContent extends DisplayComponent<MfdContentProps> {
-    private hsiRefs: HSIElementRefs
     private readonly shvRef = FSComponent.createRef<HTMLDivElement>()
     private readonly gsvRef = FSComponent.createRef<HTMLDivElement>()
     private readonly wdvRef = FSComponent.createRef<HTMLDivElement>()
 
+    private readonly subs: Subscription[] = []
+
     onAfterRender() {
-        this.props.onApi({
-            hsi: this.hsiRefs!,
-            selectedHeadingValue: this.shvRef.getOrDefault()!,
-            groundSpeedValue: this.gsvRef.getOrDefault()!,
-            waypointDistanceValue: this.wdvRef.getOrDefault()!,
-        })
+        this.props.groundSpeedEl.set(this.gsvRef.getOrDefault())
+        this.props.waypointDistanceEl.set(this.wdvRef.getOrDefault())
+        this.props.headingValueEl.set(this.shvRef.getOrDefault())
+
+        const headingEl = this.shvRef.getOrDefault()!
+        const gsEl = this.gsvRef.getOrDefault()!
+        const wdEl = this.wdvRef.getOrDefault()!
+
+        this.subs.push(
+            this.props.hsi.headingValue.sub(v => {
+                headingEl.textContent = v
+            }, true),
+            this.props.hsi.groundSpeedValue.sub(v => {
+                gsEl.textContent = v
+            }, true),
+            this.props.hsi.waypointDistanceValue.sub(v => {
+                wdEl.textContent = v
+            }, true),
+            this.props.hsi.waypointMode.sub(v => {
+                wdEl.setAttribute('mode', v)
+            }, true)
+        )
+    }
+
+    destroy(): void {
+        this.subs.forEach(s => s.destroy())
+        super.destroy()
     }
 
     render(): VNode {
+        const hsi = this.props.hsi
         return (
             <>
-                <div id="HSICompass"><HSIComponent noHeadingValue={true} noCourseValue={true} noCenterText={false} noTurnRateIndicator={false} noBackground={false} noAffectSimRadioNav={false} largeCompass={false} displayStyle={HSIndicatorDisplayType.GlassCockpit} fmsAlias="" onApi={r => this.hsiRefs = r} /></div>
+                <div id="HSICompass">
+                    <HSIComponent
+                        noHeadingValue={true}
+                        noCourseValue={true}
+                        noCenterText={false}
+                        noTurnRateIndicator={false}
+                        noBackground={false}
+                        noAffectSimRadioNav={false}
+                        largeCompass={false}
+                        displayStyle={HSIndicatorDisplayType.GlassCockpit}
+                        fmsAlias=""
+                        heading={hsi.heading}
+                        course={hsi.course}
+                        cdiDeviation={hsi.cdiDeviation}
+                        bearing1={hsi.bearing1}
+                        bearing2={hsi.bearing2}
+                        dmeDistance={hsi.dmeDistance}
+                        turnRate={hsi.turnRate}
+                        headingValue={hsi.headingValue}
+                        groundSpeedValue={hsi.groundSpeedValue}
+                        waypointDistanceValue={hsi.waypointDistanceValue}
+                        waypointMode={hsi.waypointMode}
+                    />
+                </div>
                 <div id="Infos">
                     <div id="SelectedHeading">
                         <svg id="SelectedHeadingSymbol" viewBox="0 0 50 100">
                             <path d="M0,0 h50 v30 l-30,20 l30,20 v30 h-50 Z" fill="aqua" />
                         </svg>
-                        <div id="SelectedHeadingValue" ref={this.shvRef}>060°</div>
+                        <div id="SelectedHeadingValue" ref={this.shvRef}>
+                            060°
+                        </div>
                     </div>
                     <div id="GroundSpeed">
                         <div>GS KT</div>
-                        <div id="GroundSpeedValue" ref={this.gsvRef}>202</div>
+                        <div id="GroundSpeedValue" ref={this.gsvRef}>
+                            202
+                        </div>
                     </div>
                     <div id="WaypointDistance">
                         <div>DIST NM</div>
-                        <div id="WaypointDistanceValue" ref={this.wdvRef}>371</div>
+                        <div id="WaypointDistanceValue" ref={this.wdvRef}>
+                            371
+                        </div>
                     </div>
                 </div>
             </>
-        );
+        )
     }
 }
 
 interface InstrumentProps extends ComponentProps {
-    onPfdApi: (refs: PfdRefs) => void
-    onMfdApi: (refs: MfdRefs) => void
+    apSubjects: APInfoBarSubjects
+    attitude: AttitudeSubjects
+    altimeter: AltimeterSubjects
+    airspeed: AirspeedSubjects
+    cdiSource: Subject<number>
+    cdiDeviation: Subject<number>
+    cdiVisible: Subject<boolean>
+    compassHeading: Subject<number>
+    compassTrack: Subject<number>
+    compassCourse: Subject<number>
+    hsi: HSISubjects
+    groundSpeedEl: Subject<HTMLElement | null>
+    waypointDistanceEl: Subject<HTMLElement | null>
+    headingValueEl: Subject<HTMLElement | null>
     onHighlightApi: (refs: HighlightElementRefs) => void
 }
 
@@ -135,14 +298,30 @@ class AS5Instrument extends DisplayComponent<InstrumentProps> {
                 </div>
                 <div id="PageContainer">
                     <div id="PFD">
-                        <PfdContent onApi={this.props.onPfdApi} />
+                        <PfdContent
+                            apSubjects={this.props.apSubjects}
+                            attitude={this.props.attitude}
+                            altimeter={this.props.altimeter}
+                            airspeed={this.props.airspeed}
+                            cdiSource={this.props.cdiSource}
+                            cdiDeviation={this.props.cdiDeviation}
+                            cdiVisible={this.props.cdiVisible}
+                            compassHeading={this.props.compassHeading}
+                            compassTrack={this.props.compassTrack}
+                            compassCourse={this.props.compassCourse}
+                        />
                     </div>
                     <div id="MFD">
-                        <MfdContent onApi={this.props.onMfdApi} />
+                        <MfdContent
+                            hsi={this.props.hsi}
+                            groundSpeedEl={this.props.groundSpeedEl}
+                            waypointDistanceEl={this.props.waypointDistanceEl}
+                            headingValueEl={this.props.headingValueEl}
+                        />
                     </div>
                 </div>
             </>
-        );
+        )
     }
 }
 
@@ -179,52 +358,103 @@ export class AS5 extends NavSystem {
         )
         this.selectionValueWindow.setGPS(this)
 
-        const pfd = this.pageGroups[0].pages[0] as AS5_PFD;
-        const mfd = this.pageGroups[0].pages[1] as AS5_MFD;
-        const pfdEls = pfd.element.elements;
-        const apDisplay = pfdEls[0] as PFD_AutopilotDisplay;
-        const attitude = pfdEls[1] as PFD_Attitude;
-        const airspeed = pfdEls[2] as PFD_Airspeed_Enhanced;
-        const altimeter = pfdEls[3] as PFD_Altimeter;
-        const compass = pfdEls[4] as AS5_PFD_Compass;
-        const cdi = pfdEls[5] as AS5_PFD_CDI;
-        const hsi = (mfd.element.elements[0] as AS5_MFD_HSI);
+        const pfd = this.pageGroups[0].pages[0] as AS5_PFD
+        const mfd = this.pageGroups[0].pages[1] as AS5_MFD
+        const pfdEls = pfd.element.elements
+        const apDisplay = pfdEls[0] as PFD_AutopilotDisplay
+        const attitude = pfdEls[1] as PFD_Attitude
+        const airspeed = pfdEls[2] as PFD_Airspeed_Enhanced
+        const altimeter = pfdEls[3] as PFD_Altimeter
+        const compass = pfdEls[4] as AS5_PFD_Compass
+        const cdi = pfdEls[5] as AS5_PFD_CDI
+        const hsi = mfd.element.elements[0] as AS5_MFD_HSI
+
+        const altimeterSubjects: AltimeterSubjects = {
+            indicatedAltitude: Subject.create(0),
+            baroPressure: Subject.create(0),
+            verticalSpeed: Subject.create(0),
+            referenceAltitude: Subject.create(0),
+            altitudeAlertState: Subject.create('BlueText'),
+            referenceVspeed: Subject.create('----'),
+            verticalDeviationMode: Subject.create('None'),
+            verticalDeviationValue: Subject.create(0),
+        }
+        altimeter.subjects = altimeterSubjects
+
+        const apSubjects: APInfoBarSubjects = {
+            apStatus: apDisplay.apStatusSubject,
+            apStatusDisplay: apDisplay.apStatusDisplaySubject,
+            apLateralActive: apDisplay.apLateralActiveSubject,
+            apLateralArmed: apDisplay.apLateralArmedSubject,
+            apVerticalActive: apDisplay.apVerticalActiveSubject,
+            apModeReference: apDisplay.apModeReferenceSubject,
+            apArmed: apDisplay.apArmedSubject,
+            apArmedReference: apDisplay.apArmedReferenceSubject,
+            apYDStatus: apDisplay.apYDStatusSubject,
+        }
+
+        const attSubjects: AttitudeSubjects = {
+            pitch: attitude.pitchSub,
+            bank: attitude.bankSub,
+            slipSkid: attitude.slipSkidSub,
+            fdActive: attitude.fdActiveSub,
+            fdPitch: attitude.fdPitchSub,
+            fdBark: attitude.fdBarkSub,
+            lowBankMode: attitude.lowBankModeSub,
+        }
+
+        const spdSubjects: AirspeedSubjects = {
+            indicatedAirspeed: airspeed.indicatedAirspeedSub,
+            trueAirspeed: airspeed.trueAirspeedSub,
+            groundSpeed: airspeed.groundSpeedSub,
+            machSpeed: airspeed.machSpeedSub,
+            displayRefSpeed: airspeed.displayRefSpeedSub,
+            refSpeedMach: airspeed.refSpeedMachSub,
+            refSpeed: airspeed.refSpeedSub,
+            airspeedTrend: airspeed.airspeedTrendSub,
+            maxSpeed: airspeed.maxSpeedSub,
+            displayMach: airspeed.displayMachSub,
+            noTrueAirspeed: airspeed.noTrueAirspeedSub,
+        }
+
+        const hsiSubjects: HSISubjects = {
+            heading: hsi.headingSub,
+            course: hsi.courseSub,
+            cdiDeviation: hsi.cdiDeviationSub,
+            bearing1: hsi.bearing1Sub,
+            bearing2: hsi.bearing2Sub,
+            dmeDistance: hsi.dmeDistanceSub,
+            turnRate: hsi.turnRateSub,
+            headingValue: hsi.headingValueSub,
+            groundSpeedValue: hsi.groundSpeedValueSub,
+            waypointDistanceValue: hsi.waypointDistanceValueSub,
+            waypointMode: hsi.waypointModeSub,
+        }
+
+        const groundSpeedEl = Subject.create<HTMLElement | null>(null)
+        const waypointDistanceEl = Subject.create<HTMLElement | null>(null)
+        const headingValueEl = Subject.create<HTMLElement | null>(null)
 
         FSComponent.render(
             <AS5Instrument
-                onHighlightApi={r => this.highlightRefs = r}
-                onPfdApi={r => {
-                    apDisplay.AP_LateralActive = r.ap.AP_LateralActive;
-                    apDisplay.AP_LateralArmed = r.ap.AP_LateralArmed;
-                    apDisplay.AP_Status = r.ap.AP_Status;
-                    apDisplay.AP_YDStatus = null;
-                    apDisplay.AP_FDIndicatorArrow = null;
-                    apDisplay.AP_VerticalActive = r.ap.AP_VerticalActive;
-                    apDisplay.AP_ModeReference = r.ap.AP_ModeReference;
-                    apDisplay.AP_Armed = r.ap.AP_Armed;
-                    apDisplay.AP_ArmedReference = r.ap.AP_ArmedReference;
-                    attitude.svg = r.attitude.root;
-                    altimeter.altimeterElement = r.altimeter.root;
-                    airspeed.airspeedElement = r.airspeed.root;
-                    compass.refs = r.compass;
-                    compass.bearingTextElement = r.compass.bearingText;
-                    compass.movingRibbonElement = r.compass.movingRibbon;
-                    compass.courseElement = r.compass.courseElement;
-                    compass.groundTrackElement = r.compass.groundTrackElement;
-                    compass.digitsElement = r.compass.digits;
-                    cdi.refs = r.cdi;
-                    cdi.rootElement = r.cdi.root;
-                }}
-                onMfdApi={r => {
-                    hsi.hsi = r.hsi.root;
-                    hsi.selectedHeadingValue = r.selectedHeadingValue;
-                    hsi.groundSpeedValue = r.groundSpeedValue;
-                    hsi.waypointDistanceValue = r.waypointDistanceValue;
-                }}
+                apSubjects={apSubjects}
+                attitude={attSubjects}
+                altimeter={altimeterSubjects}
+                airspeed={spdSubjects}
+                cdiSource={cdi.cdiSourceSub}
+                cdiDeviation={cdi.cdiDeviationSub}
+                cdiVisible={cdi.cdiVisibleSub}
+                compassHeading={compass.headingSub}
+                compassTrack={compass.trackSub}
+                compassCourse={compass.courseSub}
+                hsi={hsiSubjects}
+                groundSpeedEl={groundSpeedEl}
+                waypointDistanceEl={waypointDistanceEl}
+                headingValueEl={headingValueEl}
+                onHighlightApi={r => (this.highlightRefs = r)}
             />,
             this.getChildById('Electricity')
-        );
-
+        )
     }
 
     onUpdate(_deltaTime) {
@@ -280,8 +510,16 @@ export class AS5 extends NavSystem {
             value = SimVar.GetSimVarValue('KOHLSMAN SETTING HG:1', SimVarValueType.InHG)
             unit = 2
         }
-        SimVar.SetSimVarValue('L:AS5_' + this.instrumentIndex + '_Knob_Value', SimVarValueType.Number, value)
-        SimVar.SetSimVarValue('L:AS5_' + this.instrumentIndex + '_Knob_Unit', SimVarValueType.Number, unit)
+        SimVar.SetSimVarValue(
+            'L:AS5_' + this.instrumentIndex + '_Knob_Value',
+            SimVarValueType.Number,
+            value
+        )
+        SimVar.SetSimVarValue(
+            'L:AS5_' + this.instrumentIndex + '_Knob_Unit',
+            SimVarValueType.Number,
+            unit
+        )
     }
     UpdateSlider(_slider, _cursor, _index, _nbElem, _maxElems) {
         if (_nbElem > _maxElems) {
@@ -325,13 +563,27 @@ export class AS5 extends NavSystem {
         this.hdgKnobTarget = (((this.hdgKnobTarget + _sign * step) % 360) + 360) % 360
         SimVar.SetSimVarValue('K:HEADING_BUG_SET', SimVarValueType.Number, this.hdgKnobTarget)
     }
-    incrementHeading() { this.changeHeading(1) }
-    decrementHeading() { this.changeHeading(-1) }
+    incrementHeading() {
+        this.changeHeading(1)
+    }
+    decrementHeading() {
+        this.changeHeading(-1)
+    }
     syncHeading() {
-        SimVar.SetSimVarValue('K:HEADING_BUG_SET', SimVarValueType.Number, Math.round(Simplane.getHeadingMagnetic()))
+        SimVar.SetSimVarValue(
+            'K:HEADING_BUG_SET',
+            SimVarValueType.Number,
+            Math.round(Simplane.getHeadingMagnetic())
+        )
     }
     menuHeadingEnter() {
-        this.selectionValueElement.setContext('Select Heading', this.getMenuHeadingText.bind(this), this.incrementHeading.bind(this), this.decrementHeading.bind(this), this.syncHeading.bind(this))
+        this.selectionValueElement.setContext(
+            'Select Heading',
+            this.getMenuHeadingText.bind(this),
+            this.incrementHeading.bind(this),
+            this.decrementHeading.bind(this),
+            this.syncHeading.bind(this)
+        )
         this.selectionValueElement.rawValue = this.getMenuHeadingRawValue.bind(this)
         this.selectionValueElement.unit = 0
         this.switchToPopUpPage(this.selectionValueWindow)
@@ -347,27 +599,56 @@ export class AS5 extends NavSystem {
         const crs = Math.round(Simplane.getNavObs(1))
         return crs == 0 ? 360 : crs
     }
-    incrementCrs() { SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0) }
-    decrementCrs() { SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0) }
+    incrementCrs() {
+        SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0)
+    }
+    decrementCrs() {
+        SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0)
+    }
     menuCrsEnter() {
-        this.selectionValueElement.setContext('Select Course', this.getMenuCrsText.bind(this), this.incrementCrs.bind(this), this.decrementCrs.bind(this), this.syncCrs.bind(this))
+        this.selectionValueElement.setContext(
+            'Select Course',
+            this.getMenuCrsText.bind(this),
+            this.incrementCrs.bind(this),
+            this.decrementCrs.bind(this),
+            this.syncCrs.bind(this)
+        )
         this.selectionValueElement.rawValue = this.getMenuCrsRawValue.bind(this)
         this.selectionValueElement.unit = 0
         this.switchToPopUpPage(this.selectionValueWindow)
     }
     getMenuAltitudeText() {
-        return fastToFixed(SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet), 0) + 'ft'
+        return (
+            fastToFixed(
+                SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet),
+                0
+            ) + 'ft'
+        )
     }
     getMenuAltitudeRawValue() {
         return SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet)
     }
-    incrementAltitude() { SimVar.SetSimVarValue('K:AP_ALT_VAR_INC', SimVarValueType.Number, 100) }
-    decrementAltitude() { SimVar.SetSimVarValue('K:AP_ALT_VAR_DEC', SimVarValueType.Number, 100) }
+    incrementAltitude() {
+        SimVar.SetSimVarValue('K:AP_ALT_VAR_INC', SimVarValueType.Number, 100)
+    }
+    decrementAltitude() {
+        SimVar.SetSimVarValue('K:AP_ALT_VAR_DEC', SimVarValueType.Number, 100)
+    }
     syncAltitude() {
-        SimVar.SetSimVarValue('K:AP_ALT_VAR_SET_ENGLISH', SimVarValueType.Number, Math.round(Simplane.getAltitude() / 100) * 100)
+        SimVar.SetSimVarValue(
+            'K:AP_ALT_VAR_SET_ENGLISH',
+            SimVarValueType.Number,
+            Math.round(Simplane.getAltitude() / 100) * 100
+        )
     }
     menuAltitudeEnter() {
-        this.selectionValueElement.setContext('Select Altitude', this.getMenuAltitudeText.bind(this), this.incrementAltitude.bind(this), this.decrementAltitude.bind(this), this.syncAltitude.bind(this))
+        this.selectionValueElement.setContext(
+            'Select Altitude',
+            this.getMenuAltitudeText.bind(this),
+            this.incrementAltitude.bind(this),
+            this.decrementAltitude.bind(this),
+            this.syncAltitude.bind(this)
+        )
         this.selectionValueElement.rawValue = this.getMenuAltitudeRawValue.bind(this)
         this.selectionValueElement.unit = 1
         this.switchToPopUpPage(this.selectionValueWindow)
@@ -393,15 +674,37 @@ export class AS5_PFD extends NavSystemPage {
     init() {
         super.init()
         this.defaultMenu = new ContextualMenu('', [
-            new ContextualMenuElementImage('Back', this.gps.SwitchToInteractionState.bind(this.gps, 0), '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png', false),
-            new ContextualMenuElementValue('Heading', this.gps.menuHeadingEnter.bind(this.gps), this.gps.getMenuHeadingText.bind(this.gps), false),
-            new ContextualMenuElementValue('Altitude', this.gps.menuAltitudeEnter.bind(this.gps), this.gps.getMenuAltitudeText.bind(this.gps), false),
+            new ContextualMenuElementImage(
+                'Back',
+                this.gps.SwitchToInteractionState.bind(this.gps, 0),
+                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
+                false
+            ),
+            new ContextualMenuElementValue(
+                'Heading',
+                this.gps.menuHeadingEnter.bind(this.gps),
+                this.gps.getMenuHeadingText.bind(this.gps),
+                false
+            ),
+            new ContextualMenuElementValue(
+                'Altitude',
+                this.gps.menuAltitudeEnter.bind(this.gps),
+                this.gps.getMenuAltitudeText.bind(this.gps),
+                false
+            ),
             new ContextualMenuElementValue('Pitch', null, () => '-----°', true),
-            new ContextualMenuElementImage('MFD', this.gps.SwitchToPageName.bind(this.gps, 'Main', 'MFD'), '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/MFD.png', false),
+            new ContextualMenuElementImage(
+                'MFD',
+                this.gps.SwitchToPageName.bind(this.gps, 'Main', 'MFD'),
+                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/MFD.png',
+                false
+            ),
         ])
     }
 
-    onUpdate(deltaTime) { super.onUpdate(deltaTime) }
+    onUpdate(deltaTime) {
+        super.onUpdate(deltaTime)
+    }
 }
 export class AS5_MFD extends NavSystemPage {
     gps: any
@@ -416,117 +719,141 @@ export class AS5_MFD extends NavSystemPage {
     init() {
         super.init()
         this.defaultMenu = new ContextualMenu('', [
-            new ContextualMenuElementImage('Back', this.gps.SwitchToInteractionState.bind(this.gps, 0), '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png', false),
-            new ContextualMenuElementValue('Heading', this.gps.menuHeadingEnter.bind(this.gps), this.gps.getMenuHeadingText.bind(this.gps), false),
-            new ContextualMenuElementValue('Course', this.gps.menuCrsEnter.bind(this.gps), this.gps.getMenuCrsText.bind(this.gps), false),
-            new ContextualMenuElementImage('PFD', this.gps.SwitchToPageName.bind(this.gps, 'Main', 'PFD'), '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png', false),
+            new ContextualMenuElementImage(
+                'Back',
+                this.gps.SwitchToInteractionState.bind(this.gps, 0),
+                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
+                false
+            ),
+            new ContextualMenuElementValue(
+                'Heading',
+                this.gps.menuHeadingEnter.bind(this.gps),
+                this.gps.getMenuHeadingText.bind(this.gps),
+                false
+            ),
+            new ContextualMenuElementValue(
+                'Course',
+                this.gps.menuCrsEnter.bind(this.gps),
+                this.gps.getMenuCrsText.bind(this.gps),
+                false
+            ),
+            new ContextualMenuElementImage(
+                'PFD',
+                this.gps.SwitchToPageName.bind(this.gps, 'Main', 'PFD'),
+                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png',
+                false
+            ),
         ])
     }
 }
 export class AS5_PFD_Compass extends NavSystemElement {
-    refs: HorizontalCompassElementRefs | undefined
-    course: number = 0
-    bearingTextElement: SVGElement | undefined
-    movingRibbonElement: SVGElement | undefined
-    courseElement: SVGElement | undefined
-    groundTrackElement: SVGElement | undefined
-    digitsElement: SVGElement[] | undefined
-    spacing: number = 50
+    headingSub = Subject.create(0)
+    trackSub = Subject.create(0)
+    courseSub = Subject.create(0)
 
     init(_root) {}
     onEnter() {}
     onUpdate(_deltaTime) {
-        if (!this.movingRibbonElement) return
-        const bearing = Simplane.getHeadingMagnetic();
-        const track = Simplane.getTrackAngle();
-        const roundedBearing = Math.round(bearing / 10) * 10;
-        const bearingString = Math.round(bearing) + '';
-        diffAndSetText(this.bearingTextElement, '000'.slice(0, 3 - bearingString.length) + bearingString);
-        for (let i = -8; i <= 8; i++) {
-            const string = ((roundedBearing + i * 10 + 360) % 360) + '';
-            diffAndSetText(this.digitsElement[i + 8], '000'.slice(0, 3 - string.length) + string);
-        }
-        diffAndSetAttribute(this.movingRibbonElement, 'transform', 'translate(' + (roundedBearing - bearing) * (this.spacing / 10) + ',0)');
-        this.course = parseFloat(Simplane.getAutoPilotDisplayedHeadingLockValueDegrees() + '');
-        diffAndSetAttribute(this.courseElement, 'transform', 'translate(' + Avionics.Utils.diffAngle(bearing, this.course) * (this.spacing / 10) + ',0)');
-        diffAndSetAttribute(this.groundTrackElement, 'transform', 'translate(' + Avionics.Utils.diffAngle(bearing, track) * (this.spacing / 10) + ',0)');
+        this.headingSub.set(Simplane.getHeadingMagnetic())
+        this.trackSub.set(Simplane.getTrackAngle())
+        this.courseSub.set(parseFloat(Simplane.getAutoPilotDisplayedHeadingLockValueDegrees() + ''))
     }
     onExit() {}
     onEvent(_event) {}
 }
 export class AS5_PFD_CDI extends NavSystemElement {
-    refs: CDIElementRefs | undefined
-    rootElement: SVGElement | undefined
+    cdiSourceSub = Subject.create(3)
+    cdiDeviationSub = Subject.create(0)
+    cdiVisibleSub = Subject.create(false)
 
     init(_root) {}
     onEnter() {}
     onUpdate(_deltaTime) {
-        if (!this.rootElement) return
-        const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool) ? 3 : Simplane.getAutoPilotSelectedNav()
+        const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
+            ? 3
+            : Simplane.getAutoPilotSelectedNav()
         switch (cdiSource) {
-            case 1: case 2:
-                diffAndSetStyle(this.rootElement, StyleProperty.display, Simplane.getNavHasNav(cdiSource) ? 'inherit' : 'none')
-                diffAndSetAttribute(this.rootElement, 'deviation', SimVar.GetSimVarValue('NAV CDI:' + cdiSource, SimVarValueType.Number) / 127 + '')
-                diffAndSetAttribute(this.refs.deviationIndicator, 'fill', 'lime')
+            case 1:
+            case 2:
+                this.cdiVisibleSub.set(Simplane.getNavHasNav(cdiSource))
+                this.cdiDeviationSub.set(
+                    SimVar.GetSimVarValue('NAV CDI:' + cdiSource, SimVarValueType.Number) / 127
+                )
+                this.cdiSourceSub.set(cdiSource)
                 break
             case 3:
-                diffAndSetStyle(this.rootElement, StyleProperty.display, SimVar.GetSimVarValue('GPS WP NEXT ID', SimVarValueType.String) != '' ? 'inherit' : 'none')
-                diffAndSetAttribute(this.rootElement, 'deviation', SimVar.GetSimVarValue('GPS WP CROSS TRK', SimVarValueType.NM))
-                diffAndSetAttribute(this.refs.deviationIndicator, 'fill', 'magenta')
+                this.cdiVisibleSub.set(
+                    SimVar.GetSimVarValue('GPS WP NEXT ID', SimVarValueType.String) != ''
+                )
+                this.cdiDeviationSub.set(
+                    SimVar.GetSimVarValue('GPS WP CROSS TRK', SimVarValueType.NM)
+                )
+                this.cdiSourceSub.set(3)
                 break
         }
-        const needleValue = SimVar.GetSimVarValue('HSI CDI NEEDLE', SimVarValueType.Number) || 0
-        const clampedPosition = (needleValue / 127) * 45
-        diffAndSetAttribute(this.refs.deviationIndicator, 'transform', `translate(${clampedPosition}, 0)`)
     }
     onExit() {}
     onEvent(_event) {}
 }
 export class AS5_MFD_HSI extends PFD_Compass {
-    selectedHeadingValue: HTMLElement
-    groundSpeedValue: HTMLElement
-    waypointDistanceValue: HTMLElement
+    headingValueSub = Subject.create('---°')
+    groundSpeedValueSub = Subject.create('0')
+    waypointDistanceValueSub = Subject.create('---')
+    waypointModeSub = Subject.create('GPS')
+
     private _cdiSource: number = 0
     private _dmeSource: number = 0
 
-    set cdiSource(_val: number) { this._cdiSource = _val }
-    get cdiSource(): number { return this._cdiSource }
-    set dmeSource(_val: number) { this._dmeSource = _val }
-    get dmeSource(): number { return this._dmeSource }
+    set cdiSource(_val: number) {
+        this._cdiSource = _val
+    }
+    get cdiSource(): number {
+        return this._cdiSource
+    }
+    set dmeSource(_val: number) {
+        this._dmeSource = _val
+    }
+    get dmeSource(): number {
+        return this._dmeSource
+    }
 
     init(_root) {}
 
     onUpdate(_deltaTime) {
-        if (!this.hsi) return
-        if (this.selectedHeadingValue) {
-            let headingValue = parseFloat(this.hsi.getAttribute('heading_bug_rotation'))
-            if (headingValue == 0) headingValue = 360
-            const hdg = fastToFixed(headingValue, 0)
-            diffAndSetText(this.selectedHeadingValue, '000'.slice(hdg.length) + hdg + '°')
-        }
-        if (this.groundSpeedValue) {
-            diffAndSetText(this.groundSpeedValue, fastToFixed(Simplane.getGroundSpeed(), 0) + '')
-        }
+        let headingValue = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
+        if (headingValue == 0) headingValue = 360
+        const hdg = fastToFixed(headingValue, 0)
+        this.headingValueSub.set('000'.slice(hdg.length) + hdg + '\u00B0')
+
+        this.groundSpeedValueSub.set(fastToFixed(Simplane.getGroundSpeed(), 0) + '')
+
         if ((this.cdiSource == 1 || this.cdiSource == 2) && this.dmeSource != this.cdiSource) {
             this.dmeSource = this.cdiSource
         } else {
-            if (this.waypointDistanceValue) {
-                let distanceText = '---'
-                switch (this.cdiSource) {
-                    case 1: case 2:
-                        const distance = parseFloat(this.hsi.getAttribute('dme_distance'))
-                        if (!isNaN(distance)) distanceText = fastToFixed(distance, 1)
-                        diffAndSetText(this.waypointDistanceValue, distanceText)
-                        diffAndSetAttribute(this.waypointDistanceValue, 'mode', 'VOR')
-                        break
-                    case 3:
-                        if (SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) == true)
-                            distanceText = fastToFixed(SimVar.GetSimVarValue('GPS WP DISTANCE', SimVarValueType.NM), 1)
-                        diffAndSetText(this.waypointDistanceValue, distanceText)
-                        diffAndSetAttribute(this.waypointDistanceValue, 'mode', 'GPS')
-                        break
+            let distanceText = '---'
+            let mode = 'GPS'
+            switch (this.cdiSource) {
+                case 1:
+                case 2: {
+                    const dmeDist = Simplane.getNavDme(this.cdiSource)
+                    if (!isNaN(dmeDist)) distanceText = fastToFixed(dmeDist, 1)
+                    mode = 'VOR'
+                    break
                 }
+                case 3:
+                    if (
+                        SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) ==
+                        true
+                    )
+                        distanceText = fastToFixed(
+                            SimVar.GetSimVarValue('GPS WP DISTANCE', SimVarValueType.NM),
+                            1
+                        )
+                    mode = 'GPS'
+                    break
             }
+            this.waypointDistanceValueSub.set(distanceText)
+            this.waypointModeSub.set(mode)
         }
     }
 }
@@ -554,17 +881,33 @@ export class AS5_SelectionValueElement extends NavSystemElement {
     onUpdate(_deltaTime) {
         if (this.getCallback && this.value) diffAndSetText(this.value, this.getCallback())
     }
-    onExit() { diffAndSetAttribute(this.window, 'state', 'Inactive') }
+    onExit() {
+        diffAndSetAttribute(this.window, 'state', 'Inactive')
+    }
     onEvent(_event) {
         switch (_event) {
-            case 'Knob_Inc': if (this.incCallback) this.incCallback(); break
-            case 'Knob_Dec': if (this.decCallback) this.decCallback(); break
-            case 'Knob_Push': this.gps.closePopUpElement(); break
-            case 'Knob_Long_Push': if (this.syncCallback) this.syncCallback(); break
+            case 'Knob_Inc':
+                if (this.incCallback) this.incCallback()
+                break
+            case 'Knob_Dec':
+                if (this.decCallback) this.decCallback()
+                break
+            case 'Knob_Push':
+                this.gps.closePopUpElement()
+                break
+            case 'Knob_Long_Push':
+                if (this.syncCallback) this.syncCallback()
+                break
         }
     }
 
-    setContext(_titleText, _getCallback, _incCallback = EmptyCallback.Void, _decCallback = EmptyCallback.Void, _syncCallback = EmptyCallback.Void) {
+    setContext(
+        _titleText,
+        _getCallback,
+        _incCallback = EmptyCallback.Void,
+        _decCallback = EmptyCallback.Void,
+        _syncCallback = EmptyCallback.Void
+    ) {
         diffAndSetText(this.title, _titleText)
         this.getCallback = _getCallback
         this.incCallback = _incCallback

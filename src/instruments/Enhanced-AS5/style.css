@@ -285,16 +285,10 @@ as5-element #ContextualMenu #ContextualMenuElements .ContextualMenuElement {
     border: solid 2px grey;
     line-height: 1.2;
 }
-as5-element
-    #ContextualMenu
-    #ContextualMenuElements
-    .ContextualMenuElement[state='Selected'] {
+as5-element #ContextualMenu #ContextualMenuElements .ContextualMenuElement[state='Selected'] {
     border-color: aqua;
 }
-as5-element
-    #ContextualMenu
-    #ContextualMenuElements
-    .ContextualMenuElement[state='Inactive'],
+as5-element #ContextualMenu #ContextualMenuElements .ContextualMenuElement[state='Inactive'],
 as5-element
     #ContextualMenu
     #ContextualMenuElements
@@ -389,19 +383,11 @@ as5-element #PFD .airspeed-indicator .airspeed-reference-group {
 }
 as5-element #PFD .airspeed-indicator .airspeed-reference-group .background {
 }
-as5-element
-    #PFD
-    .airspeed-indicator
-    .airspeed-reference-group
-    .selected-speed-fixed-bug {
+as5-element #PFD .airspeed-indicator .airspeed-reference-group .selected-speed-fixed-bug {
 }
 as5-element #PFD .airspeed-indicator .airspeed-reference-group .selected-speed-text {
 }
-as5-element
-    #PFD
-    .airspeed-indicator
-    .airspeed-reference-group
-    .selected-speed-text-mach {
+as5-element #PFD .airspeed-indicator .airspeed-reference-group .selected-speed-text-mach {
 }
 as5-element #PFD .airspeed-indicator #shadowGradient {
 }
