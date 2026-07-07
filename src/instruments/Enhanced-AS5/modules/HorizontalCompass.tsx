@@ -34,6 +34,15 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
     private readonly courseBugTransform: MappedSubject<[number, number], string>
     private readonly trackBugTransform: MappedSubject<[number, number], string>
 
+    // Ribbon scroll transform
+    private readonly ribbonTransform: MappedSubject<[number], string>
+
+    // Bearing text (center display showing current heading, e.g. "270")
+    private readonly bearingText: MappedSubject<[number], string>
+
+    // Ribbon digit labels (17 marks spanning ±80° in 10° increments)
+    private readonly digitTextSubjects: MappedSubject<[number], string>[] = []
+
     constructor(props: HorizontalCompassProps) {
         super(props)
         const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
@@ -55,6 +64,44 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
             this.heading,
             this.track
         )
+
+        // --- Ribbon scroll transform ---
+        this.ribbonTransform = MappedSubject.create(([hdg]) => {
+            const roundedBearing = Math.round(hdg / 10) * 10
+            return `translate(${(roundedBearing - hdg) * pxPerDeg}, 0)`
+        }, this.heading)
+
+        // --- Center bearing text (padded to 3 digits) ---
+        this.bearingText = MappedSubject.create(([hdg]) => {
+            const bearingString = Math.round(hdg) + ''
+            return '000'.slice(0, 3 - bearingString.length) + bearingString
+        }, this.heading)
+
+        // --- Ribbon digit labels (17 marks at 10° intervals) ---
+        for (let i = 0; i < 17; i++) {
+            const idx = i - 8 // -8 … +8 → ±80°
+            this.digitTextSubjects.push(
+                MappedSubject.create(([hdg]) => {
+                    const roundedBearing = Math.round(hdg / 10) * 10
+                    const digitString = ((roundedBearing + idx * 10 + 360) % 360) + ''
+                    return '000'.slice(0, 3 - digitString.length) + digitString
+                }, this.heading)
+            )
+        }
+    }
+
+    destroy(): void {
+        this.heading.destroy()
+        this.track.destroy()
+        this.course.destroy()
+
+        this.courseBugTransform.destroy()
+        this.trackBugTransform.destroy()
+        this.ribbonTransform.destroy()
+        this.bearingText.destroy()
+        this.digitTextSubjects.forEach(s => s.destroy())
+
+        super.destroy()
     }
 
     get spacing(): number {
@@ -77,35 +124,6 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
     }
     get fontFamily(): string {
         return 'Montserrat-Bold'
-    }
-
-    onAfterRender(): void {
-        this.heading.sub(() => {
-            this.updateBearingDisplay()
-        })
-    }
-
-    private updateBearingDisplay(): void {
-        const heading = this.heading.get()
-        const roundedBearing = Math.round(heading / 10) * 10
-        const bearingString = Math.round(heading) + ''
-
-        const bearingText = this.bearingTextRef.getOrDefault()
-        if (bearingText)
-            bearingText.textContent = '000'.slice(0, 3 - bearingString.length) + bearingString
-
-        for (let i = -8; i <= 8; i++) {
-            const digitString = ((roundedBearing + i * 10 + 360) % 360) + ''
-            const digitEl = this.digitRefs[i + 8].getOrDefault()
-            if (digitEl) digitEl.textContent = '000'.slice(0, 3 - digitString.length) + digitString
-        }
-
-        const movingRibbon = this.movingRibbonRef.getOrDefault()
-        if (movingRibbon)
-            movingRibbon.setAttribute(
-                'transform',
-                'translate(' + (roundedBearing - heading) * (this.props.spacing / 10) + ',0)'
-            )
     }
 
     render(): VNode {
@@ -150,7 +168,11 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                     fill="#1a1d21"
                     fill-opacity="0.25"
                 />
-                <g ref={this.movingRibbonRef} class="moving-ribbon">
+                <g
+                    ref={this.movingRibbonRef}
+                    class="moving-ribbon"
+                    transform={this.ribbonTransform}
+                >
                     {[...Array(17)].map((_, i) => {
                         const idx = i - 8
                         return (
@@ -165,7 +187,7 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                                 font-family={this.fontFamily}
                                 letter-spacing="0.1em"
                             >
-                                XXX
+                                {this.digitTextSubjects[i].map(v => v)}
                             </text>
                         )
                     })}
@@ -215,7 +237,7 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                         font-size="14"
                         font-family={this.fontFamily}
                     >
-                        XXX
+                        {this.bearingText.map(v => v)}
                     </text>
                 </g>
             </svg>
