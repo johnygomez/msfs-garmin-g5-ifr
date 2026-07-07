@@ -1,5 +1,12 @@
-import { DisplayComponent, FSComponent, VNode, ComponentProps } from '@microsoft/msfs-sdk';
-import { SimVarValueType } from '@microsoft/msfs-sdk';
+import {
+    DisplayComponent,
+    FSComponent,
+    VNode,
+    ComponentProps,
+    Subject,
+    Subscription,
+} from '@microsoft/msfs-sdk'
+import { SimVarValueType } from '@microsoft/msfs-sdk'
 
 export enum HSIndicatorDisplayType {
     GlassCockpit = 0,
@@ -7,112 +14,102 @@ export enum HSIndicatorDisplayType {
     HUD_Simplified = 2,
 }
 
-export interface HSIElementRefs {
-    root: SVGSVGElement;
-    rotatingRose: SVGGElement;
-    headingBug: SVGPolygonElement;
-    courseGroup: SVGGElement;
-    courseDeviationNeedle: SVGPolygonElement;
-    beginArrow: SVGPolygonElement;
-    endArrow: SVGPolygonElement;
-    toIndicator: SVGPolygonElement;
-    fromIndicator: SVGPolygonElement;
-    turnRateArc: SVGPathElement;
-    navSource: SVGTextElement;
-    flightPhase: SVGTextElement;
-    flightPhaseBg: SVGRectElement;
-    xtk: SVGTextElement;
-    xtkBg: SVGRectElement;
-    dmeGroup: SVGGElement;
-    dmeSource: SVGTextElement;
-    dmeIdent: SVGTextElement;
-    dmeDistance: SVGTextElement;
-    bearing1: SVGGElement;
-    bearing2: SVGGElement;
-    innerCircle: SVGCircleElement;
-    bearing1FixedGroup: SVGGElement;
-    bearing2FixedGroup: SVGGElement;
-    bearing1Source: SVGTextElement;
-    bearing1Ident: SVGTextElement;
-    bearing1Distance: SVGTextElement;
-    bearing2Source: SVGTextElement;
-    bearing2Ident: SVGTextElement;
-    bearing2Distance: SVGTextElement;
-    bearingText: SVGTextElement | null;
-    headingValue: SVGTextElement | null;
-    courseValue: SVGTextElement | null;
-    currentTrackIndicator: SVGPolygonElement | null;
-    chevronBug2: SVGElement | null;
-    diamondBug2: SVGElement | null;
-    hollowDiamondBug2: SVGElement | null;
+export interface HSIComponentProps extends ComponentProps {
+    noHeadingValue: boolean
+    noCourseValue: boolean
+    noCenterText: boolean
+    noTurnRateIndicator: boolean
+    noBackground: boolean
+    noAffectSimRadioNav: boolean
+    largeCompass: boolean
+    displayStyle: HSIndicatorDisplayType
+    fmsAlias: string
+    chevronBug2?: SVGElement
+    diamondBug2?: SVGElement
+    hollowDiamondBug2?: SVGElement
+    heading: Subject<number>
+    course: Subject<number>
+    cdiDeviation: Subject<number>
+    bearing1: Subject<number>
+    bearing2: Subject<number>
+    dmeDistance: Subject<number>
+    turnRate: Subject<number>
+    headingValue: Subject<string>
+    groundSpeedValue: Subject<string>
+    waypointDistanceValue: Subject<string>
+    waypointMode: Subject<string>
 }
 
-export interface HSIProps extends ComponentProps {
-    noHeadingValue: boolean;
-    noCourseValue: boolean;
-    noCenterText: boolean;
-    noTurnRateIndicator: boolean;
-    noBackground: boolean;
-    noAffectSimRadioNav: boolean;
-    largeCompass: boolean;
-    displayStyle: HSIndicatorDisplayType;
-    fmsAlias: string;
-    chevronBug2?: SVGElement;
-    diamondBug2?: SVGElement;
-    hollowDiamondBug2?: SVGElement;
-    onApi: (refs: HSIElementRefs) => void;
-}
-
-export class HSIComponent extends DisplayComponent<HSIProps> {
+export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     chevronBug2: any
     diamondBug2: any
     hollowDiamondBug2: any
 
-    private readonly rootRef = FSComponent.createRef<SVGSVGElement>();
-    private readonly rotatingRoseRef = FSComponent.createRef<SVGGElement>();
-    private readonly headingBugRef = FSComponent.createRef<SVGPolygonElement>();
-    private readonly courseGroupRef = FSComponent.createRef<SVGGElement>();
-    private readonly courseDeviationNeedleRef = FSComponent.createRef<SVGPolygonElement>();
-    private readonly beginArrowRef = FSComponent.createRef<SVGPolygonElement>();
-    private readonly endArrowRef = FSComponent.createRef<SVGPolygonElement>();
-    private readonly toIndicatorRef = FSComponent.createRef<SVGPolygonElement>();
-    private readonly fromIndicatorRef = FSComponent.createRef<SVGPolygonElement>();
-    private readonly turnRateArcRef = FSComponent.createRef<SVGPathElement>();
-    private readonly navSourceRef = FSComponent.createRef<SVGTextElement>();
-    private readonly flightPhaseRef = FSComponent.createRef<SVGTextElement>();
-    private readonly flightPhaseBgRef = FSComponent.createRef<SVGRectElement>();
-    private readonly xtkRef = FSComponent.createRef<SVGTextElement>();
-    private readonly xtkBgRef = FSComponent.createRef<SVGRectElement>();
-    private readonly dmeGroupRef = FSComponent.createRef<SVGGElement>();
-    private readonly dmeSourceRef = FSComponent.createRef<SVGTextElement>();
-    private readonly dmeIdentRef = FSComponent.createRef<SVGTextElement>();
-    private readonly dmeDistanceRef = FSComponent.createRef<SVGTextElement>();
-    private readonly bearing1Ref = FSComponent.createRef<SVGGElement>();
-    private readonly bearing2Ref = FSComponent.createRef<SVGGElement>();
-    private readonly innerCircleRef = FSComponent.createRef<SVGCircleElement>();
-    private readonly bearing1FixedGroupRef = FSComponent.createRef<SVGGElement>();
-    private readonly bearing2FixedGroupRef = FSComponent.createRef<SVGGElement>();
-    private readonly bearing1SourceRef = FSComponent.createRef<SVGTextElement>();
-    private readonly bearing1IdentRef = FSComponent.createRef<SVGTextElement>();
-    private readonly bearing1DistanceRef = FSComponent.createRef<SVGTextElement>();
-    private readonly bearing2SourceRef = FSComponent.createRef<SVGTextElement>();
-    private readonly bearing2IdentRef = FSComponent.createRef<SVGTextElement>();
-    private readonly bearing2DistanceRef = FSComponent.createRef<SVGTextElement>();
-    private readonly bearingTextRef = FSComponent.createRef<SVGTextElement>();
-    private readonly headingValueRef = FSComponent.createRef<SVGTextElement>();
-    private readonly courseValueRef = FSComponent.createRef<SVGTextElement>();
-    private readonly currentTrackIndicatorRef = FSComponent.createRef<SVGPolygonElement>();
-    private readonly navSourceBgRef = FSComponent.createRef<SVGRectElement>();
+    private readonly rootRef = FSComponent.createRef<SVGSVGElement>()
+    private readonly rotatingRoseRef = FSComponent.createRef<SVGGElement>()
+    private readonly headingBugRef = FSComponent.createRef<SVGPolygonElement>()
+    private readonly courseGroupRef = FSComponent.createRef<SVGGElement>()
+    private readonly courseDeviationNeedleRef = FSComponent.createRef<SVGPolygonElement>()
+    private readonly beginArrowRef = FSComponent.createRef<SVGPolygonElement>()
+    private readonly endArrowRef = FSComponent.createRef<SVGPolygonElement>()
+    private readonly toIndicatorRef = FSComponent.createRef<SVGPolygonElement>()
+    private readonly fromIndicatorRef = FSComponent.createRef<SVGPolygonElement>()
+    private readonly turnRateArcRef = FSComponent.createRef<SVGPathElement>()
+    private readonly navSourceRef = FSComponent.createRef<SVGTextElement>()
+    private readonly flightPhaseRef = FSComponent.createRef<SVGTextElement>()
+    private readonly flightPhaseBgRef = FSComponent.createRef<SVGRectElement>()
+    private readonly xtkRef = FSComponent.createRef<SVGTextElement>()
+    private readonly xtkBgRef = FSComponent.createRef<SVGRectElement>()
+    private readonly dmeGroupRef = FSComponent.createRef<SVGGElement>()
+    private readonly dmeSourceRef = FSComponent.createRef<SVGTextElement>()
+    private readonly dmeIdentRef = FSComponent.createRef<SVGTextElement>()
+    private readonly dmeDistanceRef = FSComponent.createRef<SVGTextElement>()
+    private readonly bearing1Ref = FSComponent.createRef<SVGGElement>()
+    private readonly bearing2Ref = FSComponent.createRef<SVGGElement>()
+    private readonly innerCircleRef = FSComponent.createRef<SVGCircleElement>()
+    private readonly bearing1FixedGroupRef = FSComponent.createRef<SVGGElement>()
+    private readonly bearing2FixedGroupRef = FSComponent.createRef<SVGGElement>()
+    private readonly bearing1SourceRef = FSComponent.createRef<SVGTextElement>()
+    private readonly bearing1IdentRef = FSComponent.createRef<SVGTextElement>()
+    private readonly bearing1DistanceRef = FSComponent.createRef<SVGTextElement>()
+    private readonly bearing2SourceRef = FSComponent.createRef<SVGTextElement>()
+    private readonly bearing2IdentRef = FSComponent.createRef<SVGTextElement>()
+    private readonly bearing2DistanceRef = FSComponent.createRef<SVGTextElement>()
+    private readonly bearingTextRef = FSComponent.createRef<SVGTextElement>()
+    private readonly headingValueRef = FSComponent.createRef<SVGTextElement>()
+    private readonly courseValueRef = FSComponent.createRef<SVGTextElement>()
+    private readonly currentTrackIndicatorRef = FSComponent.createRef<SVGPolygonElement>()
+    private readonly navSourceBgRef = FSComponent.createRef<SVGRectElement>()
 
-    get noHeadingValue(): boolean { return this.props.noHeadingValue; }
-    get noCourseValue(): boolean { return this.props.noCourseValue; }
-    get noCenterText(): boolean { return this.props.noCenterText; }
-    get noTurnRateIndicator(): boolean { return this.props.noTurnRateIndicator; }
-    get noBackground(): boolean { return this.props.noBackground; }
-    get noAffectSimRadioNav(): boolean { return this.props.noAffectSimRadioNav; }
-    get largeCompass(): boolean { return this.props.largeCompass; }
-    get displayStyle(): HSIndicatorDisplayType { return this.props.displayStyle; }
-    get fmsAlias(): string { return this.props.fmsAlias; }
+    private readonly subs: Subscription[] = []
+
+    get noHeadingValue(): boolean {
+        return this.props.noHeadingValue
+    }
+    get noCourseValue(): boolean {
+        return this.props.noCourseValue
+    }
+    get noCenterText(): boolean {
+        return this.props.noCenterText
+    }
+    get noTurnRateIndicator(): boolean {
+        return this.props.noTurnRateIndicator
+    }
+    get noBackground(): boolean {
+        return this.props.noBackground
+    }
+    get noAffectSimRadioNav(): boolean {
+        return this.props.noAffectSimRadioNav
+    }
+    get largeCompass(): boolean {
+        return this.props.largeCompass
+    }
+    get displayStyle(): HSIndicatorDisplayType {
+        return this.props.displayStyle
+    }
+    get fmsAlias(): string {
+        return this.props.fmsAlias
+    }
 
     crosstrackFullError: number
     isDmeDisplayed: boolean
@@ -141,7 +138,7 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
         return this.largeCompass ? 156 : 116
     }
 
-    constructor(props: HSIProps) {
+    constructor(props: HSIComponentProps) {
         super(props)
         this.crosstrackFullError = 2
         this.isDmeDisplayed = false
@@ -169,47 +166,76 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
     }
 
     onAfterRender(): void {
-        if (this.props.onApi) {
-            this.props.onApi({
-                root: this.rootRef.getOrDefault()!,
-                rotatingRose: this.rotatingRoseRef.getOrDefault()!,
-                headingBug: this.headingBugRef.getOrDefault()!,
-                courseGroup: this.courseGroupRef.getOrDefault()!,
-                courseDeviationNeedle: this.courseDeviationNeedleRef.getOrDefault()!,
-                beginArrow: this.beginArrowRef.getOrDefault()!,
-                endArrow: this.endArrowRef.getOrDefault()!,
-                toIndicator: this.toIndicatorRef.getOrDefault()!,
-                fromIndicator: this.fromIndicatorRef.getOrDefault()!,
-                turnRateArc: this.turnRateArcRef.getOrDefault()!,
-                navSource: this.navSourceRef.getOrDefault()!,
-                flightPhase: this.flightPhaseRef.getOrDefault()!,
-                flightPhaseBg: this.flightPhaseBgRef.getOrDefault()!,
-                xtk: this.xtkRef.getOrDefault()!,
-                xtkBg: this.xtkBgRef.getOrDefault()!,
-                dmeGroup: this.dmeGroupRef.getOrDefault()!,
-                dmeSource: this.dmeSourceRef.getOrDefault()!,
-                dmeIdent: this.dmeIdentRef.getOrDefault()!,
-                dmeDistance: this.dmeDistanceRef.getOrDefault()!,
-                bearing1: this.bearing1Ref.getOrDefault()!,
-                bearing2: this.bearing2Ref.getOrDefault()!,
-                innerCircle: this.innerCircleRef.getOrDefault()!,
-                bearing1FixedGroup: this.bearing1FixedGroupRef.getOrDefault()!,
-                bearing2FixedGroup: this.bearing2FixedGroupRef.getOrDefault()!,
-                bearing1Source: this.bearing1SourceRef.getOrDefault()!,
-                bearing1Ident: this.bearing1IdentRef.getOrDefault()!,
-                bearing1Distance: this.bearing1DistanceRef.getOrDefault()!,
-                bearing2Source: this.bearing2SourceRef.getOrDefault()!,
-                bearing2Ident: this.bearing2IdentRef.getOrDefault()!,
-                bearing2Distance: this.bearing2DistanceRef.getOrDefault()!,
-                bearingText: this.bearingTextRef.getOrDefault() || null,
-                headingValue: this.headingValueRef.getOrDefault() || null,
-                courseValue: this.courseValueRef.getOrDefault() || null,
-                currentTrackIndicator: this.currentTrackIndicatorRef.getOrDefault() || null,
-                chevronBug2: this.chevronBug2 || null,
-                diamondBug2: this.diamondBug2 || null,
-                hollowDiamondBug2: this.hollowDiamondBug2 || null,
-            });
-        }
+        this.subs.push(
+            this.props.heading.sub(value => {
+                const hb = this.headingBugRef.getOrDefault()
+                if (hb) diffAndSetAttribute(hb, 'transform', `rotate(${value}, 50, 50)`)
+            }, true),
+
+            this.props.course.sub(value => {
+                const cg = this.courseGroupRef.getOrDefault()
+                if (cg) diffAndSetAttribute(cg, 'transform', `rotate(${value}, 50, 50)`)
+                const ct = this.courseValueRef.getOrDefault()
+                if (ct) {
+                    const crs = fastToFixed(value, 0)
+                    diffAndSetText(ct, '000'.slice(crs.length) + crs + Avionics.Utils.DEGREE_SYMBOL)
+                }
+            }, true),
+
+            this.props.cdiDeviation.sub(deviation => {
+                const cdi = this.courseDeviationNeedleRef.getOrDefault()
+                if (!cdi) return
+                const clampedPosition = Math.min(Math.max(deviation, -1), 1) * 30
+                diffAndSetAttribute(cdi, 'transform', `translate(${clampedPosition}, 0)`)
+            }, true),
+
+            this.props.bearing1.sub(value => {
+                const b1 = this.bearing1Ref.getOrDefault()
+                if (!b1) return
+                if (isNaN(value) || value === null || value === undefined) {
+                    diffAndSetAttribute(b1, 'visibility', 'hidden')
+                } else {
+                    diffAndSetAttribute(b1, 'transform', `rotate(${value}, 50, 50)`)
+                    diffAndSetAttribute(b1, 'visibility', 'visible')
+                }
+            }, true),
+
+            this.props.bearing2.sub(value => {
+                const b2 = this.bearing2Ref.getOrDefault()
+                if (!b2) return
+                if (isNaN(value) || value === null || value === undefined) {
+                    diffAndSetAttribute(b2, 'visibility', 'hidden')
+                } else {
+                    diffAndSetAttribute(b2, 'transform', `rotate(${value}, 50, 50)`)
+                    diffAndSetAttribute(b2, 'visibility', 'visible')
+                }
+            }, true),
+
+            this.props.dmeDistance.sub(distance => {
+                const el = this.dmeDistanceRef.getOrDefault()
+                if (el) diffAndSetText(el, fastToFixed(distance, 1) + 'NM')
+            }, true),
+
+            this.props.turnRate.sub(rate => {
+                this.setTurnRate(String(rate))
+            }, true),
+
+            this.props.headingValue.sub(value => {
+                const ht = this.headingValueRef.getOrDefault()
+                if (ht) diffAndSetText(ht, value)
+            }, true),
+
+            this.props.groundSpeedValue.sub(_value => {}, true),
+
+            this.props.waypointDistanceValue.sub(_value => {}, true),
+
+            this.props.waypointMode.sub(_mode => {}, true)
+        )
+    }
+
+    destroy(): void {
+        this.subs.forEach(s => s.destroy())
+        super.destroy()
     }
 
     init() {
@@ -332,7 +358,7 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                         SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Bool, 0)
                     }
                     if (this.logic_cdiSource != 3) {
-                        (Simplane as any).setAutoPilotSelectedNav(this.logic_cdiSource)
+                        ;(Simplane as any).setAutoPilotSelectedNav(this.logic_cdiSource)
                     }
                 }
                 break
@@ -347,7 +373,13 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
         diffAndSetAttribute(_elem, 'stroke-opacity', '0.2')
     }
 
-    private getExternalTextZonePath(radius: number, beginAngle: number, endAngle: number, xEnd: number, reverse = false): string {
+    private getExternalTextZonePath(
+        radius: number,
+        beginAngle: number,
+        endAngle: number,
+        xEnd: number,
+        reverse = false
+    ): string {
         const beginX = 50 - radius * Math.cos(beginAngle)
         const beginY = 50 - radius * Math.sin(beginAngle)
         const endX = 50 - radius * Math.cos(endAngle)
@@ -398,7 +430,11 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
     private updateBearingVisibility() {
         const inner = this.innerCircleRef.getOrDefault()
         if (inner) {
-            diffAndSetAttribute(inner, 'display', (this.isBearing1Displayed || this.isBearing2Displayed) ? 'inherit' : 'none')
+            diffAndSetAttribute(
+                inner,
+                'display',
+                this.isBearing1Displayed || this.isBearing2Displayed ? 'inherit' : 'none'
+            )
         }
     }
 
@@ -494,7 +530,10 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                 } else {
                     diffAndSetAttribute(this.xtkRef.getOrDefault()!, 'visibility', 'visible')
                     diffAndSetAttribute(this.xtkBgRef.getOrDefault()!, 'visibility', 'visible')
-                    diffAndSetText(this.xtkRef.getOrDefault()!, 'XTK ' + fastToFixed(deviation, 2) + 'NM')
+                    diffAndSetText(
+                        this.xtkRef.getOrDefault()!,
+                        'XTK ' + fastToFixed(deviation, 2) + 'NM'
+                    )
                 }
             } else {
                 this.crossTrackGoal = Math.min(Math.max(deviation, -1), 1) * 20
@@ -527,14 +566,10 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
             const endPointBotY = 50 - Math.cos(arcAngle) * (arcRadius - arcWidth / 2)
             let path
             if (turnRate == 4 || turnRate == -4) {
-                const endPointArrowTopX =
-                    50 + Math.sin(arcAngle) * (arcRadius + arrowWidth / 2)
-                const endPointArrowBotX =
-                    50 + Math.sin(arcAngle) * (arcRadius - arrowWidth / 2)
-                const endPointArrowTopY =
-                    50 - Math.cos(arcAngle) * (arcRadius + arrowWidth / 2)
-                const endPointArrowBotY =
-                    50 - Math.cos(arcAngle) * (arcRadius - arrowWidth / 2)
+                const endPointArrowTopX = 50 + Math.sin(arcAngle) * (arcRadius + arrowWidth / 2)
+                const endPointArrowBotX = 50 + Math.sin(arcAngle) * (arcRadius - arrowWidth / 2)
+                const endPointArrowTopY = 50 - Math.cos(arcAngle) * (arcRadius + arrowWidth / 2)
+                const endPointArrowBotY = 50 - Math.cos(arcAngle) * (arcRadius - arrowWidth / 2)
                 const endPointArrowEndX =
                     50 + Math.sin(arcAngle + (turnRate > 0 ? 0.1 : -0.1)) * arcRadius
                 const endPointArrowEndY =
@@ -626,17 +661,33 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                 case 'GPS':
                     this.sourceIsGps = true
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'fill', 'magenta')
-                    diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'fill', 'magenta')
+                    diffAndSetAttribute(
+                        this.courseDeviationNeedleRef.getOrDefault()!,
+                        'fill',
+                        'magenta'
+                    )
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'fill', 'magenta')
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'fill-opacity', '1')
-                    diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'fill-opacity', '1')
+                    diffAndSetAttribute(
+                        this.courseDeviationNeedleRef.getOrDefault()!,
+                        'fill-opacity',
+                        '1'
+                    )
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'fill-opacity', '1')
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'stroke', '')
                     diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'stroke', '')
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'stroke', '')
                     diffAndSetAttribute(ns, 'fill', 'magenta')
-                    diffAndSetAttribute(this.flightPhaseRef.getOrDefault()!, 'visibility', 'visible')
-                    diffAndSetAttribute(this.flightPhaseBgRef.getOrDefault()!, 'visibility', 'visible')
+                    diffAndSetAttribute(
+                        this.flightPhaseRef.getOrDefault()!,
+                        'visibility',
+                        'visible'
+                    )
+                    diffAndSetAttribute(
+                        this.flightPhaseBgRef.getOrDefault()!,
+                        'visibility',
+                        'visible'
+                    )
                     diffAndSetAttribute(this.toIndicatorRef.getOrDefault()!, 'fill', 'magenta')
                     diffAndSetAttribute(this.fromIndicatorRef.getOrDefault()!, 'fill', 'magenta')
                     SimVar.SetSimVarValue('L:PFD_CDI_Source', SimVarValueType.Number, 3)
@@ -646,17 +697,29 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                 case 'TCN1':
                     this.sourceIsGps = false
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'fill', 'lime')
-                    diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'fill', 'lime')
+                    diffAndSetAttribute(
+                        this.courseDeviationNeedleRef.getOrDefault()!,
+                        'fill',
+                        'lime'
+                    )
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'fill', 'lime')
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'fill-opacity', '1')
-                    diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'fill-opacity', '1')
+                    diffAndSetAttribute(
+                        this.courseDeviationNeedleRef.getOrDefault()!,
+                        'fill-opacity',
+                        '1'
+                    )
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'fill-opacity', '1')
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'stroke', '')
                     diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'stroke', '')
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'stroke', '')
                     diffAndSetAttribute(ns, 'fill', 'lime')
                     diffAndSetAttribute(this.flightPhaseRef.getOrDefault()!, 'visibility', 'hidden')
-                    diffAndSetAttribute(this.flightPhaseBgRef.getOrDefault()!, 'visibility', 'hidden')
+                    diffAndSetAttribute(
+                        this.flightPhaseBgRef.getOrDefault()!,
+                        'visibility',
+                        'hidden'
+                    )
                     diffAndSetAttribute(this.xtkRef.getOrDefault()!, 'visibility', 'hidden')
                     diffAndSetAttribute(this.xtkBgRef.getOrDefault()!, 'visibility', 'hidden')
                     diffAndSetAttribute(this.toIndicatorRef.getOrDefault()!, 'fill', 'lime')
@@ -668,14 +731,26 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                 case 'TCN2':
                     this.sourceIsGps = false
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'fill-opacity', '0')
-                    diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'fill-opacity', '0')
+                    diffAndSetAttribute(
+                        this.courseDeviationNeedleRef.getOrDefault()!,
+                        'fill-opacity',
+                        '0'
+                    )
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'fill-opacity', '0')
                     diffAndSetAttribute(this.beginArrowRef.getOrDefault()!, 'stroke', 'lime')
-                    diffAndSetAttribute(this.courseDeviationNeedleRef.getOrDefault()!, 'stroke', 'lime')
+                    diffAndSetAttribute(
+                        this.courseDeviationNeedleRef.getOrDefault()!,
+                        'stroke',
+                        'lime'
+                    )
                     diffAndSetAttribute(this.endArrowRef.getOrDefault()!, 'stroke', 'lime')
                     diffAndSetAttribute(ns, 'fill', 'lime')
                     diffAndSetAttribute(this.flightPhaseRef.getOrDefault()!, 'visibility', 'hidden')
-                    diffAndSetAttribute(this.flightPhaseBgRef.getOrDefault()!, 'visibility', 'hidden')
+                    diffAndSetAttribute(
+                        this.flightPhaseBgRef.getOrDefault()!,
+                        'visibility',
+                        'hidden'
+                    )
                     diffAndSetAttribute(this.xtkRef.getOrDefault()!, 'visibility', 'hidden')
                     diffAndSetAttribute(this.xtkBgRef.getOrDefault()!, 'visibility', 'hidden')
                     diffAndSetAttribute(this.toIndicatorRef.getOrDefault()!, 'fill', 'lime')
@@ -883,15 +958,11 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                         this.gpsNextWpDesiredTrkFrames
                     )
                 )
-                    this.setCourse(
-                        this.gpsNextWpIdValid ? gpsNextWpDesiredTrk + '' : '0'
-                    )
+                    this.setCourse(this.gpsNextWpIdValid ? gpsNextWpDesiredTrk + '' : '0')
                 if (
                     !(Avionics.Utils as any).isValueOutlier(gpsNextWpXTrk, this.gpsNextWpXTrkFrames)
                 )
-                    this.setCourseDeviation(
-                        this.gpsNextWpIdValid ? gpsNextWpXTrk + '' : '0'
-                    )
+                    this.setCourseDeviation(this.gpsNextWpIdValid ? gpsNextWpXTrk + '' : '0')
                 this.setToFrom('1')
                 this.curPhase = SimVar.GetSimVarValue('L:GPS_Current_Phase', SimVarValueType.Number)
                 this.curDeviation = SimVar.GetSimVarValue('GPS CDI SCALING', SimVarValueType.NM)
@@ -916,7 +987,10 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                 this.setFlightPhase(phaseLabel)
                 if (SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) == false)
                     this.setFlightPhase('ENR')
-                this.crosstrackFullError = this.curPhase in phases ? this.curDeviation : parseFloat(DEFAULT_CROSSTRACK_ERROR)
+                this.crosstrackFullError =
+                    this.curPhase in phases
+                        ? this.curDeviation
+                        : parseFloat(DEFAULT_CROSSTRACK_ERROR)
                 this.updateHSIDeviation()
                 break
         }
@@ -927,7 +1001,10 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                 break
             case 1:
             case 2:
-                diffAndSetText(this.bearing1SourceRef.getOrDefault()!, 'NAV' + this.logic_brg1Source)
+                diffAndSetText(
+                    this.bearing1SourceRef.getOrDefault()!,
+                    'NAV' + this.logic_brg1Source
+                )
                 if (Simplane.getNavHasNav(this.logic_brg1Source)) {
                     diffAndSetText(
                         this.bearing1IdentRef.getOrDefault()!,
@@ -967,9 +1044,7 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                         this.bearing1IdentRef.getOrDefault()!,
                         fastToFixed(Simplane.getAdfActFreq(1), 1)
                     )
-                    this.setBearing1Bearing(
-                        ((Simplane.getAdfRadial(1) + compass) % 360) + ''
-                    )
+                    this.setBearing1Bearing(((Simplane.getAdfRadial(1) + compass) % 360) + '')
                 } else {
                     diffAndSetText(this.bearing1IdentRef.getOrDefault()!, 'NO DATA')
                     this.setBearing1Bearing('')
@@ -980,7 +1055,10 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
         switch (this.logic_brg2Source) {
             case 1:
             case 2:
-                diffAndSetText(this.bearing2SourceRef.getOrDefault()!, 'NAV' + this.logic_brg2Source)
+                diffAndSetText(
+                    this.bearing2SourceRef.getOrDefault()!,
+                    'NAV' + this.logic_brg2Source
+                )
                 if (Simplane.getNavHasNav(this.logic_brg2Source)) {
                     diffAndSetText(
                         this.bearing2IdentRef.getOrDefault()!,
@@ -1020,9 +1098,7 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                         this.bearing2IdentRef.getOrDefault()!,
                         fastToFixed(Simplane.getAdfActFreq(1), 1)
                     )
-                    this.setBearing2Bearing(
-                        ((Simplane.getAdfRadial(1) + compass) % 360) + ''
-                    )
+                    this.setBearing2Bearing(((Simplane.getAdfRadial(1) + compass) % 360) + '')
                 } else {
                     diffAndSetText(this.bearing2IdentRef.getOrDefault()!, 'NO DATA')
                     this.setBearing2Bearing('')
@@ -1103,42 +1179,106 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
     render(): VNode {
         const arcRadius = 53
         const arcWidth = 5
-        const viewBox = this.largeCompass
-            ? '-28 -28 156 156'
-            : '-28 -15 156 116'
+        const viewBox = this.largeCompass ? '-28 -28 156 156' : '-28 -15 156 116'
 
         return (
             <svg ref={this.rootRef} class="hsi" width="100%" height="100%" viewBox={viewBox}>
                 {/* Compass lines */}
-                {!this.largeCompass && [-135, -90, -45, 45, 90, 135].map((angle) => (
-                    <rect key={`compass-line-${angle}`} x="49.5" y="-7" width="1" height="6" transform={`rotate(${angle} 50 50)`} fill="white" />
-                ))}
+                {!this.largeCompass &&
+                    [-135, -90, -45, 45, 90, 135].map(angle => (
+                        <rect
+                            key={`compass-line-${angle}`}
+                            x="49.5"
+                            y="-7"
+                            width="1"
+                            height="6"
+                            transform={`rotate(${angle} 50 50)`}
+                            fill="white"
+                        />
+                    ))}
 
                 {/* Turn rate indicator */}
-                {!this.noTurnRateIndicator && <>
-                    <path class="hsi-indicator-turnrate-background" d={(() => {
-                        const arcSize = 45
-                        const beginPointHalfUnitSize = arcSize / 2 / arcRadius
-                        const beginPointTopX = 50 - Math.sin(beginPointHalfUnitSize) * (arcRadius + arcWidth / 2)
-                        const beginPointBotX = 50 - Math.sin(beginPointHalfUnitSize) * (arcRadius - arcWidth / 2)
-                        const endPointTopX = 50 + Math.sin(beginPointHalfUnitSize) * (arcRadius + arcWidth / 2)
-                        const endPointBotX = 50 + Math.sin(beginPointHalfUnitSize) * (arcRadius - arcWidth / 2)
-                        const pointTopY = 50 - Math.cos(beginPointHalfUnitSize) * (arcRadius + arcWidth / 2)
-                        const pointBotY = 50 - Math.cos(beginPointHalfUnitSize) * (arcRadius - arcWidth / 2)
-                        let p = 'M' + beginPointBotX + ' ' + pointBotY + 'A ' + (arcRadius - arcWidth / 2) + ' ' + (arcRadius - arcWidth / 2) + ' 0 0 1 ' + endPointBotX + ' ' + pointBotY
-                        p += 'L' + endPointTopX + ' ' + pointTopY + 'A ' + (arcRadius + arcWidth / 2) + ' ' + (arcRadius + arcWidth / 2) + ' 0 0 0 ' + beginPointTopX + ' ' + pointTopY
-                        return p
-                    })()} fill="#1a1d21" fill-opacity="0.25" />
-                    {[-18, -9, 9, 18].map((angle) => (
-                        <rect key={`turnrate-line-${angle}`} x="49.5" y={-arcWidth} width="1" height={String(arcWidth)} transform={`rotate(${angle} 50 50)`} fill="white" />
-                    ))}
-                    <path ref={this.turnRateArcRef} fill="magenta" />
-                </>}
+                {!this.noTurnRateIndicator && (
+                    <>
+                        <path
+                            class="hsi-indicator-turnrate-background"
+                            d={(() => {
+                                const arcSize = 45
+                                const beginPointHalfUnitSize = arcSize / 2 / arcRadius
+                                const beginPointTopX =
+                                    50 -
+                                    Math.sin(beginPointHalfUnitSize) * (arcRadius + arcWidth / 2)
+                                const beginPointBotX =
+                                    50 -
+                                    Math.sin(beginPointHalfUnitSize) * (arcRadius - arcWidth / 2)
+                                const endPointTopX =
+                                    50 +
+                                    Math.sin(beginPointHalfUnitSize) * (arcRadius + arcWidth / 2)
+                                const endPointBotX =
+                                    50 +
+                                    Math.sin(beginPointHalfUnitSize) * (arcRadius - arcWidth / 2)
+                                const pointTopY =
+                                    50 -
+                                    Math.cos(beginPointHalfUnitSize) * (arcRadius + arcWidth / 2)
+                                const pointBotY =
+                                    50 -
+                                    Math.cos(beginPointHalfUnitSize) * (arcRadius - arcWidth / 2)
+                                let p =
+                                    'M' +
+                                    beginPointBotX +
+                                    ' ' +
+                                    pointBotY +
+                                    'A ' +
+                                    (arcRadius - arcWidth / 2) +
+                                    ' ' +
+                                    (arcRadius - arcWidth / 2) +
+                                    ' 0 0 1 ' +
+                                    endPointBotX +
+                                    ' ' +
+                                    pointBotY
+                                p +=
+                                    'L' +
+                                    endPointTopX +
+                                    ' ' +
+                                    pointTopY +
+                                    'A ' +
+                                    (arcRadius + arcWidth / 2) +
+                                    ' ' +
+                                    (arcRadius + arcWidth / 2) +
+                                    ' 0 0 0 ' +
+                                    beginPointTopX +
+                                    ' ' +
+                                    pointTopY
+                                return p
+                            })()}
+                            fill="#1a1d21"
+                            fill-opacity="0.25"
+                        />
+                        {[-18, -9, 9, 18].map(angle => (
+                            <rect
+                                key={`turnrate-line-${angle}`}
+                                x="49.5"
+                                y={-arcWidth}
+                                width="1"
+                                height={String(arcWidth)}
+                                transform={`rotate(${angle} 50 50)`}
+                                fill="white"
+                            />
+                        ))}
+                        <path ref={this.turnRateArcRef} fill="magenta" />
+                    </>
+                )}
 
                 {/* Rotating rose group */}
                 <g ref={this.rotatingRoseRef}>
                     {!this.noBackground && (
-                        <circle cx="50" cy="50" r={this.largeCompass ? '65' : '50'} fill="#1a1d21" fill-opacity="0.25" />
+                        <circle
+                            cx="50"
+                            cy="50"
+                            r={this.largeCompass ? '65' : '50'}
+                            fill="#1a1d21"
+                            fill-opacity="0.25"
+                        />
                     )}
 
                     {/* Tick marks - 72 ticks at 5-degree intervals */}
@@ -1150,127 +1290,467 @@ export class HSIComponent extends DisplayComponent<HSIProps> {
                         const angle = (i * (2 * Math.PI)) / 72
                         const rotation = (-angle / Math.PI) * 180 + 180
                         return (
-                            <rect key={`tick-${i}`} x="49.5" y={this.largeCompass ? 115 - length : 100 - length} width="1" height={String(length)} transform={`rotate(${rotation} 50 50)`} fill="white" />
+                            <rect
+                                key={`tick-${i}`}
+                                x="49.5"
+                                y={this.largeCompass ? 115 - length : 100 - length}
+                                width="1"
+                                height={String(length)}
+                                transform={`rotate(${rotation} 50 50)`}
+                                fill="white"
+                            />
                         )
                     })}
 
                     {/* Compass labels */}
-                    {['N', '3', '6', 'E', '12', '15', 'S', '21', '24', 'W', '30', '33'].map((text, i) => {
-                        const angle = i * (360 / 12)
-                        return (
-                            <text key={`label-${i}`} x="50" y={this.largeCompass ? '-5' : (i % 3 == 0 ? '12' : '9')} fill="white" font-size={this.largeCompass ? '7' : (i % 3 == 0 ? '15' : '8')} font-family={this.font} text-anchor="middle" alignment-baseline="central" transform={`rotate(${angle} 50 50)`}>{text}</text>
-                        )
-                    })}
+                    {['N', '3', '6', 'E', '12', '15', 'S', '21', '24', 'W', '30', '33'].map(
+                        (text, i) => {
+                            const angle = i * (360 / 12)
+                            return (
+                                <text
+                                    key={`label-${i}`}
+                                    x="50"
+                                    y={this.largeCompass ? '-5' : i % 3 == 0 ? '12' : '9'}
+                                    fill="white"
+                                    font-size={this.largeCompass ? '7' : i % 3 == 0 ? '15' : '8'}
+                                    font-family={this.font}
+                                    text-anchor="middle"
+                                    alignment-baseline="central"
+                                    transform={`rotate(${angle} 50 50)`}
+                                >
+                                    {text}
+                                </text>
+                            )
+                        }
+                    )}
 
                     {/* Heading bug */}
-                    <polygon ref={this.headingBugRef} points={this.largeCompass ? '42,-19 47,-19 50,-16 53,-19 58,-19 58,-15 42,-15' : '46,0 47,0 50,4 53,0 54,0 54,5 46,5'} fill="aqua" />
+                    <polygon
+                        ref={this.headingBugRef}
+                        points={
+                            this.largeCompass
+                                ? '42,-19 47,-19 50,-16 53,-19 58,-19 58,-15 42,-15'
+                                : '46,0 47,0 50,4 53,0 54,0 54,5 46,5'
+                        }
+                        fill="aqua"
+                    />
 
                     {/* Inner circle for bearing display */}
-                    <circle ref={this.innerCircleRef} cx="50" cy="50" r="30" stroke="white" stroke-width="0.8" fill-opacity="0" display="none" />
+                    <circle
+                        ref={this.innerCircleRef}
+                        cx="50"
+                        cy="50"
+                        r="30"
+                        stroke="white"
+                        stroke-width="0.8"
+                        fill-opacity="0"
+                        display="none"
+                    />
 
-                    {this.displayStyle != HSIndicatorDisplayType.HUD_Simplified && <>
-                        {/* Current track indicator */}
-                        <polygon ref={this.currentTrackIndicatorRef} points="50,-4 52,0 50,4 48,0" fill="magenta" />
+                    {this.displayStyle != HSIndicatorDisplayType.HUD_Simplified && (
+                        <>
+                            {/* Current track indicator */}
+                            <polygon
+                                ref={this.currentTrackIndicatorRef}
+                                points="50,-4 52,0 50,4 48,0"
+                                fill="magenta"
+                            />
 
-                        {/* Bearing 1 */}
-                        <g ref={this.bearing1Ref} display="none">
-                            <path d="M50 96 L50 80 M50 4 L50 20 M50 8 L57 15 M50 8 L43 15" stroke="aqua" stroke-width="1" fill-opacity="0" />
-                        </g>
+                            {/* Bearing 1 */}
+                            <g ref={this.bearing1Ref} display="none">
+                                <path
+                                    d="M50 96 L50 80 M50 4 L50 20 M50 8 L57 15 M50 8 L43 15"
+                                    stroke="aqua"
+                                    stroke-width="1"
+                                    fill-opacity="0"
+                                />
+                            </g>
 
-                        {/* Bearing 2 */}
-                        <g ref={this.bearing2Ref} display="none">
-                            <path d="M50 96 L50 92 M47 80 L47 90 Q50 96 53 90 L53 80 M50 4 L50 8 L57 15 M50 8 L43 15 M47 11 L47 20 M53 11 L53 20" stroke="aqua" stroke-width="1" fill-opacity="0" />
-                        </g>
+                            {/* Bearing 2 */}
+                            <g ref={this.bearing2Ref} display="none">
+                                <path
+                                    d="M50 96 L50 92 M47 80 L47 90 Q50 96 53 90 L53 80 M50 4 L50 8 L57 15 M50 8 L43 15 M47 11 L47 20 M53 11 L53 20"
+                                    stroke="aqua"
+                                    stroke-width="1"
+                                    fill-opacity="0"
+                                />
+                            </g>
 
-                        {/* Course group */}
-                        <g ref={this.courseGroupRef}>
-                            {/* Begin arrow + from indicator */}
-                            <polygon ref={this.beginArrowRef} points="51,96 49,96 49,75 51,75" fill="magenta" />
-                            <polygon ref={this.fromIndicatorRef} points="46,75 54,75 50,80" fill="magenta" stroke="black" stroke-width="0.2" display="none" />
+                            {/* Course group */}
+                            <g ref={this.courseGroupRef}>
+                                {/* Begin arrow + from indicator */}
+                                <polygon
+                                    ref={this.beginArrowRef}
+                                    points="51,96 49,96 49,75 51,75"
+                                    fill="magenta"
+                                />
+                                <polygon
+                                    ref={this.fromIndicatorRef}
+                                    points="46,75 54,75 50,80"
+                                    fill="magenta"
+                                    stroke="black"
+                                    stroke-width="0.2"
+                                    display="none"
+                                />
 
-                            {/* CDI needle */}
-                            <polygon ref={this.courseDeviationNeedleRef} points="49,74.5 51,74.5 51,25.5 49,25.5" fill="magenta" />
+                                {/* CDI needle */}
+                                <polygon
+                                    ref={this.courseDeviationNeedleRef}
+                                    points="49,74.5 51,74.5 51,25.5 49,25.5"
+                                    fill="magenta"
+                                />
 
-                            {/* End arrow + to indicator */}
-                            <polygon ref={this.endArrowRef} points="51,25 49,25 49,15 45,15 50,4 55,15 51,15" fill="magenta" />
-                            <polygon ref={this.toIndicatorRef} points="46,25 54,25 50,20" fill="magenta" stroke="black" stroke-width="0.2" display="none" />
+                                {/* End arrow + to indicator */}
+                                <polygon
+                                    ref={this.endArrowRef}
+                                    points="51,25 49,25 49,15 45,15 50,4 55,15 51,15"
+                                    fill="magenta"
+                                />
+                                <polygon
+                                    ref={this.toIndicatorRef}
+                                    points="46,25 54,25 50,20"
+                                    fill="magenta"
+                                    stroke="black"
+                                    stroke-width="0.2"
+                                    display="none"
+                                />
 
-                            {/* CDI scale circles */}
-                            {(this.largeCompass ? [-30, -15, 15, 30] : [-20, -10, 10, 20]).map((pos) => (
-                                <circle key={`cdi-dot-${pos}`} cx={String(50 + pos)} cy="50" r={this.largeCompass ? '1.5' : '2'} stroke="white" stroke-width={this.largeCompass ? '0.8' : '1'} fill-opacity="0" />
-                            ))}
-                        </g>
-                    </>}
+                                {/* CDI scale circles */}
+                                {(this.largeCompass ? [-30, -15, 15, 30] : [-20, -10, 10, 20]).map(
+                                    pos => (
+                                        <circle
+                                            key={`cdi-dot-${pos}`}
+                                            cx={String(50 + pos)}
+                                            cy="50"
+                                            r={this.largeCompass ? '1.5' : '2'}
+                                            stroke="white"
+                                            stroke-width={this.largeCompass ? '0.8' : '1'}
+                                            fill-opacity="0"
+                                        />
+                                    )
+                                )}
+                            </g>
+                        </>
+                    )}
                 </g>
 
                 {/* Top triangle */}
-                <polygon points={this.largeCompass ? '48,-20 52,-20 50,-15' : '46,-3 54,-3 50,3'} fill="white" {...(this.largeCompass ? {} : { stroke: 'black' })} />
+                <polygon
+                    points={this.largeCompass ? '48,-20 52,-20 50,-15' : '46,-3 54,-3 50,3'}
+                    fill="white"
+                    {...(this.largeCompass ? {} : { stroke: 'black' })}
+                />
 
                 {/* Plane symbol */}
-                <path d="M44 50 L49 50 L49 53 L48 54 L48 55 L52 55 L52 54 L51 53 L51 50 L56 50 L56 49 L51 48 L51 46 Q50 44 49 46 L49 48 L44 49 Z" fill="white" />
+                <path
+                    d="M44 50 L49 50 L49 53 L48 54 L48 55 L52 55 L52 54 L51 53 L51 50 L56 50 L56 49 L51 48 L51 46 Q50 44 49 46 L49 48 L44 49 Z"
+                    fill="white"
+                />
 
                 {/* Bearing text */}
-                {!this.largeCompass && <>
-                    <rect x="35" y="-15" height="12" width="30" fill="#1a1d21" />
-                    <text ref={this.bearingTextRef} fill="white" text-anchor="middle" x="50" y="-5" font-size="11" font-family={this.font} />
-                </>}
+                {!this.largeCompass && (
+                    <>
+                        <rect x="35" y="-15" height="12" width="30" fill="#1a1d21" />
+                        <text
+                            ref={this.bearingTextRef}
+                            fill="white"
+                            text-anchor="middle"
+                            x="50"
+                            y="-5"
+                            font-size="11"
+                            font-family={this.font}
+                        />
+                    </>
+                )}
 
-                {this.displayStyle != HSIndicatorDisplayType.HUD_Simplified && <>
-                    {/* Heading value */}
-                    {!this.noHeadingValue && <>
-                        <rect x="-13" y="-7" height="8" width="36" fill="#1a1d21" fill-opacity="1" />
-                        <text fill="white" x="-11" y="-0.6" font-size="7" font-family={this.font}>HDG</text>
-                        <text ref={this.headingValueRef} fill="aqua" x="5" y="-0.6" font-size="7" font-family={this.font} />
-                    </>}
+                {this.displayStyle != HSIndicatorDisplayType.HUD_Simplified && (
+                    <>
+                        {/* Heading value */}
+                        {!this.noHeadingValue && (
+                            <>
+                                <rect
+                                    x="-13"
+                                    y="-7"
+                                    height="8"
+                                    width="36"
+                                    fill="#1a1d21"
+                                    fill-opacity="1"
+                                />
+                                <text
+                                    fill="white"
+                                    x="-11"
+                                    y="-0.6"
+                                    font-size="7"
+                                    font-family={this.font}
+                                >
+                                    HDG
+                                </text>
+                                <text
+                                    ref={this.headingValueRef}
+                                    fill="aqua"
+                                    x="5"
+                                    y="-0.6"
+                                    font-size="7"
+                                    font-family={this.font}
+                                />
+                            </>
+                        )}
 
-                    {/* Course value */}
-                    {!this.noCourseValue && <>
-                        <rect x="77" y="-7" height="8" width="36" fill="#1a1d21" />
-                        <text fill="white" x="79" y="-0.6" font-size="7" font-family={this.font}>CRS</text>
-                        <text ref={this.courseValueRef} fill="magenta" x="95" y="-0.6" font-size="7" font-family={this.font} />
-                    </>}
+                        {/* Course value */}
+                        {!this.noCourseValue && (
+                            <>
+                                <rect x="77" y="-7" height="8" width="36" fill="#1a1d21" />
+                                <text
+                                    fill="white"
+                                    x="79"
+                                    y="-0.6"
+                                    font-size="7"
+                                    font-family={this.font}
+                                >
+                                    CRS
+                                </text>
+                                <text
+                                    ref={this.courseValueRef}
+                                    fill="magenta"
+                                    x="95"
+                                    y="-0.6"
+                                    font-size="7"
+                                    font-family={this.font}
+                                />
+                            </>
+                        )}
 
-                    {/* Center text: nav source, flight phase, XTK */}
-                    {!this.noCenterText && <>
-                        <rect ref={this.navSourceBgRef} fill="#1a1d21" fill-opacity="1" x="27" y="34.5" height="7" width="16" />
-                        <text ref={this.navSourceRef} fill="magenta" x="35" y="40" font-size="6" font-family={this.font} text-anchor="middle">GPS</text>
-                        <rect ref={this.flightPhaseBgRef} fill="#1a1d21" fill-opacity="1" x="56" y="34.5" height="7" width="18" />
-                        <text ref={this.flightPhaseRef} fill="magenta" x="65" y="40" font-size="6" font-family={this.font} text-anchor="middle">TERM</text>
-                        <rect ref={this.xtkBgRef} fill="#1a1d21" fill-opacity="1" x="29" y="60.5" height="7" width="40" />
-                        <text ref={this.xtkRef} fill="magenta" x="50" y="66" font-size="6" font-family={this.font} text-anchor="middle">XTK 3.15NM</text>
-                    </>}
+                        {/* Center text: nav source, flight phase, XTK */}
+                        {!this.noCenterText && (
+                            <>
+                                <rect
+                                    ref={this.navSourceBgRef}
+                                    fill="#1a1d21"
+                                    fill-opacity="1"
+                                    x="27"
+                                    y="34.5"
+                                    height="7"
+                                    width="16"
+                                />
+                                <text
+                                    ref={this.navSourceRef}
+                                    fill="magenta"
+                                    x="35"
+                                    y="40"
+                                    font-size="6"
+                                    font-family={this.font}
+                                    text-anchor="middle"
+                                >
+                                    GPS
+                                </text>
+                                <rect
+                                    ref={this.flightPhaseBgRef}
+                                    fill="#1a1d21"
+                                    fill-opacity="1"
+                                    x="56"
+                                    y="34.5"
+                                    height="7"
+                                    width="18"
+                                />
+                                <text
+                                    ref={this.flightPhaseRef}
+                                    fill="magenta"
+                                    x="65"
+                                    y="40"
+                                    font-size="6"
+                                    font-family={this.font}
+                                    text-anchor="middle"
+                                >
+                                    TERM
+                                </text>
+                                <rect
+                                    ref={this.xtkBgRef}
+                                    fill="#1a1d21"
+                                    fill-opacity="1"
+                                    x="29"
+                                    y="60.5"
+                                    height="7"
+                                    width="40"
+                                />
+                                <text
+                                    ref={this.xtkRef}
+                                    fill="magenta"
+                                    x="50"
+                                    y="66"
+                                    font-size="6"
+                                    font-family={this.font}
+                                    text-anchor="middle"
+                                >
+                                    XTK 3.15NM
+                                </text>
+                            </>
+                        )}
 
-                    {/* DME group */}
-                    <g ref={this.dmeGroupRef} display="none">
-                        <path d={this.getExternalTextZonePath(57, 0, -0.58, -28)} fill="#1a1d21" />
-                        <text fill="white" x="-27" y="57" font-size="6" font-family={this.font} text-anchor="start">DME</text>
-                        <text ref={this.dmeSourceRef} fill="aqua" x="-27" y="64" font-size="6" font-family={this.font} text-anchor="start">NAV1</text>
-                        <text ref={this.dmeIdentRef} fill="aqua" x="-27" y="71" font-size="6" font-family={this.font} text-anchor="start">117.80</text>
-                        <text ref={this.dmeDistanceRef} fill="white" x="-27" y="78" font-size="6" font-family={this.font} text-anchor="start">97.7NM</text>
-                    </g>
+                        {/* DME group */}
+                        <g ref={this.dmeGroupRef} display="none">
+                            <path
+                                d={this.getExternalTextZonePath(57, 0, -0.58, -28)}
+                                fill="#1a1d21"
+                            />
+                            <text
+                                fill="white"
+                                x="-27"
+                                y="57"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="start"
+                            >
+                                DME
+                            </text>
+                            <text
+                                ref={this.dmeSourceRef}
+                                fill="aqua"
+                                x="-27"
+                                y="64"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="start"
+                            >
+                                NAV1
+                            </text>
+                            <text
+                                ref={this.dmeIdentRef}
+                                fill="aqua"
+                                x="-27"
+                                y="71"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="start"
+                            >
+                                117.80
+                            </text>
+                            <text
+                                ref={this.dmeDistanceRef}
+                                fill="white"
+                                x="-27"
+                                y="78"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="start"
+                            >
+                                97.7NM
+                            </text>
+                        </g>
 
-                    {/* Bearing 1 fixed group */}
-                    <g ref={this.bearing1FixedGroupRef} display="none">
-                        <path d={this.getExternalTextZonePath(57, -0.6, -1.1, -28)} fill="#1a1d21" />
-                        <text ref={this.bearing1DistanceRef} fill="white" x="-27" y="88" font-size="6" font-family={this.font} text-anchor="start">16.2 NM</text>
-                        <text ref={this.bearing1IdentRef} fill="aqua" x="-27" y="94" font-size="6" font-family={this.font} text-anchor="start">ATL</text>
-                        <text ref={this.bearing1SourceRef} fill="white" x="-27" y="100" font-size="6" font-family={this.font} text-anchor="left">NAV1</text>
-                        {/* Bearing 1 pointer */}
-                        <rect x="-5" y="96.875" width="15" height="0.25" fill="aqua" />
-                        <rect x="-3" y="96.875" width="4" height="0.25" transform="rotate(-45 -3 97)" fill="aqua" />
-                        <rect x="-3" y="96.875" width="4" height="0.25" transform="rotate(45 -3 97)" fill="aqua" />
-                    </g>
+                        {/* Bearing 1 fixed group */}
+                        <g ref={this.bearing1FixedGroupRef} display="none">
+                            <path
+                                d={this.getExternalTextZonePath(57, -0.6, -1.1, -28)}
+                                fill="#1a1d21"
+                            />
+                            <text
+                                ref={this.bearing1DistanceRef}
+                                fill="white"
+                                x="-27"
+                                y="88"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="start"
+                            >
+                                16.2 NM
+                            </text>
+                            <text
+                                ref={this.bearing1IdentRef}
+                                fill="aqua"
+                                x="-27"
+                                y="94"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="start"
+                            >
+                                ATL
+                            </text>
+                            <text
+                                ref={this.bearing1SourceRef}
+                                fill="white"
+                                x="-27"
+                                y="100"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="left"
+                            >
+                                NAV1
+                            </text>
+                            {/* Bearing 1 pointer */}
+                            <rect x="-5" y="96.875" width="15" height="0.25" fill="aqua" />
+                            <rect
+                                x="-3"
+                                y="96.875"
+                                width="4"
+                                height="0.25"
+                                transform="rotate(-45 -3 97)"
+                                fill="aqua"
+                            />
+                            <rect
+                                x="-3"
+                                y="96.875"
+                                width="4"
+                                height="0.25"
+                                transform="rotate(45 -3 97)"
+                                fill="aqua"
+                            />
+                        </g>
 
-                    {/* Bearing 2 fixed group */}
-                    <g ref={this.bearing2FixedGroupRef} display="none">
-                        <path d={this.getExternalTextZonePath(57, Math.PI + 0.6, Math.PI + 1.1, 128, true)} fill="#1a1d21" />
-                        <text ref={this.bearing2DistanceRef} fill="white" x="127" y="88" font-size="6" font-family={this.font} text-anchor="end">16.2 NM</text>
-                        <text ref={this.bearing2IdentRef} fill="aqua" x="127" y="94" font-size="6" font-family={this.font} text-anchor="end">ATL</text>
-                        <text ref={this.bearing2SourceRef} fill="white" x="127" y="100" font-size="6" font-family={this.font} text-anchor="end">NAV1</text>
-                        <path d="M90 97 L92 97 M105 97 L103 97 L100 100 M103 97 L100 94 M101.5 98.5 L93 98.5 Q90 97 93 95.5 L101.5 95.5" stroke="aqua" stroke-width="0.5" fill-opacity="0" />
-                    </g>
-                </>}
+                        {/* Bearing 2 fixed group */}
+                        <g ref={this.bearing2FixedGroupRef} display="none">
+                            <path
+                                d={this.getExternalTextZonePath(
+                                    57,
+                                    Math.PI + 0.6,
+                                    Math.PI + 1.1,
+                                    128,
+                                    true
+                                )}
+                                fill="#1a1d21"
+                            />
+                            <text
+                                ref={this.bearing2DistanceRef}
+                                fill="white"
+                                x="127"
+                                y="88"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="end"
+                            >
+                                16.2 NM
+                            </text>
+                            <text
+                                ref={this.bearing2IdentRef}
+                                fill="aqua"
+                                x="127"
+                                y="94"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="end"
+                            >
+                                ATL
+                            </text>
+                            <text
+                                ref={this.bearing2SourceRef}
+                                fill="white"
+                                x="127"
+                                y="100"
+                                font-size="6"
+                                font-family={this.font}
+                                text-anchor="end"
+                            >
+                                NAV1
+                            </text>
+                            <path
+                                d="M90 97 L92 97 M105 97 L103 97 L100 100 M103 97 L100 94 M101.5 98.5 L93 98.5 Q90 97 93 95.5 L101.5 95.5"
+                                stroke="aqua"
+                                stroke-width="0.5"
+                                fill-opacity="0"
+                            />
+                        </g>
+                    </>
+                )}
             </svg>
-        );
+        )
     }
 }

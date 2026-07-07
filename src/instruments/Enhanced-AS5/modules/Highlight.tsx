@@ -1,49 +1,69 @@
-import { DisplayComponent, FSComponent, VNode, ComponentProps } from '@microsoft/msfs-sdk';
+import { DisplayComponent, FSComponent, VNode, ComponentProps } from '@microsoft/msfs-sdk'
 
 export interface HighlightElementRefs {
-    root: SVGElement;
-    background: SVGElement;
-    rectangles: SVGElement;
+    root: SVGElement
+    background: SVGElement
+    rectangles: SVGElement
 }
 
 export interface HighlightProps extends ComponentProps {
-    onApi: (refs: HighlightElementRefs) => void;
+    onApi: (refs: HighlightElementRefs) => void
 }
 
 export class HighlightComponent extends DisplayComponent<HighlightProps> {
-    private readonly rootRef = FSComponent.createRef<SVGElement>();
-    private readonly backgroundRef = FSComponent.createRef<SVGPathElement>();
-    private readonly rectanglesRef = FSComponent.createRef<SVGPathElement>();
+    private readonly rootRef = FSComponent.createRef<SVGElement>()
+    private readonly backgroundRef = FSComponent.createRef<SVGPathElement>()
+    private readonly rectanglesRef = FSComponent.createRef<SVGPathElement>()
 
     onAfterRender(): void {
-        const { z, w } = globalPanelData.daInstruments[0].vPosAndSize;
-        const width = z;
-        const height = w;
-        const root = this.rootRef.getOrDefault();
-        diffAndSetAttribute(root, 'width', width.toFixed(0));
-        diffAndSetAttribute(root, 'height', height.toFixed(0));
-        diffAndSetAttribute(root, 'display', 'none');
-        diffAndSetAttribute(root, 'viewBox', `0 0 ${width} ${height}`);
-        const d = `M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} L 0 0`;
-        diffAndSetAttribute(this.backgroundRef.getOrDefault(), 'd', d);
-        diffAndSetAttribute(this.rectanglesRef.getOrDefault(), 'd', '');
+        const { z, w } = globalPanelData.daInstruments[0].vPosAndSize
+        const width = z
+        const height = w
+        const root = this.rootRef.getOrDefault()
+        diffAndSetAttribute(root, 'width', width.toFixed(0))
+        diffAndSetAttribute(root, 'height', height.toFixed(0))
+        diffAndSetAttribute(root, 'display', 'none')
+        diffAndSetAttribute(root, 'viewBox', `0 0 ${width} ${height}`)
+        const d = `M 0 0 L ${width} 0 L ${width} ${height} L 0 ${height} L 0 0`
+        diffAndSetAttribute(this.backgroundRef.getOrDefault(), 'd', d)
+        diffAndSetAttribute(this.rectanglesRef.getOrDefault(), 'd', '')
 
         if (this.props.onApi) {
             this.props.onApi({
                 root,
                 background: this.backgroundRef.getOrDefault(),
                 rectangles: this.rectanglesRef.getOrDefault(),
-            });
+            })
         }
     }
 
     render(): VNode {
         return (
-            <svg ref={this.rootRef} class="highlight" width="0" height="0" viewBox="0 0 0 0" display="none">
-                <path ref={this.backgroundRef} d="" fill="black" fill-opacity="0.30" fill-rule="evenodd" />
-                <path ref={this.rectanglesRef} d="" stroke="#01b0f1" stroke-width="6" fill="none" stroke-linecap="square" />
+            <svg
+                ref={this.rootRef}
+                class="highlight"
+                width="0"
+                height="0"
+                viewBox="0 0 0 0"
+                display="none"
+            >
+                <path
+                    ref={this.backgroundRef}
+                    d=""
+                    fill="black"
+                    fill-opacity="0.30"
+                    fill-rule="evenodd"
+                />
+                <path
+                    ref={this.rectanglesRef}
+                    d=""
+                    stroke="#01b0f1"
+                    stroke-width="6"
+                    fill="none"
+                    stroke-linecap="square"
+                />
             </svg>
-        );
+        )
     }
 }
 

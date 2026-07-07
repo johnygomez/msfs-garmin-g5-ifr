@@ -9,7 +9,7 @@ import {
     SoftKeysMenu,
 } from './NavSystem'
 import { ContextualMenu, ContextualMenuElement } from './ContextualMenu'
-import { SimVarValueType } from '@microsoft/msfs-sdk';
+import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
 
 export class PFD_VSpeed extends NavSystemElement {
     vsi: HTMLElement
@@ -85,8 +85,17 @@ export class PFD_Airspeed extends NavSystemElement {
     alwaysDisplaySpeed: boolean
     dynamicReferenceSpeeds: any[]
     speedType: any
-    airspeedElement: Element
     maxSpeed: number
+    airspeedElement: Element
+    indicatedAirspeedSub = Subject.create(0)
+    trueAirspeedSub = Subject.create(0)
+    displayRefSpeedSub = Subject.create('False')
+    refSpeedMachSub = Subject.create(0)
+    refSpeedSub = Subject.create(0)
+    airspeedTrendSub = Subject.create(0)
+    maxSpeedSub = Subject.create(0)
+    displayMachSub = Subject.create(false)
+    machSpeedSub = Subject.create(0)
 
     constructor(_speedType = 'airspeed') {
         super()
@@ -113,12 +122,12 @@ export class PFD_Airspeed extends NavSystemElement {
             indicatedSpeed = Simplane.getGroundSpeed()
         }
         if (indicatedSpeed != this.lastIndicatedSpeed) {
-            diffAndSetAttribute(this.airspeedElement, 'airspeed', fastToFixed(indicatedSpeed, 1))
+            this.indicatedAirspeedSub.set(indicatedSpeed)
             this.lastIndicatedSpeed = indicatedSpeed
         }
         const trueSpeed = Simplane.getTrueSpeed()
         if (trueSpeed != this.lastTrueSpeed) {
-            diffAndSetAttribute(this.airspeedElement, 'true-airspeed', trueSpeed + '')
+            this.trueAirspeedSub.set(trueSpeed)
             this.lastTrueSpeed = trueSpeed
         }
         if (
@@ -130,28 +139,23 @@ export class PFD_Airspeed extends NavSystemElement {
                 SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', SimVarValueType.Bool) ||
                 SimVar.GetSimVarValue('AUTOPILOT MANAGED SPEED IN MACH', SimVarValueType.Bool)
             ) {
-                diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'Mach')
-                const refMach = SimVar.GetSimVarValue('AUTOPILOT MACH HOLD VAR', SimVarValueType.Mach)
-                diffAndSetAttribute(
-                    this.airspeedElement,
-                    'ref-speed-mach',
-                    'M' + (refMach < 1 ? fastToFixed(refMach, 3).slice(1) : fastToFixed(refMach, 3))
+                this.displayRefSpeedSub.set('Mach')
+                const refMach = SimVar.GetSimVarValue(
+                    'AUTOPILOT MACH HOLD VAR',
+                    SimVarValueType.Mach
                 )
-                diffAndSetAttribute(
-                    this.airspeedElement,
-                    'ref-speed',
+                this.refSpeedMachSub.set(refMach)
+                this.refSpeedSub.set(
                     SimVar.GetGameVarValue('FROM MACH TO KIAS', SimVarValueType.Number, refMach)
                 )
             } else {
-                diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'True')
-                diffAndSetAttribute(
-                    this.airspeedElement,
-                    'ref-speed',
-                    fastToFixed(SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots), 0)
+                this.displayRefSpeedSub.set('True')
+                this.refSpeedSub.set(
+                    SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots)
                 )
             }
         } else {
-            diffAndSetAttribute(this.airspeedElement, 'display-ref-speed', 'False')
+            this.displayRefSpeedSub.set('False')
         }
         if (isNaN(this.acceleration)) {
             this.acceleration = 0
@@ -172,18 +176,14 @@ export class PFD_Airspeed extends NavSystemElement {
                 Math.min(_deltaTime, smoothFactor) * instantAcceleration) /
             smoothFactor
         this.lastSpeed = indicatedSpeed
-        diffAndSetAttribute(this.airspeedElement, 'airspeed-trend', this.acceleration + '')
+        this.airspeedTrendSub.set(this.acceleration)
         let speedMach = -1
         const crossSpeed = SimVar.GetGameVarValue('AIRCRAFT CROSSOVER SPEED', SimVarValueType.Knots)
         if (crossSpeed != 0) {
             const cruiseMach = SimVar.GetGameVarValue('AIRCRAFT CRUISE MACH', SimVarValueType.Mach)
             const crossAltitude = Simplane.getCrossoverAltitude(crossSpeed, cruiseMach)
             const crossSpeedFactor = Simplane.getCrossoverSpeedFactor(crossSpeed, cruiseMach)
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'max-speed',
-                (Math.min(crossSpeedFactor, 1) * this.maxSpeed).toString()
-            )
+            this.maxSpeedSub.set(Math.min(crossSpeedFactor, 1) * this.maxSpeed)
             const mach = Simplane.getMachSpeed()
             const altitude = Simplane.getAltitude()
             if (mach >= cruiseMach && altitude >= crossAltitude) {
@@ -191,30 +191,34 @@ export class PFD_Airspeed extends NavSystemElement {
             }
         }
         if (speedMach > 0) {
-            diffAndSetAttribute(this.airspeedElement, 'display-mach', 'True')
-            diffAndSetAttribute(
-                this.airspeedElement,
-                'mach-speed',
-                'M ' +
-                    (speedMach < 1 ? fastToFixed(speedMach, 3).slice(1) : fastToFixed(speedMach, 3))
-            )
+            this.displayMachSub.set(true)
+            this.machSpeedSub.set(speedMach)
         } else {
-            diffAndSetAttribute(this.airspeedElement, 'display-mach', 'False')
+            this.displayMachSub.set(false)
         }
     }
     onExit() {}
     onEvent(_event) {}
 
     updateDynamicReferenceSpeeds() {
-        const validAttrs = ['airspeed', 'airspeed-trend', 'min-speed', 'green-begin', 'green-end', 'flaps-begin', 'flaps-end', 'yellow-begin', 'yellow-end', 'red-begin', 'red-end', 'max-speed', 'true-airspeed', 'no-true-airspeed', 'display-ref-speed', 'ref-speed', 'ref-speed-mach', 'display-mach', 'mach-speed', 'vyse-speed', 'vmc-speed', 'ground-airspeed'];
         for (const speed of this.dynamicReferenceSpeeds) {
             if (speed.isValid() && this.airspeedElement) {
-                if (validAttrs.includes(speed.attribute)) {
+                if (speed.attribute === 'airspeed') {
                     diffAndSetAttribute(this.airspeedElement, speed.attribute, speed.value + '')
                 }
             }
         }
     }
+}
+export interface AltimeterSubjects {
+    indicatedAltitude: Subject<number>
+    baroPressure: Subject<number>
+    verticalSpeed: Subject<number>
+    referenceAltitude: Subject<number>
+    altitudeAlertState: Subject<string>
+    referenceVspeed: Subject<string>
+    verticalDeviationMode: Subject<string>
+    verticalDeviationValue: Subject<number>
 }
 export class PFD_Altimeter extends NavSystemElement {
     lastAltitude: number
@@ -226,7 +230,7 @@ export class PFD_Altimeter extends NavSystemElement {
     altimeterIndex: number
     readyToSet: boolean
     altitudeType: any
-    altimeterElement: Element | undefined
+    subjects: AltimeterSubjects | undefined
 
     constructor(_altitudeType = 'indicatedAltimeter') {
         super()
@@ -245,43 +249,39 @@ export class PFD_Altimeter extends NavSystemElement {
 
     onEnter() {}
     onUpdate(_deltaTime) {
-        if (!this.altimeterElement) return
+        if (!this.subjects) return
         let altitude
         if (this.altitudeType == 'indicatedAltimeter') {
-            altitude = SimVar.GetSimVarValue('INDICATED ALTITUDE:' + this.altimeterIndex, SimVarValueType.Feet)
+            altitude = SimVar.GetSimVarValue(
+                'INDICATED ALTITUDE:' + this.altimeterIndex,
+                SimVarValueType.Feet
+            )
         } else if (this.altitudeType == 'gpsAlt') {
             altitude = SimVar.GetSimVarValue('GPS POSITION ALT', SimVarValueType.Feet)
         }
-        const selectedAltitude = SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet)
+        const selectedAltitude = SimVar.GetSimVarValue(
+            'AUTOPILOT ALTITUDE LOCK VAR',
+            SimVarValueType.Feet
+        )
         if (altitude != this.lastAltitude) {
-            diffAndSetAttribute(this.altimeterElement, 'Altitude', fastToFixed(altitude, 1))
+            this.subjects.indicatedAltitude.set(altitude)
             this.lastAltitude = altitude
         }
-        diffAndSetAttribute(
-            this.altimeterElement,
-            'vspeed',
-            fastToFixed(Simplane.getVerticalSpeed(), 1)
-        )
+        this.subjects.verticalSpeed.set(Simplane.getVerticalSpeed())
         if (SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD', SimVarValueType.Bool)) {
-            diffAndSetAttribute(
-                this.altimeterElement,
-                'reference-vspeed',
+            this.subjects.referenceVspeed.set(
                 fastToFixed(
                     SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD VAR', SimVarValueType.FPM),
                     0
                 )
             )
         } else {
-            diffAndSetAttribute(this.altimeterElement, 'reference-vspeed', '----')
+            this.subjects.referenceVspeed.set('----')
         }
         const altitudeRefActive = true
         if (altitudeRefActive) {
             if (selectedAltitude != this.lastSelectedAltitude) {
-                diffAndSetAttribute(
-                    this.altimeterElement,
-                    'reference-altitude',
-                    fastToFixed(selectedAltitude, 0)
-                )
+                this.subjects.referenceAltitude.set(selectedAltitude)
                 this.lastSelectedAltitude = selectedAltitude
                 this.selectedAltWasCaptured = false
             }
@@ -292,46 +292,30 @@ export class PFD_Altimeter extends NavSystemElement {
                         this.blinkTime = 5000
                     }
                     if (this.blinkTime > 0) {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
+                        this.subjects.altitudeAlertState.set(
                             Math.floor(this.blinkTime / 250) % 2 == 0 ? 'BlueText' : 'Empty'
                         )
                         this.blinkTime -= _deltaTime
                     } else {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
-                            'BlueText'
-                        )
+                        this.subjects.altitudeAlertState.set('BlueText')
                     }
                 } else if (Math.abs(altitude - selectedAltitude) <= 1000) {
                     if (this.alertState < 1) {
                         this.blinkTime = 5000
                     }
                     if (this.blinkTime > 0) {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
+                        this.subjects.altitudeAlertState.set(
                             Math.floor(this.blinkTime / 250) % 2 == 0
                                 ? 'BlueBackground'
                                 : 'BlueText'
                         )
                         this.blinkTime -= _deltaTime
                     } else {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
-                            'BlueBackground'
-                        )
+                        this.subjects.altitudeAlertState.set('BlueBackground')
                     }
                 } else {
                     this.alertState = 0
-                    diffAndSetAttribute(
-                        this.altimeterElement,
-                        'selected-altitude-alert',
-                        'BlueText'
-                    )
+                    this.subjects.altitudeAlertState.set('BlueText')
                 }
             } else {
                 if (Math.abs(altitude - selectedAltitude) <= 200) {
@@ -340,18 +324,12 @@ export class PFD_Altimeter extends NavSystemElement {
                         this.alertState = 2
                     }
                     if (this.blinkTime > 0) {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
+                        this.subjects.altitudeAlertState.set(
                             Math.floor(this.blinkTime / 250) % 2 == 0 ? 'BlueText' : 'Empty'
                         )
                         this.blinkTime -= _deltaTime
                     } else {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
-                            'BlueText'
-                        )
+                        this.subjects.altitudeAlertState.set('BlueText')
                     }
                 } else {
                     if (this.alertState != 3) {
@@ -360,24 +338,18 @@ export class PFD_Altimeter extends NavSystemElement {
                         this.alertState = 3
                     }
                     if (this.blinkTime > 0) {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
+                        this.subjects.altitudeAlertState.set(
                             Math.floor(this.blinkTime / 250) % 2 == 0 ? 'YellowText' : 'Empty'
                         )
                         this.blinkTime -= _deltaTime
                     } else {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'selected-altitude-alert',
-                            'YellowText'
-                        )
+                        this.subjects.altitudeAlertState.set('YellowText')
                     }
                 }
             }
         } else {
-            diffAndSetAttribute(this.altimeterElement, 'reference-altitude', '----')
-            diffAndSetAttribute(this.altimeterElement, 'selected-altitude-alert', 'BlueText')
+            this.subjects.referenceAltitude.set(0)
+            this.subjects.altitudeAlertState.set('BlueText')
         }
         const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
             ? 3
@@ -385,26 +357,22 @@ export class PFD_Altimeter extends NavSystemElement {
         switch (cdiSource) {
             case 1:
                 if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:1', SimVarValueType.Bool)) {
-                    diffAndSetAttribute(this.altimeterElement, 'vertical-deviation-mode', 'GS')
-                    diffAndSetAttribute(
-                        this.altimeterElement,
-                        'vertical-deviation-value',
-                        SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) / 127.0 + ''
+                    this.subjects.verticalDeviationMode.set('GS')
+                    this.subjects.verticalDeviationValue.set(
+                        SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) / 127.0
                     )
                 } else {
-                    diffAndSetAttribute(this.altimeterElement, 'vertical-deviation-mode', 'None')
+                    this.subjects.verticalDeviationMode.set('None')
                 }
                 break
             case 2:
                 if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:2', SimVarValueType.Bool)) {
-                    diffAndSetAttribute(this.altimeterElement, 'vertical-deviation-mode', 'GS')
-                    diffAndSetAttribute(
-                        this.altimeterElement,
-                        'vertical-deviation-value',
-                        SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) / 127.0 + ''
+                    this.subjects.verticalDeviationMode.set('GS')
+                    this.subjects.verticalDeviationValue.set(
+                        SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) / 127.0
                     )
                 } else {
-                    diffAndSetAttribute(this.altimeterElement, 'vertical-deviation-mode', 'None')
+                    this.subjects.verticalDeviationMode.set('None')
                 }
                 break
             case 3:
@@ -413,53 +381,34 @@ export class PFD_Altimeter extends NavSystemElement {
                     this.gps.currFlightPlanManager.isActiveApproach() &&
                     Simplane.getAutoPilotApproachType() == ApproachType.APPROACH_TYPE_RNAV
                 ) {
-                    diffAndSetAttribute(this.altimeterElement, 'vertical-deviation-mode', 'GP')
-                    diffAndSetAttribute(
-                        this.altimeterElement,
-                        'vertical-deviation-value',
-                        SimVar.GetSimVarValue('GPS VERTICAL ERROR', SimVarValueType.Meters) / 150 + ''
+                    this.subjects.verticalDeviationMode.set('GP')
+                    this.subjects.verticalDeviationValue.set(
+                        SimVar.GetSimVarValue('GPS VERTICAL ERROR', SimVarValueType.Meters) / 150
                     )
                 } else if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:1', SimVarValueType.Bool)) {
-                    diffAndSetAttribute(
-                        this.altimeterElement,
-                        'vertical-deviation-mode',
-                        'GSPreview'
-                    )
-                    diffAndSetAttribute(
-                        this.altimeterElement,
-                        'vertical-deviation-value',
-                        SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) / 127.0 + ''
+                    this.subjects.verticalDeviationMode.set('GSPreview')
+                    this.subjects.verticalDeviationValue.set(
+                        SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) / 127.0
                     )
                 } else {
                     if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:2', SimVarValueType.Bool)) {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'vertical-deviation-mode',
-                            'GSPreview'
-                        )
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'vertical-deviation-value',
-                            SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) / 127.0 + ''
+                        this.subjects.verticalDeviationMode.set('GSPreview')
+                        this.subjects.verticalDeviationValue.set(
+                            SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) / 127.0
                         )
                     } else {
-                        diffAndSetAttribute(
-                            this.altimeterElement,
-                            'vertical-deviation-mode',
-                            'None'
-                        )
+                        this.subjects.verticalDeviationMode.set('None')
                     }
                 }
                 break
         }
-        let pressure = SimVar.GetSimVarValue(
+        const rawPressure = SimVar.GetSimVarValue(
             'KOHLSMAN SETTING HG:' + this.altimeterIndex,
             SimVarValueType.InHG
         )
-        pressure = fastToFixed(pressure, 2)
-        if (pressure != this.lastPressure) {
-            diffAndSetAttribute(this.altimeterElement, 'pressure', pressure)
-            this.lastPressure = pressure
+        if (rawPressure != this.lastPressure) {
+            this.subjects.baroPressure.set(rawPressure)
+            this.lastPressure = rawPressure
         }
     }
     onExit() {}
@@ -476,7 +425,13 @@ export class PFD_Altimeter extends NavSystemElement {
 }
 export class PFD_Attitude extends NavSystemElement {
     vDir: Vec2
-    svg: Element | undefined
+    pitchSub = Subject.create(0)
+    bankSub = Subject.create(0)
+    slipSkidSub = Subject.create(0)
+    fdActiveSub = Subject.create(false)
+    fdPitchSub = Subject.create(0)
+    fdBarkSub = Subject.create(0)
+    lowBankModeSub = Subject.create(false)
 
     constructor() {
         super()
@@ -487,31 +442,22 @@ export class PFD_Attitude extends NavSystemElement {
 
     onEnter() {}
     onUpdate(_deltaTime) {
-        if (!this.svg) return
         const xyz = Simplane.getOrientationAxis()
         if (xyz) {
-            diffAndSetAttribute(this.svg, 'pitch', (xyz.pitch / Math.PI) * 180 + '')
-            diffAndSetAttribute(this.svg, 'bank', (xyz.bank / Math.PI) * 180 + '')
-            diffAndSetAttribute(this.svg, 'slip_skid', Simplane.getInclinometer() + '')
-            diffAndSetAttribute(
-                this.svg,
-                'flight_director-active',
-                SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR ACTIVE', SimVarValueType.Bool) ? 'true' : 'false'
+            this.pitchSub.set((xyz.pitch / Math.PI) * 180)
+            this.bankSub.set((xyz.bank / Math.PI) * 180)
+            this.slipSkidSub.set(Simplane.getInclinometer())
+            this.fdActiveSub.set(
+                SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR ACTIVE', SimVarValueType.Bool)
             )
-            diffAndSetAttribute(
-                this.svg,
-                'flight_director-pitch',
+            this.fdPitchSub.set(
                 SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR PITCH', SimVarValueType.Degree)
             )
-            diffAndSetAttribute(
-                this.svg,
-                'flight_director-bank',
+            this.fdBarkSub.set(
                 SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR BANK', SimVarValueType.Degree)
             )
-            diffAndSetAttribute(
-                this.svg,
-                'low-bank-mode',
-                SimVar.GetSimVarValue('AUTOPILOT MAX BANK', SimVarValueType.Degree)
+            this.lowBankModeSub.set(
+                SimVar.GetSimVarValue('AUTOPILOT MAX BANK', SimVarValueType.Degree) < 20
             )
         }
     }
@@ -573,7 +519,9 @@ export class PFD_SimpleCompass extends NavSystemElement {
         diffAndSetAttribute(
             this.compass,
             'course-active',
-            SimVar.GetSimVarValue('GPS IS ACTIVE FLIGHT PLAN', SimVarValueType.Bool) ? 'True' : 'False'
+            SimVar.GetSimVarValue('GPS IS ACTIVE FLIGHT PLAN', SimVarValueType.Bool)
+                ? 'True'
+                : 'False'
         )
     }
     onExit() {}
@@ -590,6 +538,13 @@ export class PFD_Compass extends NavSystemElement {
     hsi: any
     arcHsi: any
     nearestAirport: any
+    headingSub = Subject.create(0)
+    courseSub = Subject.create(0)
+    cdiDeviationSub = Subject.create(0)
+    bearing1Sub = Subject.create(0)
+    bearing2Sub = Subject.create(0)
+    dmeDistanceSub = Subject.create(0)
+    turnRateSub = Subject.create(0)
 
     set cdiSource(_val) {
         if (this.hsi) this.hsi.logic_cdiSource = _val
@@ -620,7 +575,8 @@ export class PFD_Compass extends NavSystemElement {
         this.hsi = this.gps.getChildById(this.hsiElemId ? this.hsiElemId : 'Compass')
         this.arcHsi = this.gps.getChildById(this.arcHsiElemId ? this.arcHsiElemId : 'ArcCompass')
         this.nearestAirport = new NearestAirportList(this.gps)
-        this.displayArc = SimVar.GetSimVarValue('L:Glasscockpit_HSI_Arc', SimVarValueType.Number) != 0
+        this.displayArc =
+            SimVar.GetSimVarValue('L:Glasscockpit_HSI_Arc', SimVarValueType.Number) != 0
         if (this.hsi) {
             this.hsi.init()
         }
@@ -662,53 +618,61 @@ export class PFD_Compass extends NavSystemElement {
                 this.gps.currFlightPlanManager.getActiveWaypointIndex() != -1 &&
                 Simplane.getAutoPilotApproachType() == ApproachType.APPROACH_TYPE_ILS
             ) {
-            const approachWPNb = this.gps.currFlightPlanManager.getApproachWaypoints().length
-            const activeWP = this.gps.currFlightPlanManager.getActiveWaypoint()
-            if (
-                ((this.ifIcao && this.ifIcao != '' && activeWP && this.ifIcao == activeWP.icao) ||
-                    (approachWPNb > 0 &&
-                        this.gps.currFlightPlanManager.getActiveWaypointIndex() >=
-                            approachWPNb - 2)) &&
-                !this.hasLocBeenEntered
-            ) {
-                const approachFrequency = this.gps.currFlightPlanManager.getApproachNavFrequency()
-                if (!isNaN(approachFrequency)) {
-                    SimVar.SetSimVarValue('K:NAV1_RADIO_SWAP', SimVarValueType.Number, 0)
-                    SimVar.SetSimVarValue(
-                        'K:NAV1_RADIO_SET_HZ',
-                        'hertz',
-                        approachFrequency * 1000000
-                    )
-                }
-                this.hasLocBeenEntered = true
-            } else {
-                let approachWP
-                const wpIndex = this.gps.currFlightPlanManager.getActiveWaypointIndex() - 1
-                if (wpIndex >= 0 && wpIndex < approachWPNb) {
-                    approachWP = this.gps.currFlightPlanManager.getApproachWaypoints()[wpIndex]
-                }
+                const approachWPNb = this.gps.currFlightPlanManager.getApproachWaypoints().length
+                const activeWP = this.gps.currFlightPlanManager.getActiveWaypoint()
                 if (
                     ((this.ifIcao &&
                         this.ifIcao != '' &&
-                        approachWP &&
-                        this.ifIcao == approachWP.icao &&
-                        this.hasLocBeenEntered) ||
+                        activeWP &&
+                        this.ifIcao == activeWP.icao) ||
                         (approachWPNb > 0 &&
-                            this.gps.currFlightPlanManager.getActiveWaypointIndex() ==
-                                approachWPNb - 1)) &&
-                    !this.hasLocBeenActivated
+                            this.gps.currFlightPlanManager.getActiveWaypointIndex() >=
+                                approachWPNb - 2)) &&
+                    !this.hasLocBeenEntered
                 ) {
-                    if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                        SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Number, 0)
+                    const approachFrequency =
+                        this.gps.currFlightPlanManager.getApproachNavFrequency()
+                    if (!isNaN(approachFrequency)) {
+                        SimVar.SetSimVarValue('K:NAV1_RADIO_SWAP', SimVarValueType.Number, 0)
+                        SimVar.SetSimVarValue(
+                            'K:NAV1_RADIO_SET_HZ',
+                            'hertz',
+                            approachFrequency * 1000000
+                        )
                     }
-                    Simplane.setAutoPilotSelectedNav(1)
-                    this.hasLocBeenActivated = true
+                    this.hasLocBeenEntered = true
+                } else {
+                    let approachWP
+                    const wpIndex = this.gps.currFlightPlanManager.getActiveWaypointIndex() - 1
+                    if (wpIndex >= 0 && wpIndex < approachWPNb) {
+                        approachWP = this.gps.currFlightPlanManager.getApproachWaypoints()[wpIndex]
+                    }
+                    if (
+                        ((this.ifIcao &&
+                            this.ifIcao != '' &&
+                            approachWP &&
+                            this.ifIcao == approachWP.icao &&
+                            this.hasLocBeenEntered) ||
+                            (approachWPNb > 0 &&
+                                this.gps.currFlightPlanManager.getActiveWaypointIndex() ==
+                                    approachWPNb - 1)) &&
+                        !this.hasLocBeenActivated
+                    ) {
+                        if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
+                            SimVar.SetSimVarValue(
+                                'K:TOGGLE_GPS_DRIVES_NAV1',
+                                SimVarValueType.Number,
+                                0
+                            )
+                        }
+                        Simplane.setAutoPilotSelectedNav(1)
+                        this.hasLocBeenActivated = true
+                    }
                 }
+            } else {
+                this.hasLocBeenEntered = false
+                this.hasLocBeenActivated = false
             }
-        } else {
-            this.hasLocBeenEntered = false
-            this.hasLocBeenActivated = false
-        }
         }
     }
     onExit() {}
@@ -758,7 +722,10 @@ export class PFD_NavStatus extends NavSystemElement {
 
     onEnter() {}
     onUpdate(_deltaTime) {
-        const flightPlanActive = SimVar.GetSimVarValue('GPS IS ACTIVE FLIGHT PLAN', SimVarValueType.Bool)
+        const flightPlanActive = SimVar.GetSimVarValue(
+            'GPS IS ACTIVE FLIGHT PLAN',
+            SimVarValueType.Bool
+        )
         if (flightPlanActive) {
             let legToName = Simplane.getGPSWpNextID()
             if (!legToName) legToName = '---'
@@ -908,7 +875,10 @@ export class PFD_XPDR extends NavSystemElement {
                         this.currEdit--
                     }
                 } else {
-                    const currCode = SimVar.GetSimVarValue('TRANSPONDER CODE:1', SimVarValueType.Number)
+                    const currCode = SimVar.GetSimVarValue(
+                        'TRANSPONDER CODE:1',
+                        SimVarValueType.Number
+                    )
                     this.newCode[0] = Math.floor(currCode / 1000)
                     this.newCode[1] = Math.floor(currCode / 100) % 10
                     this.newCode[2] = Math.floor(currCode / 10) % 10
@@ -970,7 +940,9 @@ export class PFD_XPDR extends NavSystemElement {
             }
             return displayCode
         } else {
-            return ('0000' + SimVar.GetSimVarValue('TRANSPONDER CODE:1', SimVarValueType.Number)).slice(-4)
+            return (
+                '0000' + SimVar.GetSimVarValue('TRANSPONDER CODE:1', SimVarValueType.Number)
+            ).slice(-4)
         }
     }
     digitEvent(_number) {
@@ -1001,7 +973,10 @@ export class PFD_XPDR extends NavSystemElement {
         return ''
     }
     onShutDown() {
-        this.stateBeforeShutDown = SimVar.GetSimVarValue('TRANSPONDER STATE:1', SimVarValueType.Number)
+        this.stateBeforeShutDown = SimVar.GetSimVarValue(
+            'TRANSPONDER STATE:1',
+            SimVarValueType.Number
+        )
         if (this.stateBeforeShutDown == 0) {
             this.stateBeforeShutDown = 1
         }
@@ -1010,7 +985,11 @@ export class PFD_XPDR extends NavSystemElement {
     onPowerOn() {
         const state = SimVar.GetSimVarValue('TRANSPONDER STATE:1', SimVarValueType.Number)
         if (state == 0) {
-            SimVar.SetSimVarValue('TRANSPONDER STATE:1', SimVarValueType.Number, this.stateBeforeShutDown)
+            SimVar.SetSimVarValue(
+                'TRANSPONDER STATE:1',
+                SimVarValueType.Number,
+                this.stateBeforeShutDown
+            )
         }
     }
 }
@@ -1217,22 +1196,44 @@ export class PFD_Annunciations extends Annunciations {
                 diffAndSetAttribute(this.annunciations, 'state', 'Hidden')
             }
             if (this.isAnnunciationsManager) {
-                const masterWarningActive = SimVar.GetSimVarValue('MASTER WARNING ACTIVE', SimVarValueType.Bool)
+                const masterWarningActive = SimVar.GetSimVarValue(
+                    'MASTER WARNING ACTIVE',
+                    SimVarValueType.Bool
+                )
                 if (warningCount > 0 != masterWarningActive || warningOn) {
-                    SimVar.SetSimVarValue('K:MASTER_WARNING_SET', SimVarValueType.Bool, warningCount > 0)
+                    SimVar.SetSimVarValue(
+                        'K:MASTER_WARNING_SET',
+                        SimVarValueType.Bool,
+                        warningCount > 0
+                    )
                 }
                 if (warningCount > 0 && !warningOn) {
                     SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 }
-                const masterCautionActive = SimVar.GetSimVarValue('MASTER CAUTION ACTIVE', SimVarValueType.Bool)
+                const masterCautionActive = SimVar.GetSimVarValue(
+                    'MASTER CAUTION ACTIVE',
+                    SimVarValueType.Bool
+                )
                 if (cautionCount > 0 != masterCautionActive || cautionOn) {
-                    SimVar.SetSimVarValue('K:MASTER_CAUTION_SET', SimVarValueType.Bool, cautionCount > 0)
+                    SimVar.SetSimVarValue(
+                        'K:MASTER_CAUTION_SET',
+                        SimVarValueType.Bool,
+                        cautionCount > 0
+                    )
                 }
                 if (cautionCount > 0 && !cautionOn) {
                     SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
                 }
-                SimVar.SetSimVarValue('L:Generic_Master_Warning_Active', SimVarValueType.Bool, warningOn)
-                SimVar.SetSimVarValue('L:Generic_Master_Caution_Active', SimVarValueType.Bool, cautionOn)
+                SimVar.SetSimVarValue(
+                    'L:Generic_Master_Warning_Active',
+                    SimVarValueType.Bool,
+                    warningOn
+                )
+                SimVar.SetSimVarValue(
+                    'L:Generic_Master_Caution_Active',
+                    SimVarValueType.Bool,
+                    cautionOn
+                )
             }
         }
         if (this.alertLevel == 3 && !this.isPlayingWarningTone) {
@@ -1476,7 +1477,9 @@ export class PFD_WindData extends NavSystemElement {
                     diffAndSetAttribute(
                         this.svg,
                         'wind-direction',
-                        ((SimVar.GetSimVarValue('AMBIENT WIND DIRECTION', SimVarValueType.Degree) + 180) % 360) -
+                        ((SimVar.GetSimVarValue('AMBIENT WIND DIRECTION', SimVarValueType.Degree) +
+                            180) %
+                            360) -
                             Simplane.getHeadingMagnetic() +
                             ''
                     )
@@ -1646,7 +1649,10 @@ export class PFD_Minimums extends NavSystemElement {
             case 2:
                 break
             case 3:
-                const currentBaroAlt = SimVar.GetSimVarValue('INDICATED ALTITUDE', SimVarValueType.Feet)
+                const currentBaroAlt = SimVar.GetSimVarValue(
+                    'INDICATED ALTITUDE',
+                    SimVarValueType.Feet
+                )
                 const currentRAAlt = SimVar.GetSimVarValue('RADIO HEIGHT', SimVarValueType.Feet)
                 diffAndSetAttribute(
                     this.altimeter,
@@ -1782,24 +1788,22 @@ export class PFD_InnerMap extends MapInstrumentElement {
     }
 }
 export class PFD_AutopilotDisplay extends NavSystemElement {
-    apStatusDisplay: number
-    yellowFlashBegin: number
-    apManualDisconnected: boolean
-    AP_LateralActive: Element | undefined
-    AP_LateralArmed: Element | undefined
-    AP_Status: Element | undefined
-    AP_YDStatus: Element | undefined
-    AP_FDIndicatorArrow: Element | undefined
-    AP_VerticalActive: Element | undefined
-    AP_ModeReference: Element | undefined
-    AP_Armed: Element | undefined
-    AP_ArmedReference: Element | undefined
+    apStatusDisplay: number = 0
+    yellowFlashBegin: number = 0
+    apManualDisconnected: boolean = false
+
+    apStatusSubject = Subject.create<string>('')
+    apStatusDisplaySubject = Subject.create<string>('')
+    apLateralActiveSubject = Subject.create<string>('')
+    apLateralArmedSubject = Subject.create<string>('')
+    apVerticalActiveSubject = Subject.create<string>('')
+    apModeReferenceSubject = Subject.create<string>('')
+    apArmedSubject = Subject.create<string>('')
+    apArmedReferenceSubject = Subject.create<string>('')
+    apYDStatusSubject = Subject.create<string>('')
 
     constructor() {
         super()
-        this.apStatusDisplay = 0
-        this.yellowFlashBegin = 0
-        this.apManualDisconnected = false
     }
 
     init(_root) {}
@@ -1822,81 +1826,77 @@ export class PFD_AutopilotDisplay extends NavSystemElement {
                 this.apStatusDisplay = 0
             }
         }
-        diffAndSetText(
-            this.AP_YDStatus,
+
+        this.apYDStatusSubject.set(
             SimVar.GetSimVarValue('AUTOPILOT YAW DAMPER', SimVarValueType.Bool) ? 'YD' : ''
         )
-        diffAndSetText(this.AP_Status, this.apStatusDisplay != 0 ? 'AP' : '')
+        this.apStatusSubject.set(this.apStatusDisplay != 0 ? 'AP' : '')
         switch (this.apStatusDisplay) {
             case 1:
-                diffAndSetAttribute(this.AP_Status, 'Display', 'RedFlash')
+                this.apStatusDisplaySubject.set('RedFlash')
                 break
             case 2:
-                diffAndSetAttribute(this.AP_Status, 'Display', 'YellowFlash')
+                this.apStatusDisplaySubject.set('YellowFlash')
                 break
             case 3:
-                diffAndSetAttribute(this.AP_Status, 'Display', 'Red')
+                this.apStatusDisplaySubject.set('Red')
                 break
             case 4:
-                diffAndSetAttribute(this.AP_Status, 'Display', 'Yellow')
+                this.apStatusDisplaySubject.set('Yellow')
                 break
             case 0:
             case 5:
             default:
-                diffAndSetAttribute(this.AP_Status, 'Display', '')
+                this.apStatusDisplaySubject.set('')
                 break
         }
-        diffAndSetAttribute(
-            this.AP_FDIndicatorArrow,
-            'state',
-            SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR ACTIVE', SimVarValueType.Bool)
-                ? 'Active'
-                : 'Inactive'
-        )
+
         if (SimVar.GetSimVarValue('AUTOPILOT PITCH HOLD', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_VerticalActive, 'PIT')
-            diffAndSetText(this.AP_ModeReference, '')
+            this.apVerticalActiveSubject.set('PIT')
+            this.apModeReferenceSubject.set('')
         } else if (SimVar.GetSimVarValue('AUTOPILOT FLIGHT LEVEL CHANGE', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_VerticalActive, 'FLC')
+            this.apVerticalActiveSubject.set('FLC')
             if (
                 SimVar.GetSimVarValue('L:XMLVAR_AirSpeedIsInMach', SimVarValueType.Bool) ||
                 SimVar.GetSimVarValue('AUTOPILOT MANAGED SPEED IN MACH', SimVarValueType.Bool)
             ) {
-                const refMach = SimVar.GetSimVarValue('AUTOPILOT MACH HOLD VAR', SimVarValueType.Mach)
-                diffAndSetText(
-                    this.AP_ModeReference,
+                const refMach = SimVar.GetSimVarValue(
+                    'AUTOPILOT MACH HOLD VAR',
+                    SimVarValueType.Mach
+                )
+                this.apModeReferenceSubject.set(
                     'M ' +
                         (refMach < 1 ? fastToFixed(refMach, 3).slice(1) : fastToFixed(refMach, 3))
                 )
             } else {
-                diffAndSetText(
-                    this.AP_ModeReference,
-                    fastToFixed(SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots), 0) +
-                        'KT'
+                this.apModeReferenceSubject.set(
+                    fastToFixed(
+                        SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots),
+                        0
+                    ) + 'KT'
                 )
             }
         } else if (SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_VerticalActive, 'FLC')
+            this.apVerticalActiveSubject.set('FLC')
             const refMach = SimVar.GetSimVarValue('AUTOPILOT MACH HOLD VAR', SimVarValueType.Mach)
-            diffAndSetText(
-                this.AP_ModeReference,
+            this.apModeReferenceSubject.set(
                 'M ' + (refMach < 1 ? fastToFixed(refMach, 3).slice(1) : fastToFixed(refMach, 3))
             )
         } else if (SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK', SimVarValueType.Bool)) {
             if (SimVar.GetSimVarValue('AUTOPILOT ALTITUDE ARM', SimVarValueType.Bool)) {
-                diffAndSetText(this.AP_VerticalActive, 'ALTS')
+                this.apVerticalActiveSubject.set('ALTS')
             } else {
-                diffAndSetText(this.AP_VerticalActive, 'ALT')
+                this.apVerticalActiveSubject.set('ALT')
             }
-            diffAndSetText(
-                this.AP_ModeReference,
-                fastToFixed(SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR:2', SimVarValueType.Feet), 0) +
-                    'FT'
+            this.apModeReferenceSubject.set(
+                fastToFixed(
+                    SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR:2', SimVarValueType.Feet),
+                    0
+                ) + 'FT'
             )
         } else if (SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_VerticalActive, 'VS')
-            diffAndSetText(
-                this.AP_ModeReference,
+            this.apVerticalActiveSubject.set('VS')
+            this.apModeReferenceSubject.set(
                 fastToFixed(
                     SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD VAR', SimVarValueType.FPM),
                     0
@@ -1904,95 +1904,98 @@ export class PFD_AutopilotDisplay extends NavSystemElement {
             )
         } else if (SimVar.GetSimVarValue('AUTOPILOT GLIDESLOPE ACTIVE', SimVarValueType.Bool)) {
             if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                diffAndSetText(this.AP_VerticalActive, 'GP')
+                this.apVerticalActiveSubject.set('GP')
             } else {
-                diffAndSetText(this.AP_VerticalActive, 'GS')
+                this.apVerticalActiveSubject.set('GS')
             }
-            diffAndSetText(this.AP_ModeReference, '')
+            this.apModeReferenceSubject.set('')
         } else {
-            diffAndSetText(this.AP_VerticalActive, '')
-            diffAndSetText(this.AP_ModeReference, '')
+            this.apVerticalActiveSubject.set('')
+            this.apModeReferenceSubject.set('')
         }
+
         if (SimVar.GetSimVarValue('AUTOPILOT ALTITUDE ARM', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_Armed, 'ALT')
-            diffAndSetText(this.AP_ArmedReference, '')
+            this.apArmedSubject.set('ALT')
+            this.apArmedReferenceSubject.set('')
         } else if (SimVar.GetSimVarValue('AUTOPILOT GLIDESLOPE ARM', SimVarValueType.Bool)) {
             if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                diffAndSetText(this.AP_Armed, 'V ALT')
-                diffAndSetText(this.AP_ArmedReference, 'GP')
+                this.apArmedSubject.set('V ALT')
+                this.apArmedReferenceSubject.set('GP')
             } else {
-                diffAndSetText(this.AP_Armed, 'GS')
-                diffAndSetText(this.AP_ArmedReference, '')
+                this.apArmedSubject.set('GS')
+                this.apArmedReferenceSubject.set('')
             }
         } else if (SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_Armed, 'ALTS')
-            diffAndSetText(this.AP_ArmedReference, '')
+            this.apArmedSubject.set('ALTS')
+            this.apArmedReferenceSubject.set('')
         } else {
-            diffAndSetText(this.AP_Armed, '')
-            diffAndSetText(this.AP_ArmedReference, '')
+            this.apArmedSubject.set('')
+            this.apArmedReferenceSubject.set('')
         }
+
         if (SimVar.GetSimVarValue('AUTOPILOT WING LEVELER', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_LateralActive, 'LVL')
+            this.apLateralActiveSubject.set('LVL')
         } else if (SimVar.GetSimVarValue('AUTOPILOT BANK HOLD', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_LateralActive, 'ROL')
+            this.apLateralActiveSubject.set('ROL')
         } else if (SimVar.GetSimVarValue('AUTOPILOT HEADING LOCK', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_LateralActive, 'HDG')
+            this.apLateralActiveSubject.set('HDG')
         } else if (SimVar.GetSimVarValue('AUTOPILOT NAV1 LOCK', SimVarValueType.Bool)) {
             if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                diffAndSetText(this.AP_LateralActive, 'GPS')
+                this.apLateralActiveSubject.set('GPS')
             } else {
                 if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                    diffAndSetText(this.AP_LateralActive, 'LOC')
+                    this.apLateralActiveSubject.set('LOC')
                 } else {
-                    diffAndSetText(this.AP_LateralActive, 'VOR')
+                    this.apLateralActiveSubject.set('VOR')
                 }
             }
         } else if (SimVar.GetSimVarValue('AUTOPILOT BACKCOURSE HOLD', SimVarValueType.Bool)) {
-            diffAndSetText(this.AP_LateralArmed, 'BC')
+            this.apLateralArmedSubject.set('BC')
         } else if (SimVar.GetSimVarValue('AUTOPILOT APPROACH HOLD', SimVarValueType.Bool)) {
             if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                diffAndSetText(this.AP_LateralArmed, 'GPS')
+                this.apLateralArmedSubject.set('GPS')
             } else {
                 if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                    diffAndSetText(this.AP_LateralActive, 'LOC')
+                    this.apLateralActiveSubject.set('LOC')
                 } else {
-                    diffAndSetText(this.AP_LateralActive, 'VOR')
+                    this.apLateralActiveSubject.set('VOR')
                 }
             }
         } else {
-            diffAndSetText(this.AP_LateralActive, '')
+            this.apLateralActiveSubject.set('')
         }
+
         if (
             SimVar.GetSimVarValue('AUTOPILOT HEADING LOCK', SimVarValueType.Bool) ||
             SimVar.GetSimVarValue('AUTOPILOT WING LEVELER', SimVarValueType.Bool)
         ) {
             if (SimVar.GetSimVarValue('AUTOPILOT NAV1 LOCK', SimVarValueType.Bool)) {
                 if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                    diffAndSetText(this.AP_LateralArmed, 'GPS')
+                    this.apLateralArmedSubject.set('GPS')
                 } else {
                     if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                        diffAndSetText(this.AP_LateralArmed, 'LOC')
+                        this.apLateralArmedSubject.set('LOC')
                     } else {
-                        diffAndSetText(this.AP_LateralArmed, 'VOR')
+                        this.apLateralArmedSubject.set('VOR')
                     }
                 }
             } else if (SimVar.GetSimVarValue('AUTOPILOT BACKCOURSE HOLD', SimVarValueType.Bool)) {
-                diffAndSetText(this.AP_LateralArmed, 'BC')
+                this.apLateralArmedSubject.set('BC')
             } else if (SimVar.GetSimVarValue('AUTOPILOT APPROACH HOLD', SimVarValueType.Bool)) {
                 if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                    diffAndSetText(this.AP_LateralArmed, 'GPS')
+                    this.apLateralArmedSubject.set('GPS')
                 } else {
                     if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                        diffAndSetText(this.AP_LateralArmed, 'LOC')
+                        this.apLateralArmedSubject.set('LOC')
                     } else {
-                        diffAndSetText(this.AP_LateralArmed, 'VOR')
+                        this.apLateralArmedSubject.set('VOR')
                     }
                 }
             } else {
-                diffAndSetText(this.AP_LateralArmed, '')
+                this.apLateralArmedSubject.set('')
             }
         } else {
-            diffAndSetText(this.AP_LateralArmed, '')
+            this.apLateralArmedSubject.set('')
         }
     }
     onExit() {}
@@ -4205,23 +4208,23 @@ export class MFD_Procedures extends NavSystemElement {
                     !this.gps.currFlightPlanManager.isActiveApproach()
             )
             const approach = this.gps.currFlightPlanManager.getAirportApproach()
-        if (approach) {
-            diffAndSetText(this.loadedApproach, approach.name)
-        } else {
-            diffAndSetText(this.loadedApproach, '____-')
-        }
-        const departure = this.gps.currFlightPlanManager.getDeparture()
-        if (departure) {
-            diffAndSetText(this.loadedDeparture, departure.name)
-        } else {
-            diffAndSetText(this.loadedDeparture, '____-')
-        }
-        const arrival = this.gps.currFlightPlanManager.getArrival()
-        if (arrival) {
-            diffAndSetText(this.loadedArrival, arrival.name)
-        } else {
-            diffAndSetText(this.loadedArrival, '____-')
-        }
+            if (approach) {
+                diffAndSetText(this.loadedApproach, approach.name)
+            } else {
+                diffAndSetText(this.loadedApproach, '____-')
+            }
+            const departure = this.gps.currFlightPlanManager.getDeparture()
+            if (departure) {
+                diffAndSetText(this.loadedDeparture, departure.name)
+            } else {
+                diffAndSetText(this.loadedDeparture, '____-')
+            }
+            const arrival = this.gps.currFlightPlanManager.getArrival()
+            if (arrival) {
+                diffAndSetText(this.loadedArrival, arrival.name)
+            } else {
+                diffAndSetText(this.loadedArrival, '____-')
+            }
         }
     }
     onExit() {
