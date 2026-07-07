@@ -44,6 +44,7 @@ import { AltimeterComponent } from './Altimeter'
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 
 export interface AirspeedSubjects {
+    indicatedAirspeed: Subject<number>
     displayRefSpeed: Subject<string>
     refSpeedMach: Subject<number>
     refSpeed: Subject<number>
@@ -65,6 +66,7 @@ export interface HSISubjects {
     groundSpeedValue: Subject<string>
     waypointDistanceValue: Subject<string>
     waypointMode: Subject<string>
+    hsiComponent: Subject<HSIComponent | null>
 }
 
 interface PfdContentProps extends ComponentProps {
@@ -113,6 +115,7 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                         bus={this.props.bus}
                         height={850}
                         noColor={false}
+                        indicatedAirspeed={spd.indicatedAirspeed}
                         displayRefSpeed={spd.displayRefSpeed}
                         refSpeedMach={spd.refSpeedMach}
                         refSpeed={spd.refSpeed}
@@ -146,6 +149,7 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
 }
 
 interface MfdContentProps extends ComponentProps {
+    bus: EventBus
     hsi: HSISubjects
     groundSpeedEl: Subject<HTMLElement | null>
     waypointDistanceEl: Subject<HTMLElement | null>
@@ -164,22 +168,22 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
         this.props.waypointDistanceEl.set(this.wdvRef.getOrDefault())
         this.props.headingValueEl.set(this.shvRef.getOrDefault())
 
-        const headingEl = this.shvRef.getOrDefault()!
-        const gsEl = this.gsvRef.getOrDefault()!
-        const wdEl = this.wdvRef.getOrDefault()!
-
         this.subs.push(
             this.props.hsi.headingValue.sub(v => {
-                headingEl.textContent = v
+                const el = this.shvRef.getOrDefault()
+                if (el) el.textContent = v
             }, true),
             this.props.hsi.groundSpeedValue.sub(v => {
-                gsEl.textContent = v
+                const el = this.gsvRef.getOrDefault()
+                if (el) el.textContent = v
             }, true),
             this.props.hsi.waypointDistanceValue.sub(v => {
-                wdEl.textContent = v
+                const el = this.wdvRef.getOrDefault()
+                if (el) el.textContent = v
             }, true),
             this.props.hsi.waypointMode.sub(v => {
-                wdEl.setAttribute('mode', v)
+                const el = this.wdvRef.getOrDefault()
+                if (el) el.setAttribute('mode', v)
             }, true)
         )
     }
@@ -195,10 +199,8 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
             <>
                 <div id="HSICompass">
                     <HSIComponent
-                        noHeadingValue={true}
-                        noCourseValue={true}
+                        bus={this.props.bus}
                         noCenterText={false}
-                        noTurnRateIndicator={false}
                         noBackground={false}
                         noAffectSimRadioNav={false}
                         largeCompass={false}
@@ -210,11 +212,11 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
                         bearing1={hsi.bearing1}
                         bearing2={hsi.bearing2}
                         dmeDistance={hsi.dmeDistance}
-                        turnRate={hsi.turnRate}
                         headingValue={hsi.headingValue}
                         groundSpeedValue={hsi.groundSpeedValue}
                         waypointDistanceValue={hsi.waypointDistanceValue}
                         waypointMode={hsi.waypointMode}
+                        onApi={instance => this.props.hsi.hsiComponent.set(instance)}
                     />
                 </div>
                 <div id="Infos">
@@ -223,19 +225,19 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
                             <path d="M0,0 h50 v30 l-30,20 l30,20 v30 h-50 Z" fill="aqua" />
                         </svg>
                         <div id="SelectedHeadingValue" ref={this.shvRef}>
-                            060°
+                            360°
                         </div>
                     </div>
                     <div id="GroundSpeed">
                         <div>GS KT</div>
                         <div id="GroundSpeedValue" ref={this.gsvRef}>
-                            202
+                            90
                         </div>
                     </div>
                     <div id="WaypointDistance">
                         <div>DIST NM</div>
                         <div id="WaypointDistanceValue" ref={this.wdvRef}>
-                            371
+                            0.0
                         </div>
                     </div>
                 </div>
@@ -280,6 +282,7 @@ class AS5Instrument extends DisplayComponent<InstrumentProps> {
                     </div>
                     <div id="MFD">
                         <MfdContent
+                            bus={this.props.bus}
                             hsi={this.props.hsi}
                             groundSpeedEl={this.props.groundSpeedEl}
                             waypointDistanceEl={this.props.waypointDistanceEl}
@@ -365,6 +368,7 @@ export class AS5 extends NavSystem {
         }
 
         const spdSubjects: AirspeedSubjects = {
+            indicatedAirspeed: airspeed.indicatedAirspeedSub,
             displayRefSpeed: airspeed.displayRefSpeedSub,
             refSpeedMach: airspeed.refSpeedMachSub,
             refSpeed: airspeed.refSpeedSub,
@@ -373,6 +377,8 @@ export class AS5 extends NavSystem {
             displayMach: airspeed.displayMachSub,
             noTrueAirspeed: airspeed.noTrueAirspeedSub,
         }
+
+        const hsiComponent = Subject.create<HSIComponent | null>(null)
 
         const hsiSubjects: HSISubjects = {
             heading: hsi.headingSub,
@@ -386,7 +392,10 @@ export class AS5 extends NavSystem {
             groundSpeedValue: hsi.groundSpeedValueSub,
             waypointDistanceValue: hsi.waypointDistanceValueSub,
             waypointMode: hsi.waypointModeSub,
+            hsiComponent,
         }
+
+        hsi.bindHSIComponent(hsiComponent)
 
         const groundSpeedEl = Subject.create<HTMLElement | null>(null)
         const waypointDistanceEl = Subject.create<HTMLElement | null>(null)
@@ -786,7 +795,26 @@ export class AS5_MFD_HSI extends PFD_Compass {
         return this._dmeSource
     }
 
+    bindHSIComponent(hsiComponentSub: Subject<HSIComponent | null>): void {
+        this._subs.push(
+            hsiComponentSub.sub(instance => {
+                this._hsiComponent = instance
+            })
+        )
+    }
+
     init(_root) {}
+    private _hsiComponent: HSIComponent | null = null
+    private readonly _subs: Subscription[] = []
+
+    onEvent(_event: any) {
+        // Forward events to the FSComponent HSI so CDI switching, bearing
+        // selection, etc. still work. Override inherited PFD_Compass.onEvent()
+        // which would crash trying to access this.hsi.onEvent().
+        if (this._hsiComponent) {
+            this._hsiComponent.onEvent(_event)
+        }
+    }
 
     onUpdate(_deltaTime) {
         this.headingSub.set(Simplane.getAutoPilotHeadingLockValueDegrees())
@@ -798,6 +826,14 @@ export class AS5_MFD_HSI extends PFD_Compass {
         this.headingValueSub.set('000'.slice(hdg.length) + hdg + '\u00B0')
 
         this.groundSpeedValueSub.set(fastToFixed(Simplane.getGroundSpeed(), 0) + '')
+
+        // HSIComponent.update() must be called explicitly here because it reads
+        // SimVars that are not published to the EventBus (CDI, bearing, DME data).
+        // The declarative transforms (rose, heading bug, etc.) are driven by
+        // ConsumerSubjects / MappedSubjects bound in JSX.
+        if (this._hsiComponent) {
+            this._hsiComponent.update(_deltaTime)
+        }
 
         if ((this.cdiSource == 1 || this.cdiSource == 2) && this.dmeSource != this.cdiSource) {
             this.dmeSource = this.cdiSource

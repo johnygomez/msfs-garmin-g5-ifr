@@ -263,6 +263,7 @@ as5-element #ContextualMenu {
     display: flex;
     flex-direction: column;
     align-items: center;
+    z-index: 20;
 }
 as5-element #ContextualMenu[state='Inactive'] {
     visibility: hidden;
@@ -280,7 +281,7 @@ as5-element #ContextualMenu #ContextualMenuElements .ContextualMenuElement {
     width: 23%;
     height: 80%;
     text-align: center;
-    font-size: 120%;
+    font-size: 16px;
     background: linear-gradient(grey, black);
     border: solid 2px grey;
     line-height: 1.2;
@@ -356,6 +357,7 @@ as5-element #SelectionValueWindow {
     border: 2px solid grey;
     border-radius: 10px;
     text-align: center;
+    z-index: 20;
 }
 as5-element #SelectionValueWindow[state='Active'] {
     display: inherit;

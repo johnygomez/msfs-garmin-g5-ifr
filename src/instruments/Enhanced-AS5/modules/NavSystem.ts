@@ -1,4 +1,4 @@
-import { SimVarValueType } from '@microsoft/msfs-sdk'
+import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
 export class NavSystem extends BaseInstrument {
     static _iterations: number = 0
     static maxTimeUpdateAllTime: number = 0
@@ -49,6 +49,12 @@ export class NavSystem extends BaseInstrument {
     lastRelevantICAO: any
     lastRelevantICAOType: any
     cockpitSettings: any
+
+    // Reactive state Subjects (replaces imperative diffAndSetAttribute calls)
+    readonly pageState = Subject.create('')
+    readonly contextualMenuState = Subject.create('Inactive')
+    readonly sliderState = Subject.create('Inactive')
+    readonly sliderCursorStyle = Subject.create('')
 
     get flightPlanManager() {
         return this.currFlightPlanManager
@@ -105,6 +111,25 @@ export class NavSystem extends BaseInstrument {
         if (this.manageFlightPlan && typeof FlightPlanManager !== 'undefined') {
             this.currFlightPlanManager = new FlightPlanManager(this)
         }
+
+        // Bind reactive state Subjects to DOM elements
+        this.pageState.sub(state => {
+            if (!this.pagesContainer) {
+                this.pagesContainer = this.getChildById('PageContainer')
+            }
+            if (this.pagesContainer) {
+                this.pagesContainer.setAttribute('state', state)
+            }
+        }, true)
+        this.contextualMenuState.sub(state => {
+            if (this.contextualMenu) this.contextualMenu.setAttribute('state', state)
+        }, true)
+        this.sliderState.sub(state => {
+            if (this.menuSlider) this.menuSlider.setAttribute('state', state)
+        }, true)
+        this.sliderCursorStyle.sub(style => {
+            if (this.menuSliderCursor) this.menuSliderCursor.setAttribute('style', style)
+        }, true)
     }
 
     onUpdate(_deltaTime) {}
@@ -327,7 +352,7 @@ export class NavSystem extends BaseInstrument {
                 if (event == 'ElementSetAttribute' && _args.length >= 4) {
                     const element = this.getChildById(_args[1])
                     if (element) {
-                        diffAndSetAttribute(element, _args[2], _args[3])
+                        element.setAttribute(_args[2], _args[3])
                     }
                 } else {
                     this.computeEvent(event)
@@ -412,7 +437,7 @@ export class NavSystem extends BaseInstrument {
             this.pagesContainer = this.getChildById('PageContainer')
         }
         if (this.pagesContainer) {
-            diffAndSetAttribute(this.pagesContainer, 'state', this.getCurrentPage().htmlElemId)
+            this.pageState.set(this.getCurrentPage().htmlElemId)
         }
         if (this.useUpdateBudget) {
             this.updateGroupsWithBudget()
@@ -498,14 +523,10 @@ export class NavSystem extends BaseInstrument {
             const cursorHeight = (_maxElems * 100) / _nbElem
             const pct = _index / (_nbElem - _maxElems)
             const cursorTop = Math.min(pct, 1.0) * (100 - cursorHeight)
-            diffAndSetAttribute(_slider, 'state', 'Active')
-            diffAndSetAttribute(
-                _cursor,
-                'style',
-                'height:' + cursorHeight + '%; top:' + cursorTop + '%'
-            )
+            this.sliderState.set('Active')
+            this.sliderCursorStyle.set('height:' + cursorHeight + '%; top:' + cursorTop + '%')
         } else {
-            diffAndSetAttribute(_slider, 'state', 'Inactive')
+            this.sliderState.set('Inactive')
         }
     }
     frequencyFormat(_frequency, _nbDigits) {
@@ -597,7 +618,7 @@ export class NavSystem extends BaseInstrument {
                 }
                 break
             case 2:
-                diffAndSetAttribute(this.contextualMenu, 'state', 'Inactive')
+                this.contextualMenuState.set('Inactive')
                 break
         }
     }
@@ -616,7 +637,7 @@ export class NavSystem extends BaseInstrument {
                 this.cursorIndex = 0
                 break
             case 2:
-                diffAndSetAttribute(this.contextualMenu, 'state', 'Active')
+                this.contextualMenuState.set('Active')
                 this.contextualMenuDisplayBeginIndex = 0
                 this.cursorIndex = 0
                 if (this.currentContextualMenu.elements[0].isInactive()) {
@@ -1417,6 +1438,9 @@ export class CDIElement extends NavSystemElement {
     cdiCursor: HTMLElement
     toFrom: HTMLElement
 
+    /** Reactive CDI cursor position (0-100%). Consumed by FSComponent CDI display. */
+    readonly cdiPosition = Subject.create(50)
+
     init(_root) {
         this.cdiCursor = this.gps.getChildById('CDICursor')
         this.toFrom = this.gps.getChildById('ToFrom')
@@ -1425,11 +1449,7 @@ export class CDIElement extends NavSystemElement {
     onEnter() {}
     onUpdate(_deltaTime) {
         const CTD = Simplane.getNextWaypointCrossTrk()
-        diffAndSetAttribute(
-            this.cdiCursor,
-            'style',
-            'left:' + ((CTD <= -1 ? -1 : CTD >= 1 ? 1 : CTD) * 50 + 50) + '%'
-        )
+        this.cdiPosition.set((CTD <= -1 ? -1 : CTD >= 1 ? 1 : CTD) * 50 + 50)
     }
     onExit() {}
     onEvent(_event) {}
@@ -1456,6 +1476,14 @@ export class MapInstrumentElement extends NavSystemElement {
     instrumentLoaded: boolean
     weatherTexts: any[]
 
+    // Reactive state Subjects for fuel range circle
+    readonly fuelRangeState = Subject.create('Inactive')
+    readonly fuelRangeRadiusReserve = Subject.create('0')
+    readonly fuelRangeInnerRadius = Subject.create('0')
+    readonly fuelRangeTimeToReserve = Subject.create('0')
+    readonly fuelRangeOffsetX = Subject.create('0')
+    readonly fuelRangeOffsetY = Subject.create('0')
+
     constructor() {
         super()
         this.displayMode = EMapDisplayMode.GPS
@@ -1471,6 +1499,27 @@ export class MapInstrumentElement extends NavSystemElement {
     init(_root) {
         this.instrument = _root.querySelector('map-instrument')
         this.fuelRangeCircle = _root.querySelector('glasscockpit-fuel-range-circle')
+
+        // Bind reactive Subjects to fuel range circle DOM element
+        this.fuelRangeState.sub(s => {
+            if (this.fuelRangeCircle) this.fuelRangeCircle.setAttribute('state', s)
+        }, true)
+        this.fuelRangeRadiusReserve.sub(v => {
+            if (this.fuelRangeCircle) this.fuelRangeCircle.setAttribute('radius-reserve', v)
+        }, true)
+        this.fuelRangeInnerRadius.sub(v => {
+            if (this.fuelRangeCircle) this.fuelRangeCircle.setAttribute('inner-radius', v)
+        }, true)
+        this.fuelRangeTimeToReserve.sub(v => {
+            if (this.fuelRangeCircle) this.fuelRangeCircle.setAttribute('time-to-reserve', v)
+        }, true)
+        this.fuelRangeOffsetX.sub(v => {
+            if (this.fuelRangeCircle) this.fuelRangeCircle.setAttribute('offset-x', v)
+        }, true)
+        this.fuelRangeOffsetY.sub(v => {
+            if (this.fuelRangeCircle) this.fuelRangeCircle.setAttribute('offset-y', v)
+        }, true)
+
         if (this.instrument) {
             TemplateElement.callNoBinding(this.instrument, () => {
                 this.onTemplateLoaded()
@@ -1486,14 +1535,12 @@ export class MapInstrumentElement extends NavSystemElement {
                 const range = this.instrument.getWeatherRange()
                 const ratio = 1.0 / this.weatherTexts.length
                 for (let i = 0; i < this.weatherTexts.length; i++) {
-                    diffAndSetText(
-                        this.weatherTexts[i],
+                    this.weatherTexts[i].textContent =
                         fastToFixed(range * ratio * (i + 1), 2) + 'NM'
-                    )
                 }
             }
             if (this.fuelRangeCircle && this.fuelRangeOn) {
-                diffAndSetAttribute(this.fuelRangeCircle, 'state', 'Active')
+                this.fuelRangeState.set('Active')
                 const size = Math.max(this.instrument.clientHeight, this.instrument.clientWidth)
                 this.fuelRangeCircle.style.height = size + 'px'
                 this.fuelRangeCircle.style.width = size + 'px'
@@ -1516,26 +1563,24 @@ export class MapInstrumentElement extends NavSystemElement {
                 const timeToReserve = Math.max(0, timeToEmpty - this.fuelRangeReserveMinutes)
                 const distanceToReserve = timeToReserve * this.smoothedSpeed
                 const distanceToEmpty = timeToEmpty * this.smoothedSpeed
-                diffAndSetAttribute(
-                    this.fuelRangeCircle,
-                    'radius-reserve',
+                this.fuelRangeRadiusReserve.set(
                     Math.min(2000, (distanceToEmpty * 1000) / this.instrument.getDisplayRange()) +
                         ''
                 )
-                diffAndSetAttribute(
-                    this.fuelRangeCircle,
-                    'inner-radius',
+                this.fuelRangeInnerRadius.set(
                     Math.min(2000, (distanceToReserve * 1000) / this.instrument.getDisplayRange()) +
                         ''
                 )
-                diffAndSetAttribute(this.fuelRangeCircle, 'time-to-reserve', timeToReserve + '')
+                this.fuelRangeTimeToReserve.set(timeToReserve + '')
                 const offset = this.instrument.getPlaneCoords()
-                offset.y = (offset.y - 500) * this.instrument.getOverdrawFactor()
-                offset.x = (offset.x - 500) * this.instrument.getOverdrawFactor()
-                diffAndSetAttribute(this.fuelRangeCircle, 'offset-x', offset.x + '')
-                diffAndSetAttribute(this.fuelRangeCircle, 'offset-y', offset.y + '')
+                this.fuelRangeOffsetY.set(
+                    (offset.y - 500) * this.instrument.getOverdrawFactor() + ''
+                )
+                this.fuelRangeOffsetX.set(
+                    (offset.x - 500) * this.instrument.getOverdrawFactor() + ''
+                )
             } else if (this.fuelRangeCircle) {
-                diffAndSetAttribute(this.fuelRangeCircle, 'state', 'Inactive')
+                this.fuelRangeState.set('Inactive')
             }
         }
     }
@@ -1640,15 +1685,15 @@ export class MapInstrumentElement extends NavSystemElement {
                 if (_mode == EWeatherRadar.HORIZONTAL) {
                     this.instrument.setBingMapStyle('10.3%', '-13.3%', '127%', '157%')
                     const coneAngle = 90
-                    diffAndSetAttribute(svgRoot, 'viewBox', '0 0 400 400')
+                    svgRoot.setAttribute('viewBox', '0 0 400 400')
                     const trsGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(trsGroup, 'transform', 'translate(-125, 29) scale(1.63)')
+                    trsGroup.setAttribute('transform', 'translate(-125, 29) scale(1.63)')
                     svgRoot.appendChild(trsGroup)
                     const viewBox = document.createElementNS(Avionics.SVG.NS, 'svg')
-                    diffAndSetAttribute(viewBox, 'viewBox', '-600 -600 1200 1200')
+                    viewBox.setAttribute('viewBox', '-600 -600 1200 1200')
                     trsGroup.appendChild(viewBox)
                     const circleGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(circleGroup, 'id', 'Circles')
+                    circleGroup.setAttribute('id', 'Circles')
                     viewBox.appendChild(circleGroup)
                     {
                         const rads = [0.25, 0.5, 0.75, 1.0]
@@ -1659,90 +1704,90 @@ export class MapInstrumentElement extends NavSystemElement {
                             while (Math.floor(startDegrees) <= endDegrees) {
                                 const line = document.createElementNS(Avionics.SVG.NS, 'rect')
                                 const degree = 180 + startDegrees + 0.5
-                                diffAndSetAttribute(line, 'x', '0')
-                                diffAndSetAttribute(line, 'y', rad + '')
-                                diffAndSetAttribute(line, 'width', dashWidth + '')
-                                diffAndSetAttribute(line, 'height', dashHeight + '')
-                                diffAndSetAttribute(line, 'transform', 'rotate(' + degree + ' 0 0)')
-                                diffAndSetAttribute(line, 'fill', 'white')
+                                line.setAttribute('x', '0')
+                                line.setAttribute('y', rad + '')
+                                line.setAttribute('width', dashWidth + '')
+                                line.setAttribute('height', dashHeight + '')
+                                line.setAttribute('transform', 'rotate(' + degree + ' 0 0)')
+                                line.setAttribute('fill', 'white')
                                 circleGroup.appendChild(line)
                                 startDegrees += coneAngle / dashNbRect
                             }
                         }
                     }
                     const lineGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(lineGroup, 'id', 'Lines')
+                    lineGroup.setAttribute('id', 'Lines')
                     viewBox.appendChild(lineGroup)
                     {
                         const coneStart = 180 - coneAngle * 0.5
                         const coneStartLine = document.createElementNS(Avionics.SVG.NS, 'line')
-                        diffAndSetAttribute(coneStartLine, 'x1', '0')
-                        diffAndSetAttribute(coneStartLine, 'y1', '0')
-                        diffAndSetAttribute(coneStartLine, 'x2', '0')
-                        diffAndSetAttribute(coneStartLine, 'y2', circleRadius + '')
+                        coneStartLine.setAttribute('x1', '0')
+                        coneStartLine.setAttribute('y1', '0')
+                        coneStartLine.setAttribute('x2', '0')
+                        coneStartLine.setAttribute('y2', circleRadius + '')
                         diffAndSetAttribute(
                             coneStartLine,
                             'transform',
                             'rotate(' + coneStart + ' 0 0)'
                         )
-                        diffAndSetAttribute(coneStartLine, 'stroke', 'white')
-                        diffAndSetAttribute(coneStartLine, 'stroke-width', '3')
+                        coneStartLine.setAttribute('stroke', 'white')
+                        coneStartLine.setAttribute('stroke-width', '3')
                         lineGroup.appendChild(coneStartLine)
                         const coneEnd = 180 + coneAngle * 0.5
                         const coneEndLine = document.createElementNS(Avionics.SVG.NS, 'line')
-                        diffAndSetAttribute(coneEndLine, 'x1', '0')
-                        diffAndSetAttribute(coneEndLine, 'y1', '0')
-                        diffAndSetAttribute(coneEndLine, 'x2', '0')
-                        diffAndSetAttribute(coneEndLine, 'y2', circleRadius + '')
-                        diffAndSetAttribute(coneEndLine, 'transform', 'rotate(' + coneEnd + ' 0 0)')
-                        diffAndSetAttribute(coneEndLine, 'stroke', 'white')
-                        diffAndSetAttribute(coneEndLine, 'stroke-width', '3')
+                        coneEndLine.setAttribute('x1', '0')
+                        coneEndLine.setAttribute('y1', '0')
+                        coneEndLine.setAttribute('x2', '0')
+                        coneEndLine.setAttribute('y2', circleRadius + '')
+                        coneEndLine.setAttribute('transform', 'rotate(' + coneEnd + ' 0 0)')
+                        coneEndLine.setAttribute('stroke', 'white')
+                        coneEndLine.setAttribute('stroke-width', '3')
                         lineGroup.appendChild(coneEndLine)
                     }
                     const textGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(textGroup, 'id', 'Texts')
+                    textGroup.setAttribute('id', 'Texts')
                     viewBox.appendChild(textGroup)
                     {
                         this.weatherTexts = []
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '100')
-                        diffAndSetAttribute(text, 'y', '-85')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '20')
+                        text.setAttribute('x', '100')
+                        text.setAttribute('y', '-85')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '20')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '200')
-                        diffAndSetAttribute(text, 'y', '-185')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '20')
+                        text.setAttribute('x', '200')
+                        text.setAttribute('y', '-185')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '20')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '300')
-                        diffAndSetAttribute(text, 'y', '-285')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '20')
+                        text.setAttribute('x', '300')
+                        text.setAttribute('y', '-285')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '20')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '400')
-                        diffAndSetAttribute(text, 'y', '-385')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '20')
+                        text.setAttribute('x', '400')
+                        text.setAttribute('y', '-385')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '20')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                 } else if (_mode == EWeatherRadar.VERTICAL) {
                     this.instrument.setBingMapStyle('-75%', '-88%', '201%', '250%')
                     const coneAngle = 51.43
-                    diffAndSetAttribute(svgRoot, 'viewBox', '0 0 400 400')
+                    svgRoot.setAttribute('viewBox', '0 0 400 400')
                     const trsGroup = document.createElementNS(Avionics.SVG.NS, 'g')
                     diffAndSetAttribute(
                         trsGroup,
@@ -1751,10 +1796,10 @@ export class MapInstrumentElement extends NavSystemElement {
                     )
                     svgRoot.appendChild(trsGroup)
                     const viewBox = document.createElementNS(Avionics.SVG.NS, 'svg')
-                    diffAndSetAttribute(viewBox, 'viewBox', '-600 -600 1200 1200')
+                    viewBox.setAttribute('viewBox', '-600 -600 1200 1200')
                     trsGroup.appendChild(viewBox)
                     const circleGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(circleGroup, 'id', 'Circles')
+                    circleGroup.setAttribute('id', 'Circles')
                     viewBox.appendChild(circleGroup)
                     {
                         const rads = [0.25, 0.5, 0.75, 1.0]
@@ -1765,19 +1810,19 @@ export class MapInstrumentElement extends NavSystemElement {
                             while (Math.floor(startDegrees) <= endDegrees) {
                                 const line = document.createElementNS(Avionics.SVG.NS, 'rect')
                                 const degree = 180 + startDegrees + 0.5
-                                diffAndSetAttribute(line, 'x', '0')
-                                diffAndSetAttribute(line, 'y', rad + '')
-                                diffAndSetAttribute(line, 'width', dashWidth + '')
-                                diffAndSetAttribute(line, 'height', dashHeight + '')
-                                diffAndSetAttribute(line, 'transform', 'rotate(' + degree + ' 0 0)')
-                                diffAndSetAttribute(line, 'fill', 'white')
+                                line.setAttribute('x', '0')
+                                line.setAttribute('y', rad + '')
+                                line.setAttribute('width', dashWidth + '')
+                                line.setAttribute('height', dashHeight + '')
+                                line.setAttribute('transform', 'rotate(' + degree + ' 0 0)')
+                                line.setAttribute('fill', 'white')
                                 circleGroup.appendChild(line)
                                 startDegrees += coneAngle / dashNbRect
                             }
                         }
                     }
                     const limitGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(limitGroup, 'id', 'Limits')
+                    limitGroup.setAttribute('id', 'Limits')
                     viewBox.appendChild(limitGroup)
                     {
                         const endPosY = circleRadius + 50
@@ -1785,11 +1830,11 @@ export class MapInstrumentElement extends NavSystemElement {
                         let posY = 50
                         while (posY <= endPosY) {
                             const line = document.createElementNS(Avionics.SVG.NS, 'rect')
-                            diffAndSetAttribute(line, 'x', posX + '')
-                            diffAndSetAttribute(line, 'y', -posY + '')
-                            diffAndSetAttribute(line, 'width', dashHeight + '')
-                            diffAndSetAttribute(line, 'height', dashWidth + '')
-                            diffAndSetAttribute(line, 'fill', 'white')
+                            line.setAttribute('x', posX + '')
+                            line.setAttribute('y', -posY + '')
+                            line.setAttribute('width', dashHeight + '')
+                            line.setAttribute('height', dashWidth + '')
+                            line.setAttribute('fill', 'white')
                             limitGroup.appendChild(line)
                             posY += dashWidth * 2
                         }
@@ -1797,111 +1842,111 @@ export class MapInstrumentElement extends NavSystemElement {
                         posY = 50
                         while (posY <= endPosY) {
                             const line = document.createElementNS(Avionics.SVG.NS, 'rect')
-                            diffAndSetAttribute(line, 'x', posX + '')
-                            diffAndSetAttribute(line, 'y', -posY + '')
-                            diffAndSetAttribute(line, 'width', dashHeight + '')
-                            diffAndSetAttribute(line, 'height', dashWidth + '')
-                            diffAndSetAttribute(line, 'fill', 'white')
+                            line.setAttribute('x', posX + '')
+                            line.setAttribute('y', -posY + '')
+                            line.setAttribute('width', dashHeight + '')
+                            line.setAttribute('height', dashWidth + '')
+                            line.setAttribute('fill', 'white')
                             limitGroup.appendChild(line)
                             posY += dashWidth * 2
                         }
                     }
                     const lineGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(lineGroup, 'id', 'Lines')
+                    lineGroup.setAttribute('id', 'Lines')
                     viewBox.appendChild(lineGroup)
                     {
                         const coneStart = 180 - coneAngle * 0.5
                         const coneStartLine = document.createElementNS(Avionics.SVG.NS, 'line')
-                        diffAndSetAttribute(coneStartLine, 'x1', '0')
-                        diffAndSetAttribute(coneStartLine, 'y1', '0')
-                        diffAndSetAttribute(coneStartLine, 'x2', '0')
-                        diffAndSetAttribute(coneStartLine, 'y2', circleRadius + '')
+                        coneStartLine.setAttribute('x1', '0')
+                        coneStartLine.setAttribute('y1', '0')
+                        coneStartLine.setAttribute('x2', '0')
+                        coneStartLine.setAttribute('y2', circleRadius + '')
                         diffAndSetAttribute(
                             coneStartLine,
                             'transform',
                             'rotate(' + coneStart + ' 0 0)'
                         )
-                        diffAndSetAttribute(coneStartLine, 'stroke', 'white')
-                        diffAndSetAttribute(coneStartLine, 'stroke-width', '3')
+                        coneStartLine.setAttribute('stroke', 'white')
+                        coneStartLine.setAttribute('stroke-width', '3')
                         lineGroup.appendChild(coneStartLine)
                         const coneEnd = 180 + coneAngle * 0.5
                         const coneEndLine = document.createElementNS(Avionics.SVG.NS, 'line')
-                        diffAndSetAttribute(coneEndLine, 'x1', '0')
-                        diffAndSetAttribute(coneEndLine, 'y1', '0')
-                        diffAndSetAttribute(coneEndLine, 'x2', '0')
-                        diffAndSetAttribute(coneEndLine, 'y2', circleRadius + '')
-                        diffAndSetAttribute(coneEndLine, 'transform', 'rotate(' + coneEnd + ' 0 0)')
-                        diffAndSetAttribute(coneEndLine, 'stroke', 'white')
-                        diffAndSetAttribute(coneEndLine, 'stroke-width', '3')
+                        coneEndLine.setAttribute('x1', '0')
+                        coneEndLine.setAttribute('y1', '0')
+                        coneEndLine.setAttribute('x2', '0')
+                        coneEndLine.setAttribute('y2', circleRadius + '')
+                        coneEndLine.setAttribute('transform', 'rotate(' + coneEnd + ' 0 0)')
+                        coneEndLine.setAttribute('stroke', 'white')
+                        coneEndLine.setAttribute('stroke-width', '3')
                         lineGroup.appendChild(coneEndLine)
                     }
                     const textGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                    diffAndSetAttribute(textGroup, 'id', 'Texts')
+                    textGroup.setAttribute('id', 'Texts')
                     viewBox.appendChild(textGroup)
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetText(text, '+60000FT')
-                        diffAndSetAttribute(text, 'x', '50')
-                        diffAndSetAttribute(text, 'y', '-150')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '20')
-                        diffAndSetAttribute(text, 'transform', 'rotate(-90)')
+                        text.textContent = '+60000FT'
+                        text.setAttribute('x', '50')
+                        text.setAttribute('y', '-150')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '20')
+                        text.setAttribute('transform', 'rotate(-90)')
                         textGroup.appendChild(text)
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetText(text, '-60000FT')
-                        diffAndSetAttribute(text, 'x', '50')
-                        diffAndSetAttribute(text, 'y', '160')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '20')
-                        diffAndSetAttribute(text, 'transform', 'rotate(-90)')
+                        text.textContent = '-60000FT'
+                        text.setAttribute('x', '50')
+                        text.setAttribute('y', '160')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '20')
+                        text.setAttribute('transform', 'rotate(-90)')
                         textGroup.appendChild(text)
                         this.weatherTexts = []
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '85')
-                        diffAndSetAttribute(text, 'y', '85')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '18')
-                        diffAndSetAttribute(text, 'transform', 'rotate(-90)')
+                        text.setAttribute('x', '85')
+                        text.setAttribute('y', '85')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '18')
+                        text.setAttribute('transform', 'rotate(-90)')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '215')
-                        diffAndSetAttribute(text, 'y', '160')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '18')
-                        diffAndSetAttribute(text, 'transform', 'rotate(-90)')
+                        text.setAttribute('x', '215')
+                        text.setAttribute('y', '160')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '18')
+                        text.setAttribute('transform', 'rotate(-90)')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '345')
-                        diffAndSetAttribute(text, 'y', '220')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '18')
-                        diffAndSetAttribute(text, 'transform', 'rotate(-90)')
+                        text.setAttribute('x', '345')
+                        text.setAttribute('y', '220')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '18')
+                        text.setAttribute('transform', 'rotate(-90)')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                     {
                         const text = document.createElementNS(Avionics.SVG.NS, 'text')
-                        diffAndSetAttribute(text, 'x', '475')
-                        diffAndSetAttribute(text, 'y', '280')
-                        diffAndSetAttribute(text, 'fill', 'white')
-                        diffAndSetAttribute(text, 'font-size', '18')
-                        diffAndSetAttribute(text, 'transform', 'rotate(-90)')
+                        text.setAttribute('x', '475')
+                        text.setAttribute('y', '280')
+                        text.setAttribute('fill', 'white')
+                        text.setAttribute('font-size', '18')
+                        text.setAttribute('transform', 'rotate(-90)')
                         textGroup.appendChild(text)
                         this.weatherTexts.push(text)
                     }
                 }
                 const legendGroup = document.createElementNS(Avionics.SVG.NS, 'g')
-                diffAndSetAttribute(legendGroup, 'id', 'legendGroup')
+                legendGroup.setAttribute('id', 'legendGroup')
                 svgRoot.appendChild(legendGroup)
                 {
                     const x = -5
@@ -1916,49 +1961,49 @@ export class MapInstrumentElement extends NavSystemElement {
                     const left = x - w * 0.5
                     const top = y - h * 0.5
                     let rect = document.createElementNS(Avionics.SVG.NS, 'rect')
-                    diffAndSetAttribute(rect, 'x', left + '')
-                    diffAndSetAttribute(rect, 'y', top + '')
-                    diffAndSetAttribute(rect, 'width', w + '')
-                    diffAndSetAttribute(rect, 'height', h + '')
-                    diffAndSetAttribute(rect, 'stroke', 'white')
-                    diffAndSetAttribute(rect, 'stroke-width', '2')
-                    diffAndSetAttribute(rect, 'stroke-opacity', '1')
+                    rect.setAttribute('x', left + '')
+                    rect.setAttribute('y', top + '')
+                    rect.setAttribute('width', w + '')
+                    rect.setAttribute('height', h + '')
+                    rect.setAttribute('stroke', 'white')
+                    rect.setAttribute('stroke-width', '2')
+                    rect.setAttribute('stroke-opacity', '1')
                     legendGroup.appendChild(rect)
                     rect = document.createElementNS(Avionics.SVG.NS, 'rect')
-                    diffAndSetAttribute(rect, 'x', left + '')
-                    diffAndSetAttribute(rect, 'y', top + '')
-                    diffAndSetAttribute(rect, 'width', w + '')
-                    diffAndSetAttribute(rect, 'height', titleHeight + '')
-                    diffAndSetAttribute(rect, 'stroke', 'white')
-                    diffAndSetAttribute(rect, 'stroke-width', '2')
-                    diffAndSetAttribute(rect, 'stroke-opacity', '1')
+                    rect.setAttribute('x', left + '')
+                    rect.setAttribute('y', top + '')
+                    rect.setAttribute('width', w + '')
+                    rect.setAttribute('height', titleHeight + '')
+                    rect.setAttribute('stroke', 'white')
+                    rect.setAttribute('stroke-width', '2')
+                    rect.setAttribute('stroke-opacity', '1')
                     legendGroup.appendChild(rect)
                     let text = document.createElementNS(Avionics.SVG.NS, 'text')
-                    diffAndSetText(text, 'SCALE')
-                    diffAndSetAttribute(text, 'x', x + '')
-                    diffAndSetAttribute(text, 'y', top + titleHeight * 0.5 + '')
-                    diffAndSetAttribute(text, 'fill', 'white')
-                    diffAndSetAttribute(text, 'font-size', '11')
-                    diffAndSetAttribute(text, 'text-anchor', 'middle')
+                    text.textContent = 'SCALE'
+                    text.setAttribute('x', x + '')
+                    text.setAttribute('y', top + titleHeight * 0.5 + '')
+                    text.setAttribute('fill', 'white')
+                    text.setAttribute('font-size', '11')
+                    text.setAttribute('text-anchor', 'middle')
                     legendGroup.appendChild(text)
                     let scaleIndex = 0
                     rect = document.createElementNS(Avionics.SVG.NS, 'rect')
-                    diffAndSetAttribute(rect, 'x', left + scaleOffsetX + '')
+                    rect.setAttribute('x', left + scaleOffsetX + '')
                     diffAndSetAttribute(
                         rect,
                         'y',
                         top + titleHeight + scaleOffsetY + scaleIndex * scaleHeight + ''
                     )
-                    diffAndSetAttribute(rect, 'width', scaleWidth + '')
-                    diffAndSetAttribute(rect, 'height', scaleHeight + '')
-                    diffAndSetAttribute(rect, 'fill', 'red')
-                    diffAndSetAttribute(rect, 'stroke', 'white')
-                    diffAndSetAttribute(rect, 'stroke-width', '2')
-                    diffAndSetAttribute(rect, 'stroke-opacity', '1')
+                    rect.setAttribute('width', scaleWidth + '')
+                    rect.setAttribute('height', scaleHeight + '')
+                    rect.setAttribute('fill', 'red')
+                    rect.setAttribute('stroke', 'white')
+                    rect.setAttribute('stroke-width', '2')
+                    rect.setAttribute('stroke-opacity', '1')
                     legendGroup.appendChild(rect)
                     text = document.createElementNS(Avionics.SVG.NS, 'text')
-                    diffAndSetText(text, 'HEAVY')
-                    diffAndSetAttribute(text, 'x', left + scaleOffsetX + scaleWidth + 5 + '')
+                    text.textContent = 'HEAVY'
+                    text.setAttribute('x', left + scaleOffsetX + scaleWidth + 5 + '')
                     diffAndSetAttribute(
                         text,
                         'y',
@@ -1969,42 +2014,42 @@ export class MapInstrumentElement extends NavSystemElement {
                             scaleHeight * 0.5 +
                             ''
                     )
-                    diffAndSetAttribute(text, 'fill', 'white')
-                    diffAndSetAttribute(text, 'font-size', '11')
+                    text.setAttribute('fill', 'white')
+                    text.setAttribute('font-size', '11')
                     legendGroup.appendChild(text)
                     scaleIndex++
                     rect = document.createElementNS(Avionics.SVG.NS, 'rect')
-                    diffAndSetAttribute(rect, 'x', left + scaleOffsetX + '')
+                    rect.setAttribute('x', left + scaleOffsetX + '')
                     diffAndSetAttribute(
                         rect,
                         'y',
                         top + titleHeight + scaleOffsetY + scaleIndex * scaleHeight + ''
                     )
-                    diffAndSetAttribute(rect, 'width', scaleWidth + '')
-                    diffAndSetAttribute(rect, 'height', scaleHeight + '')
-                    diffAndSetAttribute(rect, 'fill', 'yellow')
-                    diffAndSetAttribute(rect, 'stroke', 'white')
-                    diffAndSetAttribute(rect, 'stroke-width', '2')
-                    diffAndSetAttribute(rect, 'stroke-opacity', '1')
+                    rect.setAttribute('width', scaleWidth + '')
+                    rect.setAttribute('height', scaleHeight + '')
+                    rect.setAttribute('fill', 'yellow')
+                    rect.setAttribute('stroke', 'white')
+                    rect.setAttribute('stroke-width', '2')
+                    rect.setAttribute('stroke-opacity', '1')
                     legendGroup.appendChild(rect)
                     scaleIndex++
                     rect = document.createElementNS(Avionics.SVG.NS, 'rect')
-                    diffAndSetAttribute(rect, 'x', left + scaleOffsetX + '')
+                    rect.setAttribute('x', left + scaleOffsetX + '')
                     diffAndSetAttribute(
                         rect,
                         'y',
                         top + titleHeight + scaleOffsetY + scaleIndex * scaleHeight + ''
                     )
-                    diffAndSetAttribute(rect, 'width', scaleWidth + '')
-                    diffAndSetAttribute(rect, 'height', scaleHeight + '')
-                    diffAndSetAttribute(rect, 'fill', 'green')
-                    diffAndSetAttribute(rect, 'stroke', 'white')
-                    diffAndSetAttribute(rect, 'stroke-width', '2')
-                    diffAndSetAttribute(rect, 'stroke-opacity', '1')
+                    rect.setAttribute('width', scaleWidth + '')
+                    rect.setAttribute('height', scaleHeight + '')
+                    rect.setAttribute('fill', 'green')
+                    rect.setAttribute('stroke', 'white')
+                    rect.setAttribute('stroke-width', '2')
+                    rect.setAttribute('stroke-opacity', '1')
                     legendGroup.appendChild(rect)
                     text = document.createElementNS(Avionics.SVG.NS, 'text')
-                    diffAndSetText(text, 'LIGHT')
-                    diffAndSetAttribute(text, 'x', left + scaleOffsetX + scaleWidth + 5 + '')
+                    text.textContent = 'LIGHT'
+                    text.setAttribute('x', left + scaleOffsetX + scaleWidth + 5 + '')
                     diffAndSetAttribute(
                         text,
                         'y',
@@ -2015,23 +2060,23 @@ export class MapInstrumentElement extends NavSystemElement {
                             scaleHeight * 0.5 +
                             ''
                     )
-                    diffAndSetAttribute(text, 'fill', 'white')
-                    diffAndSetAttribute(text, 'font-size', '11')
+                    text.setAttribute('fill', 'white')
+                    text.setAttribute('font-size', '11')
                     legendGroup.appendChild(text)
                     scaleIndex++
                     rect = document.createElementNS(Avionics.SVG.NS, 'rect')
-                    diffAndSetAttribute(rect, 'x', left + scaleOffsetX + '')
+                    rect.setAttribute('x', left + scaleOffsetX + '')
                     diffAndSetAttribute(
                         rect,
                         'y',
                         top + titleHeight + scaleOffsetY + scaleIndex * scaleHeight + ''
                     )
-                    diffAndSetAttribute(rect, 'width', scaleWidth + '')
-                    diffAndSetAttribute(rect, 'height', scaleHeight + '')
-                    diffAndSetAttribute(rect, 'fill', 'black')
-                    diffAndSetAttribute(rect, 'stroke', 'white')
-                    diffAndSetAttribute(rect, 'stroke-width', '2')
-                    diffAndSetAttribute(rect, 'stroke-opacity', '1')
+                    rect.setAttribute('width', scaleWidth + '')
+                    rect.setAttribute('height', scaleHeight + '')
+                    rect.setAttribute('fill', 'black')
+                    rect.setAttribute('stroke', 'white')
+                    rect.setAttribute('stroke-width', '2')
+                    rect.setAttribute('stroke-opacity', '1')
                     legendGroup.appendChild(rect)
                 }
             }
@@ -2050,7 +2095,7 @@ export class SoftKeyHtmlElement {
     fillFromElement(_elem) {
         const val = _elem.name
         if (this.Value != val) {
-            diffAndSetHTML(this.Element, val)
+            this.Element.innerHTML = val
             this.Value = val
         }
         if (_elem.stateCallback) {
@@ -2059,7 +2104,7 @@ export class SoftKeyHtmlElement {
             _elem.state = 'Greyed'
         }
         if (_elem.state) {
-            diffAndSetAttribute(this.Element, 'state', _elem.state)
+            this.Element.setAttribute('state', _elem.state)
         }
     }
 }
@@ -2601,7 +2646,7 @@ export class Cabin_Annunciations extends Annunciations {
                     cautionOn
                 )
             }
-            if (this.annunciations) diffAndSetHTML(this.annunciations, messages)
+            if (this.annunciations) this.annunciations.innerHTML = messages
             this.needReload = false
         }
         if (this.warningTone && !this.isPlayingWarningTone && this.isAnnunciationsManager) {
@@ -3318,19 +3363,19 @@ export class Cabin_Warnings extends Warnings {
         if (this.currentWarning != warning) {
             this.currentWarning = warning
             if (this.warningBox && this.warningContent) {
-                diffAndSetText(this.warningContent, this.getCurrentWarningText())
+                this.warningContent.textContent = this.getCurrentWarningText()
                 switch (this.getCurrentWarningLevel()) {
                     case 0:
-                        diffAndSetAttribute(this.warningBox, 'state', 'Hidden')
+                        this.warningBox.setAttribute('state', 'Hidden')
                         break
                     case 1:
-                        diffAndSetAttribute(this.warningBox, 'state', 'White')
+                        this.warningBox.setAttribute('state', 'White')
                         break
                     case 2:
-                        diffAndSetAttribute(this.warningBox, 'state', 'Yellow')
+                        this.warningBox.setAttribute('state', 'Yellow')
                         break
                     case 3:
-                        diffAndSetAttribute(this.warningBox, 'state', 'Red')
+                        this.warningBox.setAttribute('state', 'Red')
                         break
                 }
             }

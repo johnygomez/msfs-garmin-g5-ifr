@@ -22,17 +22,17 @@ export interface AltimeterComponentProps extends ComponentProps {
     verticalDeviationValue: Subject<number>
 }
 
+/** State for all six split-flap cursor digit elements, derived from indicated altitude. */
+interface CursorDigitState {
+    d1: { top: { text: string; transform: string }; bot: { text: string; transform: string } }
+    d2: { top: { text: string; transform: string }; bot: { text: string; transform: string } }
+    d3: { top: { text: string; transform: string }; bot: { text: string; transform: string } }
+}
+
 export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps> {
     private readonly rootRef = FSComponent.createRef<SVGElement>()
     private readonly cursorRef = FSComponent.createRef<SVGElement>()
     private readonly cursorGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorDigit1TopRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorDigit1BotRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorDigit2TopRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorDigit2BotRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorDigit3TopRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorDigit3BotRef = FSComponent.createRef<SVGElement>()
-    private readonly endDigitGroupRef = FSComponent.createRef<SVGElement>()
     private readonly minimumAltitudeBugRef = FSComponent.createRef<SVGElement>()
     private readonly trendElementRef = FSComponent.createRef<SVGElement>()
     private readonly verticalDeviationTextRef = FSComponent.createRef<SVGElement>()
@@ -47,9 +47,14 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly selectedVSBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly indicatorTextRef = FSComponent.createRef<SVGElement>()
 
+    // Legacy ref arrays — kept to avoid breaking any parent-level access patterns
     private gradTextRefs: NodeReference<SVGElement>[] = []
     private gradRectRefs: NodeReference<SVGElement>[] = []
-    private endDigitRefs: NodeReference<SVGElement>[] = []
+
+    private readonly gradCount: number
+
+    /** Pixels per 1000 ft on the tape (60 px per 100 ft). */
+    private readonly GRADUATION_PX_PER_1000FT = 600
 
     // ConsumerSubjects from the EventBus
     private readonly indicatedAlt: ConsumerSubject<number>
@@ -70,6 +75,14 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly vsBarY: MappedSubject<[number], number>
     private readonly vsBarHeight: MappedSubject<[number], number>
     private readonly vsIndicatorTransform: MappedSubject<[number], string>
+    private readonly trendY: MappedSubject<[number], number>
+    private readonly trendHeight: MappedSubject<[number], number>
+
+    // New: reactive graduation & digit subjects (replaces imperative onAfterRender)
+    private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
+    private readonly endDigitTextSubjects: MappedSubject<[number], string>[] = []
+    private readonly endDigitTransform: MappedSubject<[number], string>
+    private readonly cursorState: MappedSubject<[number], CursorDigitState>
 
     constructor(props: AltimeterComponentProps) {
         super(props)
@@ -87,18 +100,61 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         )
 
         const centerY = props.height / 2 - 100
+        // Main graduations every 100 ft → spacing = GRADUATION_PX_PER_1000FT / 10 px
+        const gradSpacingPx = this.GRADUATION_PX_PER_1000FT / 10
+        const gradN = Math.ceil((props.height - 100) / gradSpacingPx)
+        this.gradCount = gradN
 
-        // --- Derived transforms for declarative JSX bindings ---
+        // --- Graduation text subjects ---
+        // One MappedSubject per graduation tick, indexed in the same order as the
+        // loop in buildGraduationGroup (i = -n … +n). 100‑ft intervals, higher
+        // altitude at the top (G3X convention).
+        for (let i = -gradN; i <= gradN; i++) {
+            const idx = i
+            this.gradTextSubjects.push(
+                MappedSubject.create(([alt]) => {
+                    const gradCenter = Math.round(alt / 100) * 100
+                    return fastToFixed(gradCenter - idx * 100, 0)
+                }, this.indicatedAlt)
+            )
+        }
+
+        // --- End-digit (rotating drum) subjects ---
+        // 5 digits showing the last two digits of altitude ±20,
+        // plus a group transform for the rolling animation.
+        this.endDigitTransform = MappedSubject.create(([alt]) => {
+            const endValue = alt % 100
+            const endCenter = Math.round(endValue / 10) * 10
+            return `translate(0, ${((endValue - endCenter) * 60) / 10})`
+        }, this.indicatedAlt)
+
+        for (let i = -2; i <= 2; i++) {
+            const idx = i
+            this.endDigitTextSubjects.push(
+                MappedSubject.create(([alt]) => {
+                    const digitValue = Math.round((((2 - idx) * 10 + alt) % 100) / 10) * 10
+                    return fastToFixed(Math.abs((digitValue % 100) / 10), 0) + '0'
+                }, this.indicatedAlt)
+            )
+        }
+
+        // --- Cursor digit state ---
+        // Single MappedSubject that computes all split-flap digit text & transforms.
+        this.cursorState = MappedSubject.create(
+            ([alt]) => this.computeCursorDigitState(alt),
+            this.indicatedAlt
+        )
+
+        // --- Existing derived transforms for declarative JSX bindings ---
 
         this.tapeTransform = MappedSubject.create(([alt]) => {
-            const graduationSize = 160
-            const offset = (alt % 200) * (graduationSize / 200)
+            const offset = (alt % 1000) * (this.GRADUATION_PX_PER_1000FT / 1000)
             return `translate(0, ${-offset.toFixed(1)})`
         }, this.indicatedAlt)
 
         this.bugTransform = MappedSubject.create(
             ([refAlt, indAlt]) => {
-                const diff = (((refAlt - indAlt) % 200) / 200) * 160
+                const diff = (((refAlt - indAlt) % 1000) / 1000) * this.GRADUATION_PX_PER_1000FT
                 return `translate(0, ${-diff})`
             },
             this.refAltitude,
@@ -161,6 +217,20 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             const clamped = Math.max(-2000, Math.min(2000, vs))
             return `translate(0, ${(clamped / 2000) * 240})`
         }, this.verticalSpd)
+
+        this.trendY = MappedSubject.create(([vs]) => {
+            const clamped = Math.max(-2000, Math.min(2000, vs))
+            const rawY = centerY + (clamped / 10) * -1.5
+            const trendVal = Math.max(-50, Math.min(props.height - 150, rawY))
+            return Math.min(trendVal, centerY)
+        }, this.verticalSpd)
+
+        this.trendHeight = MappedSubject.create(([vs]) => {
+            const clamped = Math.max(-2000, Math.min(2000, vs))
+            const rawY = centerY + (clamped / 10) * -1.5
+            const trendVal = Math.max(-50, Math.min(props.height - 150, rawY))
+            return Math.abs(trendVal - centerY)
+        }, this.verticalSpd)
     }
 
     public destroy(): void {
@@ -169,7 +239,116 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.verticalSpd.destroy()
         this.refAltitude.destroy()
 
+        // Destroy derived subjects
+        this.tapeTransform.destroy()
+        this.bugTransform.destroy()
+        this.alertFill.destroy()
+        this.alertBgFill.destroy()
+        this.deviationVisibility.destroy()
+        this.chevronDisplay.destroy()
+        this.diamondDisplay.destroy()
+        this.hollowDiamondDisplay.destroy()
+        this.deviationTransform.destroy()
+        this.vsBarY.destroy()
+        this.vsBarHeight.destroy()
+        this.vsIndicatorTransform.destroy()
+        this.trendY.destroy()
+        this.trendHeight.destroy()
+
+        this.gradTextSubjects.forEach(s => s.destroy())
+        this.endDigitTextSubjects.forEach(s => s.destroy())
+        this.endDigitTransform.destroy()
+        this.cursorState.destroy()
+
         super.destroy()
+    }
+
+    /**
+     * Compute the split-flap cursor digit state from indicated altitude.
+     * Ported from the pre-FSComponent Altimeter.ts attributeChangedCallback.
+     */
+    private computeCursorDigitState(altitude: number): CursorDigitState {
+        const blank = (): { text: string; transform: string } => ({ text: '', transform: '' })
+        const state: CursorDigitState = {
+            d1: { top: blank(), bot: blank() },
+            d2: { top: blank(), bot: blank() },
+            d3: { top: blank(), bot: blank() },
+        }
+
+        const absAlt = Math.abs(altitude)
+        const endValue = altitude % 100
+        const isRolling = endValue > 90 || endValue < -90
+        const rollingTranslate = (endValue > 0 ? endValue - 90 : endValue + 100) * 5.7
+        const rollingTransform = isRolling ? `translate(0, ${rollingTranslate})` : ''
+
+        if (absAlt < 90) {
+            if (altitude < 0) state.d3.bot.text = '-'
+            return state
+        }
+
+        const d3Value = (absAlt % 1000) / 100
+        const d2Value = absAlt >= 990 ? (absAlt % 10000) / 1000 : 0
+        const d1Value = absAlt >= 9990 ? (absAlt % 100000) / 10000 : 0
+
+        const d3RollsOver = d3Value > 9
+        const d2RollsOver = d2Value > 9
+
+        // --- digit3 (hundreds) ---
+        const floorD3 = Math.floor(d3Value)
+        const nextD3 = (floorD3 + 1) % 10
+
+        state.d3.bot.text = absAlt < 100 ? '' : fastToFixed(floorD3, 0)
+        state.d3.top.text = fastToFixed(nextD3, 0)
+
+        if (isRolling) {
+            if (endValue < 0) {
+                state.d3.bot.text = fastToFixed(nextD3, 0)
+                state.d3.top.text = absAlt < 100 ? '' : fastToFixed(floorD3, 0)
+            }
+            state.d3.bot.transform = rollingTransform
+            state.d3.top.transform = rollingTransform
+        }
+
+        // --- digit2 (thousands) ---
+        if (absAlt >= 990) {
+            const floorD2 = Math.floor(d2Value)
+            const nextD2 = (floorD2 + 1) % 10
+
+            state.d2.bot.text = absAlt < 1000 ? '' : fastToFixed(floorD2, 0)
+            state.d2.top.text = fastToFixed(nextD2, 0)
+
+            if (isRolling && d3RollsOver) {
+                if (endValue < 0) {
+                    state.d2.bot.text = fastToFixed(nextD2, 0)
+                    state.d2.top.text = absAlt < 1000 ? '' : fastToFixed(floorD2, 0)
+                }
+                state.d2.bot.transform = rollingTransform
+                state.d2.top.transform = rollingTransform
+            }
+
+            // --- digit1 (ten-thousands) ---
+            if (absAlt >= 9990) {
+                const floorD1 = Math.floor(d1Value)
+                const nextD1 = (floorD1 + 1) % 10
+
+                state.d1.bot.text = absAlt < 10000 ? '' : fastToFixed(floorD1, 0)
+                state.d1.top.text = fastToFixed(nextD1, 0)
+
+                if (isRolling && d3RollsOver && d2RollsOver) {
+                    if (endValue < 0) {
+                        state.d1.bot.text = fastToFixed(nextD1, 0)
+                        state.d1.top.text = absAlt < 10000 ? '' : fastToFixed(floorD1, 0)
+                    }
+                    state.d1.bot.transform = rollingTransform
+                    state.d1.top.transform = rollingTransform
+                }
+            }
+        } else {
+            // absAlt < 990: clear digit1 & digit2
+            if (altitude < 0) state.d2.bot.text = '-'
+        }
+
+        return state
     }
 
     render(): VNode {
@@ -300,65 +479,68 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         viewBox="0 0 120 80"
                     >
                         <g class="cursor-static-digit-group" transform="scale(1, 1.25)">
+                            {/* digit1 (ten-thousands) */}
                             <text
-                                ref={this.cursorDigit1TopRef}
                                 x="4"
                                 y="-1"
                                 fill="white"
                                 font-size="56"
                                 font-family={GF_font}
+                                transform={this.cursorState.map(s => s.d1.top.transform)}
                             >
-                                X
+                                {this.cursorState.map(s => s.d1.top.text)}
                             </text>
                             <text
-                                ref={this.cursorDigit1BotRef}
                                 x="4"
                                 y="57"
                                 fill="white"
                                 font-size="56"
                                 font-family={GF_font}
+                                transform={this.cursorState.map(s => s.d1.bot.transform)}
                             >
-                                X
+                                {this.cursorState.map(s => s.d1.bot.text)}
                             </text>
+                            {/* digit2 (thousands) */}
                             <text
-                                ref={this.cursorDigit2TopRef}
                                 x="42"
                                 y="-1"
                                 fill="white"
                                 font-size="56"
                                 font-family={GF_font}
+                                transform={this.cursorState.map(s => s.d2.top.transform)}
                             >
-                                X
+                                {this.cursorState.map(s => s.d2.top.text)}
                             </text>
                             <text
-                                ref={this.cursorDigit2BotRef}
                                 x="42"
                                 y="57"
                                 fill="white"
                                 font-size="56"
                                 font-family={GF_font}
+                                transform={this.cursorState.map(s => s.d2.bot.transform)}
                             >
-                                X
+                                {this.cursorState.map(s => s.d2.bot.text)}
                             </text>
+                            {/* digit3 (hundreds) */}
                             <text
-                                ref={this.cursorDigit3TopRef}
                                 x="80"
                                 y="-1"
                                 fill="white"
                                 font-size="48"
                                 font-family={GF_font}
+                                transform={this.cursorState.map(s => s.d3.top.transform)}
                             >
-                                X
+                                {this.cursorState.map(s => s.d3.top.text)}
                             </text>
                             <text
-                                ref={this.cursorDigit3BotRef}
                                 x="80"
                                 y="54"
                                 fill="white"
                                 font-size="48"
                                 font-family={GF_font}
+                                transform={this.cursorState.map(s => s.d3.bot.transform)}
                             >
-                                X
+                                {this.cursorState.map(s => s.d3.bot.text)}
                             </text>
                         </g>
                     </svg>
@@ -370,7 +552,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         height="150"
                         viewBox="0 -66 80 150"
                     >
-                        <g ref={this.endDigitGroupRef} class="cursor-rotatating-text-group">
+                        <g class="cursor-rotatating-text-group" transform={this.endDigitTransform}>
                             <g transform="scale(1, 1.15)">
                                 {this.buildEndDigits(GF_font, endDigitSpace)}
                             </g>
@@ -466,9 +648,9 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     ref={this.trendElementRef}
                     class="trend-element"
                     x="0"
-                    y="-50"
+                    y={this.trendY}
                     width="8"
-                    height="0"
+                    height={this.trendHeight}
                     fill="#d12bc7"
                 />
             </svg>
@@ -476,9 +658,10 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     }
 
     private buildGraduationGroup(center: number): VNode {
-        const graduationSize = 160
-        const n = Math.ceil((this.props.height - 100) / 200)
+        const graduationSize = this.GRADUATION_PX_PER_1000FT / 10 // px per 100 ft
+        const n = Math.ceil((this.props.height - 100) / graduationSize)
         const children: VNode[] = []
+        let subjectIdx = 0
 
         for (let i = -n; i <= n; i++) {
             const mainGradRef = FSComponent.createRef<SVGElement>()
@@ -494,8 +677,10 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     fill="white"
                 />
             )
+
             const gradTextRef = FSComponent.createRef<SVGElement>()
             this.gradTextRefs.push(gradTextRef)
+            const gradSubject = this.gradTextSubjects[subjectIdx++]
             children.push(
                 <text
                     ref={gradTextRef}
@@ -503,30 +688,27 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     x="50"
                     y={fastToFixed(center + 16 + i * graduationSize, 0)}
                     fill="white"
-                    font-size="60"
+                    font-size="64"
                     font-family="Montserrat-Bold"
                 >
-                    XXXX
+                    {gradSubject.map(v => v)}
                 </text>
             )
-            for (let j = 1; j < 5; j++) {
-                const subGradRef = FSComponent.createRef<SVGElement>()
-                this.gradRectRefs.push(subGradRef)
-                children.push(
-                    <rect
-                        ref={subGradRef}
-                        class="grad"
-                        x="0"
-                        y={fastToFixed(
-                            center - 2 + i * graduationSize + j * (graduationSize / 5),
-                            0
-                        )}
-                        height="4"
-                        width="15"
-                        fill="white"
-                    />
-                )
-            }
+
+            // Single sub-tick at the 50‑ft midpoint
+            const subGradRef = FSComponent.createRef<SVGElement>()
+            this.gradRectRefs.push(subGradRef)
+            children.push(
+                <rect
+                    ref={subGradRef}
+                    class="grad"
+                    x="0"
+                    y={fastToFixed(center - 2 + i * graduationSize + graduationSize / 2, 0)}
+                    height="4"
+                    width="15"
+                    fill="white"
+                />
+            )
         }
 
         return (
@@ -537,22 +719,19 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     }
 
     private buildEndDigits(GF_font: string, endDigitSpace: number): VNode[] {
-        this.endDigitRefs.length = 0
         const children: VNode[] = []
-        for (let i = -2; i <= 2; i++) {
-            const digitRef = FSComponent.createRef<SVGElement>()
-            this.endDigitRefs.push(digitRef)
+        for (let i = 0; i < 5; i++) {
+            const subject = this.endDigitTextSubjects[i]
             children.push(
                 <text
-                    ref={digitRef}
                     x="46"
-                    y={27 + endDigitSpace * i}
+                    y={27 + endDigitSpace * (i - 2)}
                     fill="white"
-                    font-size="50"
+                    font-size="56"
                     font-family={GF_font}
                     text-anchor="middle"
                 >
-                    XX
+                    {subject.map(v => v)}
                 </text>
             )
         }
@@ -739,7 +918,9 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         font-size={fontSize}
                         font-family={GF_font}
                     >
-                        -0000
+                        {this.verticalSpd.map(v =>
+                            Math.abs(v) >= 100 ? fastToFixed(Math.round(v / 50) * 50, 0) : ''
+                        )}
                     </text>
                 </g>
                 <rect
