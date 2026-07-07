@@ -28,7 +28,12 @@ import {
     SimVarValueType,
     Subject,
     Subscription,
+    EventBus,
+    AdcPublisher,
+    AhrsPublisher,
+    NavComSimVarPublisher,
 } from '@microsoft/msfs-sdk'
+import { G5CustomPublisher } from './G5CustomPublisher'
 import { HorizontalCompassComponent } from './HorizontalCompass'
 import { CDIComponent } from './CDI'
 import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
@@ -38,21 +43,7 @@ import { AttitudeIndicatorComponent, SlipSkidDisplayMode } from './AttitudeIndic
 import { AltimeterComponent } from './Altimeter'
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 
-export interface AttitudeSubjects {
-    pitch: Subject<number>
-    bank: Subject<number>
-    slipSkid: Subject<number>
-    fdActive: Subject<boolean>
-    fdPitch: Subject<number>
-    fdBark: Subject<number>
-    lowBankMode: Subject<boolean>
-}
-
 export interface AirspeedSubjects {
-    indicatedAirspeed: Subject<number>
-    trueAirspeed: Subject<number>
-    groundSpeed: Subject<number>
-    machSpeed: Subject<number>
     displayRefSpeed: Subject<string>
     refSpeedMach: Subject<number>
     refSpeed: Subject<number>
@@ -77,21 +68,17 @@ export interface HSISubjects {
 }
 
 interface PfdContentProps extends ComponentProps {
+    bus: EventBus
     apSubjects: APInfoBarSubjects
-    attitude: AttitudeSubjects
     altimeter: AltimeterSubjects
     airspeed: AirspeedSubjects
     cdiSource: Subject<number>
     cdiDeviation: Subject<number>
     cdiVisible: Subject<boolean>
-    compassHeading: Subject<number>
-    compassTrack: Subject<number>
-    compassCourse: Subject<number>
 }
 
 class PfdContent extends DisplayComponent<PfdContentProps> {
     render(): VNode {
-        const att = this.props.attitude
         const spd = this.props.airspeed
         const alt = this.props.altimeter
         return (
@@ -101,29 +88,20 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                 </div>
                 <div id="Horizon">
                     <AttitudeIndicatorComponent
+                        bus={this.props.bus}
                         verticalCenter={true}
                         bottomY={215}
                         slipSkidDisplayMode={SlipSkidDisplayMode.ROUND}
                         showTurnRate={true}
                         bankSizeRatio={-12}
                         isBackup={false}
-                        pitch={att.pitch}
-                        bank={att.bank}
-                        slipSkid={att.slipSkid}
-                        fdActive={att.fdActive}
-                        fdPitch={att.fdPitch}
-                        fdBark={att.fdBark}
-                        lowBankMode={att.lowBankMode}
                     />
                 </div>
                 <div id="Altimeter">
                     <AltimeterComponent
+                        bus={this.props.bus}
                         height={1020}
                         VSStyle="Compact"
-                        indicatedAltitude={alt.indicatedAltitude}
-                        baroPressure={alt.baroPressure}
-                        verticalSpeed={alt.verticalSpeed}
-                        referenceAltitude={alt.referenceAltitude}
                         altitudeAlertState={alt.altitudeAlertState}
                         referenceVspeed={alt.referenceVspeed}
                         verticalDeviationMode={alt.verticalDeviationMode}
@@ -132,12 +110,9 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                 </div>
                 <div id="Airspeed">
                     <AirspeedIndicatorComponent
+                        bus={this.props.bus}
                         height={850}
                         noColor={false}
-                        indicatedAirspeed={spd.indicatedAirspeed}
-                        trueAirspeed={spd.trueAirspeed}
-                        groundSpeed={spd.groundSpeed}
-                        machSpeed={spd.machSpeed}
                         displayRefSpeed={spd.displayRefSpeed}
                         refSpeedMach={spd.refSpeedMach}
                         refSpeed={spd.refSpeed}
@@ -149,13 +124,11 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                 </div>
                 <div id="Compass">
                     <HorizontalCompassComponent
+                        bus={this.props.bus}
                         truncateLeft={50}
                         truncateRight={78}
                         spacing={50}
                         groundTrackActive={true}
-                        heading={this.props.compassHeading}
-                        track={this.props.compassTrack}
-                        course={this.props.compassCourse}
                     />
                 </div>
                 <div id="CDI">
@@ -272,16 +245,13 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
 }
 
 interface InstrumentProps extends ComponentProps {
+    bus: EventBus
     apSubjects: APInfoBarSubjects
-    attitude: AttitudeSubjects
     altimeter: AltimeterSubjects
     airspeed: AirspeedSubjects
     cdiSource: Subject<number>
     cdiDeviation: Subject<number>
     cdiVisible: Subject<boolean>
-    compassHeading: Subject<number>
-    compassTrack: Subject<number>
-    compassCourse: Subject<number>
     hsi: HSISubjects
     groundSpeedEl: Subject<HTMLElement | null>
     waypointDistanceEl: Subject<HTMLElement | null>
@@ -299,16 +269,13 @@ class AS5Instrument extends DisplayComponent<InstrumentProps> {
                 <div id="PageContainer">
                     <div id="PFD">
                         <PfdContent
+                            bus={this.props.bus}
                             apSubjects={this.props.apSubjects}
-                            attitude={this.props.attitude}
                             altimeter={this.props.altimeter}
                             airspeed={this.props.airspeed}
                             cdiSource={this.props.cdiSource}
                             cdiDeviation={this.props.cdiDeviation}
                             cdiVisible={this.props.cdiVisible}
-                            compassHeading={this.props.compassHeading}
-                            compassTrack={this.props.compassTrack}
-                            compassCourse={this.props.compassCourse}
                         />
                     </div>
                     <div id="MFD">
@@ -338,6 +305,12 @@ export class AS5 extends NavSystem {
     pageGroups: NavSystemPageGroup[]
     menuMaxElems: number
 
+    readonly bus = new EventBus()
+    private adcPublisher?: AdcPublisher
+    private ahrsPublisher?: AhrsPublisher
+    private navComPublisher?: NavComSimVarPublisher
+    private customPublisher?: G5CustomPublisher
+
     constructor() {
         super()
         this.pageGroups = [new NavSystemPageGroup('Main', this, [new AS5_PFD(), new AS5_MFD()])]
@@ -362,10 +335,8 @@ export class AS5 extends NavSystem {
         const mfd = this.pageGroups[0].pages[1] as AS5_MFD
         const pfdEls = pfd.element.elements
         const apDisplay = pfdEls[0] as PFD_AutopilotDisplay
-        const attitude = pfdEls[1] as PFD_Attitude
         const airspeed = pfdEls[2] as PFD_Airspeed_Enhanced
         const altimeter = pfdEls[3] as PFD_Altimeter
-        const compass = pfdEls[4] as AS5_PFD_Compass
         const cdi = pfdEls[5] as AS5_PFD_CDI
         const hsi = mfd.element.elements[0] as AS5_MFD_HSI
 
@@ -393,21 +364,7 @@ export class AS5 extends NavSystem {
             apYDStatus: apDisplay.apYDStatusSubject,
         }
 
-        const attSubjects: AttitudeSubjects = {
-            pitch: attitude.pitchSub,
-            bank: attitude.bankSub,
-            slipSkid: attitude.slipSkidSub,
-            fdActive: attitude.fdActiveSub,
-            fdPitch: attitude.fdPitchSub,
-            fdBark: attitude.fdBarkSub,
-            lowBankMode: attitude.lowBankModeSub,
-        }
-
         const spdSubjects: AirspeedSubjects = {
-            indicatedAirspeed: airspeed.indicatedAirspeedSub,
-            trueAirspeed: airspeed.trueAirspeedSub,
-            groundSpeed: airspeed.groundSpeedSub,
-            machSpeed: airspeed.machSpeedSub,
             displayRefSpeed: airspeed.displayRefSpeedSub,
             refSpeedMach: airspeed.refSpeedMachSub,
             refSpeed: airspeed.refSpeedSub,
@@ -435,18 +392,25 @@ export class AS5 extends NavSystem {
         const waypointDistanceEl = Subject.create<HTMLElement | null>(null)
         const headingValueEl = Subject.create<HTMLElement | null>(null)
 
+        this.adcPublisher = new AdcPublisher(this.bus)
+        this.ahrsPublisher = new AhrsPublisher(this.bus)
+        this.navComPublisher = new NavComSimVarPublisher(this.bus)
+        this.customPublisher = new G5CustomPublisher(this.bus)
+
+        this.adcPublisher.startPublish()
+        this.ahrsPublisher.startPublish()
+        this.navComPublisher.startPublish()
+        this.customPublisher.startPublish()
+
         FSComponent.render(
             <AS5Instrument
+                bus={this.bus}
                 apSubjects={apSubjects}
-                attitude={attSubjects}
                 altimeter={altimeterSubjects}
                 airspeed={spdSubjects}
                 cdiSource={cdi.cdiSourceSub}
                 cdiDeviation={cdi.cdiDeviationSub}
                 cdiVisible={cdi.cdiVisibleSub}
-                compassHeading={compass.headingSub}
-                compassTrack={compass.trackSub}
-                compassCourse={compass.courseSub}
                 hsi={hsiSubjects}
                 groundSpeedEl={groundSpeedEl}
                 waypointDistanceEl={waypointDistanceEl}
@@ -458,6 +422,10 @@ export class AS5 extends NavSystem {
     }
 
     onUpdate(_deltaTime) {
+        this.adcPublisher?.onUpdate()
+        this.ahrsPublisher?.onUpdate()
+        this.navComPublisher?.onUpdate()
+        this.customPublisher?.onUpdate()
         this.updateKnobTooltipValue()
     }
 
@@ -754,9 +722,10 @@ export class AS5_PFD_Compass extends NavSystemElement {
     init(_root) {}
     onEnter() {}
     onUpdate(_deltaTime) {
-        this.headingSub.set(Simplane.getHeadingMagnetic())
-        this.trackSub.set(Simplane.getTrackAngle())
-        this.courseSub.set(parseFloat(Simplane.getAutoPilotDisplayedHeadingLockValueDegrees() + ''))
+        // Data is published to the EventBus by AhrsPublisher + G5CustomPublisher.
+        // Display components read from the bus via ConsumerSubject.
+        // Subject fields (headingSub, trackSub, courseSub) retained for backward
+        // compatibility until Phase F cleanup.
     }
     onExit() {}
     onEvent(_event) {}
@@ -820,6 +789,9 @@ export class AS5_MFD_HSI extends PFD_Compass {
     init(_root) {}
 
     onUpdate(_deltaTime) {
+        this.headingSub.set(Simplane.getAutoPilotHeadingLockValueDegrees())
+        this.courseSub.set(Simplane.getNavObs(1))
+
         let headingValue = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
         if (headingValue == 0) headingValue = 360
         const hdg = fastToFixed(headingValue, 0)

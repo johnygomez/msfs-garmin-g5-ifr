@@ -6,7 +6,11 @@ import {
     NodeReference,
     Subject,
     Subscription,
+    EventBus,
+    ConsumerSubject,
+    AdcEvents,
 } from '@microsoft/msfs-sdk'
+import { G5CustomEvents } from './G5CustomPublisher'
 
 export class ReferenceBug {
     bug: any
@@ -15,12 +19,9 @@ export class ReferenceBug {
 }
 
 export interface AirspeedIndicatorComponentProps extends ComponentProps {
+    bus: EventBus
     height: number
     noColor: boolean
-    indicatedAirspeed: Subject<number>
-    trueAirspeed: Subject<number>
-    groundSpeed: Subject<number>
-    machSpeed: Subject<number>
     displayRefSpeed: Subject<string>
     refSpeedMach: Subject<number>
     refSpeed: Subject<number>
@@ -67,28 +68,30 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
 
     private readonly subs: Subscription[] = []
 
+    // ConsumerSubjects from the EventBus — reactive Subscribable values for declarative JSX
+    private readonly ias: ConsumerSubject<number>
+    private readonly tas: ConsumerSubject<number>
+    private readonly machNumber: ConsumerSubject<number>
+    private readonly gs: ConsumerSubject<number>
+
     private center: number = 0
+
+    constructor(props: AirspeedIndicatorComponentProps) {
+        super(props)
+        const sub = props.bus.getSubscriber<AdcEvents & G5CustomEvents>()
+
+        this.ias = ConsumerSubject.create(sub.on('ias').withPrecision(0), 0)
+        this.tas = ConsumerSubject.create(sub.on('tas').withPrecision(0), 0)
+        this.machNumber = ConsumerSubject.create(sub.on('mach_number').withPrecision(3), 0)
+        this.gs = ConsumerSubject.create(sub.on('ground_speed').withPrecision(0), 0)
+    }
 
     onAfterRender(): void {
         const height = this.props.height
         this.center = (height - 100) / 2
 
         this.subs.push(
-            this.props.indicatedAirspeed.sub(ias => this.updateIASDisplay(ias), true),
-            this.props.trueAirspeed.sub(tas => {
-                const el = this.tasTextRef.getOrDefault()
-                if (el) el.textContent = fastToFixed(tas, 0) + 'KT'
-            }),
-            this.props.groundSpeed.sub(gs => {
-                const el = this.GSTextRef.getOrDefault()
-                if (el) el.textContent = fastToFixed(gs, 0) + 'KT'
-            }),
-            this.props.machSpeed.sub(mach => {
-                const el = this.machTextRef.getOrDefault()
-                if (el)
-                    el.textContent =
-                        'M ' + (mach < 1 ? fastToFixed(mach, 3).slice(1) : fastToFixed(mach, 3))
-            }),
+            this.ias.sub(ias => this.updateIASDisplay(ias), true),
             this.props.displayRefSpeed.sub(mode => this.updateRefSpeedDisplay(mode)),
             this.props.refSpeedMach.sub(refMach => {
                 const el = this.selectedSpeedTextMachRef.getOrDefault()
@@ -137,6 +140,13 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
 
     destroy(): void {
         this.subs.forEach(s => s.destroy())
+        this.subs.length = 0
+
+        this.ias.destroy()
+        this.tas.destroy()
+        this.machNumber.destroy()
+        this.gs.destroy()
+
         super.destroy()
     }
 
@@ -547,7 +557,6 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                     TAS
                 </text>
                 <text
-                    ref={this.tasTextRef}
                     x="195"
                     y={height - 100 + 38}
                     fill="white"
@@ -556,10 +565,9 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                     text-anchor="end"
                     display="none"
                 >
-                    0KT
+                    {this.tas.map(t => fastToFixed(t, 0) + 'KT')}
                 </text>
                 <text
-                    ref={this.machTextRef}
                     x="195"
                     y={height - 100 + 38}
                     fill="white"
@@ -568,7 +576,9 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                     text-anchor="end"
                     display="none"
                 >
-                    M .000
+                    {this.machNumber.map(
+                        m => 'M ' + (m < 1 ? fastToFixed(m, 3).slice(1) : fastToFixed(m, 3))
+                    )}
                 </text>
                 <text
                     ref={this.tasGsTextRef}
@@ -582,7 +592,6 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                     GS
                 </text>
                 <text
-                    ref={this.GSTextRef}
                     x="195"
                     y={height - 100 + 38}
                     fill="magenta"
@@ -590,7 +599,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                     font-family={GF_font}
                     text-anchor="end"
                 >
-                    0KT
+                    {this.gs.map(g => fastToFixed(g, 0) + 'KT')}
                 </text>
             </svg>
         )

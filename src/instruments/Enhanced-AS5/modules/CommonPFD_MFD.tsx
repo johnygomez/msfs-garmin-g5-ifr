@@ -442,24 +442,9 @@ export class PFD_Attitude extends NavSystemElement {
 
     onEnter() {}
     onUpdate(_deltaTime) {
-        const xyz = Simplane.getOrientationAxis()
-        if (xyz) {
-            this.pitchSub.set((xyz.pitch / Math.PI) * 180)
-            this.bankSub.set((xyz.bank / Math.PI) * 180)
-            this.slipSkidSub.set(Simplane.getInclinometer())
-            this.fdActiveSub.set(
-                SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR ACTIVE', SimVarValueType.Bool)
-            )
-            this.fdPitchSub.set(
-                SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR PITCH', SimVarValueType.Degree)
-            )
-            this.fdBarkSub.set(
-                SimVar.GetSimVarValue('AUTOPILOT FLIGHT DIRECTOR BANK', SimVarValueType.Degree)
-            )
-            this.lowBankModeSub.set(
-                SimVar.GetSimVarValue('AUTOPILOT MAX BANK', SimVarValueType.Degree) < 20
-            )
-        }
+        // Data is published to the EventBus by AhrsPublisher + G5CustomPublisher.
+        // Display components read from the bus via ConsumerSubject.
+        // Subject fields retained for backward compatibility until Phase F cleanup.
     }
     onExit() {}
     onEvent(_event) {}

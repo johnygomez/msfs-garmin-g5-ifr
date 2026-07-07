@@ -4,9 +4,12 @@ import {
     VNode,
     ComponentProps,
     NodeReference,
-    Subject,
-    Subscription,
+    EventBus,
+    ConsumerSubject,
+    MappedSubject,
+    AhrsEvents,
 } from '@microsoft/msfs-sdk'
+import { G5CustomEvents } from './G5CustomPublisher'
 
 export enum SlipSkidDisplayMode {
     ROUND = 0,
@@ -14,39 +17,23 @@ export enum SlipSkidDisplayMode {
 }
 
 export interface AttitudeIndicatorComponentProps extends ComponentProps {
+    bus: EventBus
     verticalCenter: boolean
     bottomY: number
     slipSkidDisplayMode: SlipSkidDisplayMode
     showTurnRate: boolean
     bankSizeRatio: number
     isBackup: boolean
-    pitch: Subject<number>
-    bank: Subject<number>
-    slipSkid: Subject<number>
-    fdActive: Subject<boolean>
-    fdPitch: Subject<number>
-    fdBark: Subject<number>
-    lowBankMode: Subject<boolean>
 }
 
 export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicatorComponentProps> {
-    private readonly rootRef = FSComponent.createRef<SVGElement>()
     private readonly horizonGroupRef = FSComponent.createRef<SVGElement>()
     private readonly horizonTopRef = FSComponent.createRef<SVGElement>()
     private readonly horizonBottomRef = FSComponent.createRef<SVGElement>()
     private readonly horizonSeparatorRef = FSComponent.createRef<SVGElement>()
-    private readonly pitchContainerRef = FSComponent.createRef<SVGElement>()
     private readonly pitchGradationsRef = FSComponent.createRef<SVGElement>()
     private readonly bankGroupRef = FSComponent.createRef<SVGElement>()
     private readonly bankArcRef = FSComponent.createRef<SVGElement>()
-    private readonly flightDirectorRef = FSComponent.createRef<SVGElement>()
-    private readonly flightDirectorOuterLeftRef = FSComponent.createRef<SVGElement>()
-    private readonly flightDirectorOuterLeftLineRef = FSComponent.createRef<SVGElement>()
-    private readonly flightDirectorOuterRightRef = FSComponent.createRef<SVGElement>()
-    private readonly flightDirectorOuterRightLineRef = FSComponent.createRef<SVGElement>()
-    private readonly slipSkidBallRef = FSComponent.createRef<SVGElement>()
-    private readonly slipSkidLeftMarkerRef = FSComponent.createRef<SVGElement>()
-    private readonly slipSkidRightMarkerRef = FSComponent.createRef<SVGElement>()
     private readonly turnRateIndicatorRef = FSComponent.createRef<SVGElement>()
     private readonly turnRateLeftMarkerRef = FSComponent.createRef<SVGElement>()
     private readonly turnRateRightMarkerRef = FSComponent.createRef<SVGElement>()
@@ -60,15 +47,31 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     private readonly cursorTriangleInnerRightRef = FSComponent.createRef<SVGElement>()
     private readonly cursorTriangleOuterRightRef = FSComponent.createRef<SVGElement>()
     private readonly cursorTopTriangleRef = FSComponent.createRef<SVGElement>()
-    private readonly lowBankGreenArcRef = FSComponent.createRef<SVGElement>()
-    private readonly bankingColorRef = FSComponent.createRef<SVGElement>()
-    private readonly lowBankModeRef = FSComponent.createRef<SVGElement>()
-    private readonly lowBankModeMaskRef = FSComponent.createRef<SVGElement>()
 
     private pitchLeftTextRefs: NodeReference<SVGElement>[] = []
     private pitchRightTextRefs: NodeReference<SVGElement>[] = []
 
-    private readonly subs: Subscription[] = []
+    // ConsumerSubjects from the EventBus — reactive values for geometry transforms
+    private readonly pitch: ConsumerSubject<number>
+    private readonly bank: ConsumerSubject<number>
+    private readonly slipSkid: ConsumerSubject<number>
+    private readonly fdPitch: ConsumerSubject<number>
+    private readonly fdBark: ConsumerSubject<number>
+    private readonly fdActive: ConsumerSubject<boolean>
+    private readonly maxBankValue: ConsumerSubject<number>
+
+    // Derived Subscribables for declarative JSX attribute bindings
+    private readonly rootTransform: MappedSubject<[number], string>
+    private readonly pitchTransform: MappedSubject<[number], string>
+    private readonly skidBallCx: MappedSubject<[number], number>
+    private readonly skidLeftX: MappedSubject<[number], number>
+    private readonly skidRightX: MappedSubject<[number], number>
+    private readonly fdVisibility: MappedSubject<[boolean], string>
+    private readonly fdPitchTransform: MappedSubject<[number], string>
+    private readonly fdBarkRotation: MappedSubject<[number], string>
+    private readonly lowBankDisplay: MappedSubject<[number], string>
+    private readonly lowBankMaskPath: MappedSubject<[number], string>
+    private readonly lowBankColorDisplay: MappedSubject<[number], string>
 
     private readonly horizonTopColor = '#3062C8'
     private readonly horizonBottomColor = '#864B01'
@@ -111,97 +114,80 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         return this.isBackup ? 330 : 230
     }
 
-    onAfterRender(): void {
-        const root = this.rootRef.getOrDefault()
-        const pitchContainer = this.pitchContainerRef.getOrDefault()
-        const slipSkidBall = this.slipSkidBallRef.getOrDefault()
-        const flightDirector = this.flightDirectorRef.getOrDefault()
-        const flightDirectorOuterLeft = this.flightDirectorOuterLeftRef.getOrDefault()
-        const flightDirectorOuterLeftLine = this.flightDirectorOuterLeftLineRef.getOrDefault()
-        const flightDirectorOuterRight = this.flightDirectorOuterRightRef.getOrDefault()
-        const flightDirectorOuterRightLine = this.flightDirectorOuterRightLineRef.getOrDefault()
-        const lowBankGreenArc = this.lowBankGreenArcRef.getOrDefault()
-        const lowBankModeMask = this.lowBankModeMaskRef.getOrDefault()
-        const slipSkidLeftMarker = this.slipSkidLeftMarkerRef.getOrDefault()
-        const slipSkidRightMarker = this.slipSkidRightMarkerRef.getOrDefault()
-        const lowBankMode = this.lowBankModeRef.getOrDefault()
-        const bankingColor = this.bankingColorRef.getOrDefault()
+    constructor(props: AttitudeIndicatorComponentProps) {
+        super(props)
+        const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
 
-        if (!root || !pitchContainer) return
+        this.pitch = ConsumerSubject.create(sub.on('pitch_deg').withPrecision(0), 0)
+        this.bank = ConsumerSubject.create(sub.on('roll_deg').withPrecision(0), 0)
+        this.slipSkid = ConsumerSubject.create(sub.on('turn_coordinator_ball').withPrecision(2), 0)
+        this.fdPitch = ConsumerSubject.create(sub.on('flight_director_pitch').withPrecision(0), 0)
+        this.fdBark = ConsumerSubject.create(sub.on('flight_director_bank').withPrecision(0), 0)
+        this.fdActive = ConsumerSubject.create(sub.on('flight_director_is_active'), false)
+        this.maxBankValue = ConsumerSubject.create(sub.on('ap_max_bank_value').withPrecision(0), 30)
 
-        const pitchScale = this.bankSizeRatio
+        const pitchScale = props.bankSizeRatio
+        const radius = -this.topY
 
-        this.subs.push(
-            this.props.pitch.sub(pitch => {
-                pitchContainer.setAttribute('transform', `translate(0, ${pitch * pitchScale})`)
-            }, true),
+        // --- Derived transforms for declarative JSX bindings ---
 
-            this.props.bank.sub(bank => {
-                root.setAttribute('transform', `rotate(${bank})`)
-            }, true),
+        this.rootTransform = MappedSubject.create(([b]) => `rotate(${b})`, this.bank)
 
-            this.props.slipSkid.sub(slipSkid => {
-                const clampedSkid = Math.min(Math.max(slipSkid, -1), 1)
-                const offset = clampedSkid * 15
-                if (slipSkidBall) {
-                    slipSkidBall.setAttribute('cx', `${offset}`)
-                }
-                if (slipSkidLeftMarker) {
-                    slipSkidLeftMarker.setAttribute('x', `${-15 + offset}`)
-                }
-                if (slipSkidRightMarker) {
-                    slipSkidRightMarker.setAttribute('x', `${11 + offset}`)
-                }
-            }, true),
+        this.pitchTransform = MappedSubject.create(
+            ([p]) => `translate(0, ${p * pitchScale})`,
+            this.pitch
+        )
 
-            this.props.fdActive.sub(active => {
-                if (flightDirector) {
-                    flightDirector.setAttribute('display', active ? 'inherit' : 'none')
-                }
-            }, true),
+        this.skidBallCx = MappedSubject.create(
+            ([s]) => Math.min(Math.max(s, -1), 1) * 15,
+            this.slipSkid
+        )
 
-            this.props.fdPitch.sub(fdPitch => {
-                const fdY = fdPitch * pitchScale
-                if (flightDirectorOuterLeft)
-                    flightDirectorOuterLeft.setAttribute('transform', `translate(0, ${fdY})`)
-                if (flightDirectorOuterLeftLine)
-                    flightDirectorOuterLeftLine.setAttribute('transform', `translate(0, ${fdY})`)
-                if (flightDirectorOuterRight)
-                    flightDirectorOuterRight.setAttribute('transform', `translate(0, ${fdY})`)
-                if (flightDirectorOuterRightLine)
-                    flightDirectorOuterRightLine.setAttribute('transform', `translate(0, ${fdY})`)
-            }, true),
+        this.skidLeftX = MappedSubject.create(
+            ([s]) => -15 + Math.min(Math.max(s, -1), 1) * 15,
+            this.slipSkid
+        )
 
-            this.props.fdBark.sub(fdBark => {
-                if (flightDirector) {
-                    flightDirector.setAttribute('transform', `rotate(${fdBark})`)
-                }
-            }, true),
+        this.skidRightX = MappedSubject.create(
+            ([s]) => 11 + Math.min(Math.max(s, -1), 1) * 15,
+            this.slipSkid
+        )
 
-            this.props.lowBankMode.sub(lowBank => {
-                if (lowBankGreenArc) {
-                    lowBankGreenArc.setAttribute('display', lowBank ? 'inherit' : 'none')
-                }
-                if (lowBankModeMask) {
-                    lowBankModeMask.setAttribute('d', this.getLowBankMaskPath(lowBank))
-                }
-                if (lowBankMode && bankingColor) {
-                    bankingColor.setAttribute('display', 'inherit')
-                } else if (bankingColor) {
-                    bankingColor.setAttribute('display', 'none')
-                }
-            }, true)
+        this.fdVisibility = MappedSubject.create(([a]) => (a ? 'inherit' : 'none'), this.fdActive)
+
+        this.fdPitchTransform = MappedSubject.create(
+            ([p]) => `translate(0, ${p * pitchScale})`,
+            this.fdPitch
+        )
+
+        this.fdBarkRotation = MappedSubject.create(([b]) => `rotate(${b})`, this.fdBark)
+
+        this.lowBankDisplay = MappedSubject.create(
+            ([m]) => (m < 20 ? 'inherit' : 'none'),
+            this.maxBankValue
+        )
+
+        this.lowBankMaskPath = MappedSubject.create(
+            ([m]) => (m < 20 ? `M0 ${-radius} h-200 v${2 * radius} h200 Z` : ''),
+            this.maxBankValue
+        )
+
+        this.lowBankColorDisplay = MappedSubject.create(
+            ([m]) => (m < 20 ? 'inherit' : 'none'),
+            this.maxBankValue
         )
     }
 
     destroy(): void {
-        this.subs.forEach(s => s.destroy())
-        super.destroy()
-    }
+        this.pitch.destroy()
+        this.bank.destroy()
+        this.slipSkid.destroy()
+        this.fdPitch.destroy()
+        this.fdBark.destroy()
+        this.fdActive.destroy()
+        this.maxBankValue.destroy()
 
-    private getLowBankMaskPath(_enabled: boolean): string {
-        const radius = this.bankRadius
-        return `M0 ${-radius} h-200 v${2 * radius} h200 Z`
+        super.destroy()
     }
 
     render(): VNode {
@@ -263,8 +249,8 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                 </svg>
                 <div id="Attitude" style="width:100%; height:100%; position:absolute">
                     <svg
-                        ref={this.rootRef}
                         class="attitude-root"
+                        transform={this.rootTransform}
                         width="100%"
                         height="100%"
                         viewBox={this.viewBox}
@@ -272,8 +258,8 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                         style="position:absolute"
                     >
                         <svg
-                            ref={this.pitchContainerRef}
                             class="attitude_pitch_container"
+                            transform={this.pitchTransform}
                             width="230"
                             height={`${this.pitchContainerHeight}`}
                             x="-115"
@@ -422,36 +408,36 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
 
     private buildFlightDirector(): VNode[] {
         return [
-            <g ref={this.flightDirectorRef} class="flight-director">
+            <g class="flight-director" display={this.fdVisibility} transform={this.fdBarkRotation}>
                 <path
-                    ref={this.flightDirectorOuterLeftRef}
                     class="flight-director-outer-left"
                     d="M-100 40 -100 20 0 0 -85 40 Z"
                     fill="#d12bc7"
                     stroke="black"
                     stroke-width="1.5"
+                    transform={this.fdPitchTransform}
                 />
                 <path
-                    ref={this.flightDirectorOuterLeftLineRef}
                     class="flight-director-outer-left-line"
                     d="M-100 20 L-85 40 Z"
                     stroke="black"
                     stroke-width="1.5"
+                    transform={this.fdPitchTransform}
                 />
                 <path
-                    ref={this.flightDirectorOuterRightRef}
                     class="flight-director-outer-right"
                     d="M100 40 100 20 0 0 85 40 Z"
                     fill="#d12bc7"
                     stroke="black"
                     stroke-width="1.5"
+                    transform={this.fdPitchTransform}
                 />
                 <path
-                    ref={this.flightDirectorOuterRightLineRef}
                     class="flight-director-outer-right-line"
                     d="M100 20 L85 40 Z"
                     stroke="black"
                     stroke-width="1.5"
+                    transform={this.fdPitchTransform}
                 />
             </g>,
         ]
@@ -662,18 +648,16 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                 return [
                     <g id="slipSkid">
                         <circle
-                            ref={this.slipSkidBallRef}
                             class="slip-skid-ball"
-                            cx="0"
+                            cx={this.skidBallCx}
                             cy={`${y}`}
                             r="10"
                             fill="white"
                             stroke="black"
                         />
                         <rect
-                            ref={this.slipSkidLeftMarkerRef}
                             class="slip-skid-left-marker"
-                            x="-15"
+                            x={this.skidLeftX}
                             y={`${y - 11}`}
                             width="4"
                             height="22"
@@ -681,9 +665,8 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             stroke="black"
                         />
                         <rect
-                            ref={this.slipSkidRightMarkerRef}
                             class="slip-skid-right-marker"
-                            x="11"
+                            x={this.skidRightX}
                             y={`${y - 11}`}
                             width="4"
                             height="22"
@@ -696,12 +679,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
             case SlipSkidDisplayMode.DEFAULT:
             default:
                 return [
-                    <path
-                        ref={this.slipSkidBallRef}
-                        id="slipSkid"
-                        d={`M-20 ${topY + 30} l4 -6 h32 l4 6 Z`}
-                        fill="white"
-                    />,
+                    <path id="slipSkid" d={`M-20 ${topY + 30} l4 -6 h32 l4 6 Z`} fill="white" />,
                 ]
         }
     }
@@ -712,12 +690,11 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         return [
             <defs>
                 <clipPath id="topMask">
-                    <path ref={this.lowBankModeMaskRef} />
+                    <path d={this.lowBankMaskPath} />
                 </clipPath>
             </defs>,
-            <g ref={this.lowBankModeRef} clip-path="url(#topMask)">
+            <g clip-path="url(#topMask)" display={this.lowBankColorDisplay}>
                 <circle
-                    ref={this.lowBankGreenArcRef}
                     class="low-bank-green-arc"
                     cx="0"
                     cy="0"
@@ -725,6 +702,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                     fill="transparent"
                     stroke="green"
                     stroke-width="5"
+                    display={this.lowBankDisplay}
                 />
             </g>,
         ]
