@@ -1,13 +1,21 @@
-import { DisplayComponent, FSComponent, VNode, ComponentProps, Subject } from '@microsoft/msfs-sdk'
+import {
+    DisplayComponent,
+    FSComponent,
+    VNode,
+    ComponentProps,
+    EventBus,
+    ConsumerSubject,
+    MappedSubject,
+    AhrsEvents,
+} from '@microsoft/msfs-sdk'
+import { G5CustomEvents } from './G5CustomPublisher'
 
 export interface HorizontalCompassProps extends ComponentProps {
+    bus: EventBus
     truncateLeft: number
     truncateRight: number
     spacing: number
     groundTrackActive: boolean
-    heading: Subject<number>
-    track: Subject<number>
-    course: Subject<number>
 }
 
 export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompassProps> {
@@ -17,9 +25,37 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
     private readonly bearingTextRef = FSComponent.createRef<SVGTextElement>()
     private readonly digitRefs = [...Array(17)].map(() => FSComponent.createRef<SVGTextElement>())
 
-    private heading = 0
-    private track = 0
-    private course = 0
+    // ConsumerSubjects from the EventBus — reactive values for compass geometry
+    private readonly heading: ConsumerSubject<number>
+    private readonly track: ConsumerSubject<number>
+    private readonly course: ConsumerSubject<number>
+
+    // Derived Subscribables for declarative JSX attribute bindings
+    private readonly courseBugTransform: MappedSubject<[number, number], string>
+    private readonly trackBugTransform: MappedSubject<[number, number], string>
+
+    constructor(props: HorizontalCompassProps) {
+        super(props)
+        const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
+
+        this.heading = ConsumerSubject.create(sub.on('hdg_deg').withPrecision(0), 0)
+        this.track = ConsumerSubject.create(sub.on('track_angle_magnetic').withPrecision(0), 0)
+        this.course = ConsumerSubject.create(sub.on('ap_heading_selected').withPrecision(0), 0)
+
+        const pxPerDeg = props.spacing / 10
+
+        this.courseBugTransform = MappedSubject.create(
+            ([hdg, crs]) => `translate(${Avionics.Utils.diffAngle(hdg, crs) * pxPerDeg}, 0)`,
+            this.heading,
+            this.course
+        )
+
+        this.trackBugTransform = MappedSubject.create(
+            ([hdg, trk]) => `translate(${Avionics.Utils.diffAngle(hdg, trk) * pxPerDeg}, 0)`,
+            this.heading,
+            this.track
+        )
+    }
 
     get spacing(): number {
         return this.props.spacing
@@ -44,24 +80,13 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
     }
 
     onAfterRender(): void {
-        this.props.heading.sub((h: number) => {
-            this.heading = h
+        this.heading.sub(() => {
             this.updateBearingDisplay()
-            this.updateCourseBug()
-            this.updateGroundTrackBug()
-        })
-        this.props.track.sub((t: number) => {
-            this.track = t
-            this.updateGroundTrackBug()
-        })
-        this.props.course.sub((c: number) => {
-            this.course = c
-            this.updateCourseBug()
         })
     }
 
     private updateBearingDisplay(): void {
-        const heading = this.heading
+        const heading = this.heading.get()
         const roundedBearing = Math.round(heading / 10) * 10
         const bearingString = Math.round(heading) + ''
 
@@ -80,29 +105,6 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
             movingRibbon.setAttribute(
                 'transform',
                 'translate(' + (roundedBearing - heading) * (this.props.spacing / 10) + ',0)'
-            )
-    }
-
-    private updateCourseBug(): void {
-        const courseEl = this.courseRef.getOrDefault()
-        if (courseEl)
-            courseEl.setAttribute(
-                'transform',
-                'translate(' +
-                    Avionics.Utils.diffAngle(this.heading, this.course) *
-                        (this.props.spacing / 10) +
-                    ',0)'
-            )
-    }
-
-    private updateGroundTrackBug(): void {
-        const groundTrackEl = this.groundTrackRef.getOrDefault()
-        if (groundTrackEl)
-            groundTrackEl.setAttribute(
-                'transform',
-                'translate(' +
-                    Avionics.Utils.diffAngle(this.heading, this.track) * (this.props.spacing / 10) +
-                    ',0)'
             )
     }
 
@@ -182,18 +184,18 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                     })}
                 </g>
                 <polygon
-                    ref={this.courseRef}
                     class="course-bug"
                     points={`${center},20 ${center + 6},16 ${center + 10},16 ${center + 10},20 ${center - 10},20 ${center - 10},16 ${center - 6},16`}
                     fill="aqua"
+                    transform={this.courseBugTransform}
                 />
                 <polygon
-                    ref={this.groundTrackRef}
                     class="ground-track-bug"
                     points={`${center},15 ${center + 5},20 ${center - 5},20`}
                     fill="magenta"
                     stroke="black"
                     visibility={this.groundTrackActive ? '' : 'hidden'}
+                    transform={this.trackBugTransform}
                 />
                 <polygon
                     class="bearing-background"

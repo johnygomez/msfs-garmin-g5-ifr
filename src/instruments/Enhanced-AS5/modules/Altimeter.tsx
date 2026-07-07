@@ -5,16 +5,17 @@ import {
     ComponentProps,
     NodeReference,
     Subject,
-    Subscription,
+    EventBus,
+    ConsumerSubject,
+    MappedSubject,
+    AdcEvents,
 } from '@microsoft/msfs-sdk'
+import { G5CustomEvents } from './G5CustomPublisher'
 
 export interface AltimeterComponentProps extends ComponentProps {
+    bus: EventBus
     height: number
     VSStyle: string
-    indicatedAltitude: Subject<number>
-    baroPressure: Subject<number>
-    verticalSpeed: Subject<number>
-    referenceAltitude: Subject<number>
     altitudeAlertState: Subject<string>
     referenceVspeed: Subject<string>
     verticalDeviationMode: Subject<string>
@@ -23,7 +24,6 @@ export interface AltimeterComponentProps extends ComponentProps {
 
 export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps> {
     private readonly rootRef = FSComponent.createRef<SVGElement>()
-    private readonly graduationGroupRef = FSComponent.createRef<SVGElement>()
     private readonly cursorRef = FSComponent.createRef<SVGElement>()
     private readonly cursorGroupRef = FSComponent.createRef<SVGElement>()
     private readonly cursorDigit1TopRef = FSComponent.createRef<SVGElement>()
@@ -33,140 +33,143 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly cursorDigit3TopRef = FSComponent.createRef<SVGElement>()
     private readonly cursorDigit3BotRef = FSComponent.createRef<SVGElement>()
     private readonly endDigitGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly pressureTextRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedAltitudeBugRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedAltitudeTextRef = FSComponent.createRef<SVGElement>()
     private readonly minimumAltitudeBugRef = FSComponent.createRef<SVGElement>()
     private readonly trendElementRef = FSComponent.createRef<SVGElement>()
-    private readonly verticalDeviationGroupRef = FSComponent.createRef<SVGElement>()
     private readonly verticalDeviationTextRef = FSComponent.createRef<SVGElement>()
-    private readonly chevronBugRef = FSComponent.createRef<SVGElement>()
-    private readonly diamondBugRef = FSComponent.createRef<SVGElement>()
-    private readonly hollowDiamondBugRef = FSComponent.createRef<SVGElement>()
-    private readonly verticalSpeedGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly verticalSpeedBarRef = FSComponent.createRef<SVGElement>()
-    private readonly verticalSpeedIndicatorRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineScaleRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineAltRef = FSComponent.createRef<SVGElement>()
     private readonly bugsGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedAltitudeBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly selectedAltitudeFixedBugRef = FSComponent.createRef<SVGElement>()
     private readonly pressureBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly selectedVSBugRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedVSTextRef = FSComponent.createRef<SVGElement>()
     private readonly selectedVSBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly indicatorTextRef = FSComponent.createRef<SVGElement>()
 
     private gradTextRefs: NodeReference<SVGElement>[] = []
     private gradRectRefs: NodeReference<SVGElement>[] = []
     private endDigitRefs: NodeReference<SVGElement>[] = []
-    private subs: Subscription[] = []
+
+    // ConsumerSubjects from the EventBus
+    private readonly indicatedAlt: ConsumerSubject<number>
+    private readonly baroSetting: ConsumerSubject<number>
+    private readonly verticalSpd: ConsumerSubject<number>
+    private readonly refAltitude: ConsumerSubject<number>
+
+    // Derived Subscribables for declarative JSX attribute bindings
+    private readonly tapeTransform: MappedSubject<[number], string>
+    private readonly bugTransform: MappedSubject<[number, number], string>
+    private readonly alertFill: MappedSubject<[string], string>
+    private readonly alertBgFill: MappedSubject<[string], string>
+    private readonly deviationVisibility: MappedSubject<[string], string>
+    private readonly chevronDisplay: MappedSubject<[string], string>
+    private readonly diamondDisplay: MappedSubject<[string], string>
+    private readonly hollowDiamondDisplay: MappedSubject<[string], string>
+    private readonly deviationTransform: MappedSubject<[number], string>
+    private readonly vsBarY: MappedSubject<[number], number>
+    private readonly vsBarHeight: MappedSubject<[number], number>
+    private readonly vsIndicatorTransform: MappedSubject<[number], string>
 
     constructor(props: AltimeterComponentProps) {
         super(props)
-    }
+        const sub = props.bus.getSubscriber<AdcEvents & G5CustomEvents>()
 
-    onAfterRender(): void {
-        const root = this.rootRef.getOrDefault()
-        const pressureText = this.pressureTextRef.getOrDefault()
-        const selectedAltText = this.selectedAltitudeTextRef.getOrDefault()
-        const selectedAltBug = this.selectedAltitudeBugRef.getOrDefault()
-        const selAltBg = this.selectedAltitudeBackgroundRef.getOrDefault()
-        const verticalDevGroup = this.verticalDeviationGroupRef.getOrDefault()
-        const chevronBug = this.chevronBugRef.getOrDefault()
-        const diamondBug = this.diamondBugRef.getOrDefault()
-        const hollowDiamondBug = this.hollowDiamondBugRef.getOrDefault()
-        const verticalSpeedBar = this.verticalSpeedBarRef.getOrDefault()
-        const verticalSpeedIndicator = this.verticalSpeedIndicatorRef.getOrDefault()
-        const gradGroup = this.graduationGroupRef.getOrDefault()
-
-        const centerY = this.props.height / 2 - 100
-
-        this.subs.push(
-            this.props.baroPressure.sub(p => {
-                pressureText?.setAttribute('textContent', p.toFixed(2))
-            }, true)
+        this.indicatedAlt = ConsumerSubject.create(sub.on('indicated_alt').withPrecision(0), 0)
+        this.baroSetting = ConsumerSubject.create(
+            sub.on('altimeter_baro_setting_inhg').withPrecision(2),
+            29.92
+        )
+        this.verticalSpd = ConsumerSubject.create(sub.on('vertical_speed').withPrecision(0), 0)
+        this.refAltitude = ConsumerSubject.create(
+            sub.on('ap_altitude_selected').withPrecision(0),
+            0
         )
 
-        this.subs.push(
-            this.props.referenceAltitude.sub(alt => {
-                const s = Math.round(alt).toString()
-                selectedAltText?.setAttribute('textContent', s)
-                if (selectedAltBug && gradGroup) {
-                    const diff = (((alt - this.props.indicatedAltitude.get()) % 200) / 200) * 160
-                    selectedAltBug.setAttribute('transform', `translate(0, ${-diff})`)
-                }
-            }, true)
+        const centerY = props.height / 2 - 100
+
+        // --- Derived transforms for declarative JSX bindings ---
+
+        this.tapeTransform = MappedSubject.create(([alt]) => {
+            const graduationSize = 160
+            const offset = (alt % 200) * (graduationSize / 200)
+            return `translate(0, ${-offset.toFixed(1)})`
+        }, this.indicatedAlt)
+
+        this.bugTransform = MappedSubject.create(
+            ([refAlt, indAlt]) => {
+                const diff = (((refAlt - indAlt) % 200) / 200) * 160
+                return `translate(0, ${-diff})`
+            },
+            this.refAltitude,
+            this.indicatedAlt
         )
 
-        this.subs.push(
-            this.props.altitudeAlertState.sub(state => {
-                if (!selectedAltText) return
-                switch (state) {
-                    case 'BlueText':
-                        selectedAltText.setAttribute('fill', '#36c8d2')
-                        break
-                    case 'BlueBackground':
-                        selectedAltText.setAttribute('fill', '#36c8d2')
-                        selAltBg?.setAttribute('fill', '#36c8d2')
-                        break
-                    case 'YellowText':
-                        selectedAltText.setAttribute('fill', 'yellow')
-                        break
-                    case 'Empty':
-                        selectedAltText.setAttribute('fill', 'transparent')
-                        break
-                }
-            }, true)
+        this.alertFill = MappedSubject.create(([state]) => {
+            switch (state) {
+                case 'Empty':
+                    return 'transparent'
+                case 'YellowText':
+                    return 'yellow'
+                default:
+                    return '#36c8d2'
+            }
+        }, props.altitudeAlertState)
+
+        this.alertBgFill = MappedSubject.create(
+            ([state]) => (state === 'BlueBackground' ? '#36c8d2' : '#1a1d21'),
+            props.altitudeAlertState
         )
 
-        this.subs.push(
-            this.props.referenceVspeed.sub(v => {
-                root?.setAttribute('reference-vspeed', v)
-            }, true)
+        this.deviationVisibility = MappedSubject.create(
+            ([mode]) => (mode !== 'None' ? 'visible' : 'hidden'),
+            props.verticalDeviationMode
         )
 
-        this.subs.push(
-            this.props.verticalDeviationMode.sub(mode => {
-                if (!verticalDevGroup) return
-                verticalDevGroup.setAttribute('visibility', mode !== 'None' ? 'visible' : 'hidden')
-                chevronBug?.setAttribute('display', mode === 'GS' ? '' : 'none')
-                diamondBug?.setAttribute('display', mode === 'GP' ? '' : 'none')
-                hollowDiamondBug?.setAttribute('display', mode === 'GSPreview' ? '' : 'none')
-            }, true)
+        this.chevronDisplay = MappedSubject.create(
+            ([mode]) => (mode === 'GS' ? '' : 'none'),
+            props.verticalDeviationMode
         )
 
-        this.subs.push(
-            this.props.verticalDeviationValue.sub(val => {
-                const offsetY = Math.max(-1, Math.min(1, val)) * 132
-                chevronBug?.setAttribute('transform', `translate(0, ${offsetY})`)
-                diamondBug?.setAttribute('transform', `translate(0, ${offsetY})`)
-                hollowDiamondBug?.setAttribute('transform', `translate(0, ${offsetY})`)
-            }, true)
+        this.diamondDisplay = MappedSubject.create(
+            ([mode]) => (mode === 'GP' ? '' : 'none'),
+            props.verticalDeviationMode
         )
 
-        this.subs.push(
-            this.props.verticalSpeed.sub(vs => {
-                if (!verticalSpeedBar) return
-                const clamped = Math.max(-2000, Math.min(2000, vs))
-                const barY = centerY - (clamped / 2000) * 240
-                verticalSpeedBar.setAttribute('y', Math.min(centerY, barY).toString())
-                verticalSpeedBar.setAttribute('height', Math.abs((clamped / 2000) * 240).toString())
-                verticalSpeedIndicator?.setAttribute(
-                    'transform',
-                    `translate(0, ${(clamped / 2000) * 240})`
-                )
-            }, true)
+        this.hollowDiamondDisplay = MappedSubject.create(
+            ([mode]) => (mode === 'GSPreview' ? '' : 'none'),
+            props.verticalDeviationMode
         )
+
+        this.deviationTransform = MappedSubject.create(([val]) => {
+            const offsetY = Math.max(-1, Math.min(1, val)) * 132
+            return `translate(0, ${offsetY})`
+        }, props.verticalDeviationValue)
+
+        this.vsBarY = MappedSubject.create(([vs]) => {
+            const clamped = Math.max(-2000, Math.min(2000, vs))
+            const barY = centerY - (clamped / 2000) * 240
+            return Math.min(centerY, barY)
+        }, this.verticalSpd)
+
+        this.vsBarHeight = MappedSubject.create(([vs]) => {
+            const clamped = Math.max(-2000, Math.min(2000, vs))
+            return Math.abs((clamped / 2000) * 240)
+        }, this.verticalSpd)
+
+        this.vsIndicatorTransform = MappedSubject.create(([vs]) => {
+            const clamped = Math.max(-2000, Math.min(2000, vs))
+            return `translate(0, ${(clamped / 2000) * 240})`
+        }, this.verticalSpd)
     }
 
     public destroy(): void {
-        this.subs.forEach(sub => {
-            sub.destroy()
-        })
-        this.subs.length = 0
+        this.indicatedAlt.destroy()
+        this.baroSetting.destroy()
+        this.verticalSpd.destroy()
+        this.refAltitude.destroy()
+
+        super.destroy()
     }
 
     render(): VNode {
@@ -186,11 +189,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                 id="AltimeterRoot"
                 viewBox={`-55 -100 ${viewBoxWidth} ${this.props.height}`}
             >
-                <g
-                    ref={this.verticalDeviationGroupRef}
-                    class="vertical-deviation-group"
-                    visibility="hidden"
-                >
+                <g class="vertical-deviation-group" visibility={this.deviationVisibility}>
                     <rect
                         class="vertical-deviation-background"
                         x="-50"
@@ -231,22 +230,25 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         />
                     ))}
                     <polygon
-                        ref={this.chevronBugRef}
                         class="vertical-deviation-chevron-bug"
                         points={`-45,${centerY} -10,${centerY - 20} -10,${centerY - 10} -25,${centerY} -10,${centerY + 10} -10,${centerY + 20}`}
                         fill="#d12bc7"
+                        display={this.chevronDisplay}
+                        transform={this.deviationTransform}
                     />
                     <polygon
-                        ref={this.diamondBugRef}
                         class="vertical-deviation-diamond-bug"
                         points={`-40,${centerY} -25,${centerY - 15} -10,${centerY} -25,${centerY + 15}`}
                         fill="#10c210"
+                        display={this.diamondDisplay}
+                        transform={this.deviationTransform}
                     />
                     <polygon
-                        ref={this.hollowDiamondBugRef}
                         class="vertical-deviation-hollow-diamond-bug"
                         points={`-40,${centerY} -25,${centerY - 15} -10,${centerY} -25,${centerY + 15} -25,${centerY + 5} -20,${centerY} -25,${centerY - 5} -30,${centerY} -25,${centerY + 5} -25,${centerY + 15}`}
                         fill="#DFDFDF"
+                        display={this.hollowDiamondDisplay}
+                        transform={this.deviationTransform}
                     />
                 </g>
                 <rect
@@ -376,10 +378,10 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     </svg>
                     <g ref={this.bugsGroupRef} class="bugs-group">
                         <polygon
-                            ref={this.selectedAltitudeBugRef}
                             class="selected-altitude-bug"
                             points={`0,${center - 50} 25,${center - 50} 25,${center - 22} 0,${center} 25,${center + 22} 25,${center + 50} 0,${center + 50}`}
                             fill="#36c8d2"
+                            transform={this.bugTransform}
                         />
                         <polyline
                             ref={this.minimumAltitudeBugRef}
@@ -409,13 +411,12 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     height="30"
                 />
                 <rect
-                    ref={this.selectedAltitudeBackgroundRef}
                     class="selected-altitude-background"
                     x="0"
                     y="-100"
                     width={compactVs ? 320 : 200}
                     height="60"
-                    fill="#1a1d21"
+                    fill={this.alertBgFill}
                     stroke="white"
                     stroke-width="3"
                 />
@@ -426,16 +427,15 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     fill="#36c8d2"
                 />
                 <text
-                    ref={this.selectedAltitudeTextRef}
                     class="selected-altitude-text"
                     x="250"
                     y="-50"
-                    fill="#36c8d2"
+                    fill={this.alertFill}
                     font-size="56"
                     font-family={GF_font}
                     text-anchor="end"
                 >
-                    ----
+                    {this.refAltitude.map(a => Math.round(a).toString())}
                 </text>
                 <rect
                     ref={this.pressureBackgroundRef}
@@ -449,7 +449,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     stroke-width="5"
                 />
                 <text
-                    ref={this.pressureTextRef}
                     class="pressure-text"
                     x="20"
                     y={this.props.height - 100 - 18}
@@ -458,7 +457,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     font-family={GF_font}
                     letter-spacing="0.05em"
                 >
-                    --.--
+                    {this.baroSetting.map(p => p.toFixed(2))}
                 </text>
                 {compactVs
                     ? this.buildCompactVS(centerY, GF_font)
@@ -531,7 +530,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         }
 
         return (
-            <g ref={this.graduationGroupRef} class="graduation-group">
+            <g class="graduation-group" transform={this.tapeTransform}>
                 {children}
             </g>
         )
@@ -623,7 +622,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         const fontSize = 30
 
         return (
-            <g ref={this.verticalSpeedGroupRef} id="VerticalSpeed" transform="translate(52,0)">
+            <g id="VerticalSpeed" transform="translate(52,0)">
                 <path
                     class="vertical-speed-background"
                     d={`M200 -50 v${this.props.height - 100} H250 V-${centerY + 25} l-40 -25 l40 -25 V-50 Z`}
@@ -631,11 +630,10 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     fill-opacity="0"
                 />
                 <rect
-                    ref={this.verticalSpeedBarRef}
                     class="vertical-speed-left-bar"
                     x="210"
-                    y={centerY - 240}
-                    height="480"
+                    y={this.vsBarY}
+                    height={this.vsBarHeight}
                     width="2"
                     fill="white"
                 />
@@ -671,12 +669,12 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     fill="#36c8d2"
                 />
                 <polygon
-                    ref={this.verticalSpeedIndicatorRef}
                     class="vertical-speed-indicator"
                     points={`180,${centerY + 35} 215,${centerY} 180,${centerY - 35}`}
                     fill="white"
                     stroke="black"
                     stroke-width="2.5"
+                    transform={this.vsIndicatorTransform}
                 />
             </g>
         )
@@ -689,7 +687,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         const fontSize = 30
 
         return (
-            <g ref={this.verticalSpeedGroupRef} id="VerticalSpeed" transform="translate(52,0)">
+            <g id="VerticalSpeed" transform="translate(52,0)">
                 <path
                     class="vertical-speed-background"
                     d={`M200 0 V${this.props.height - 200} H275 V${centerY + 50} L210 ${centerY} L275 ${centerY - 50} V0 Z`}
@@ -726,7 +724,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     points={`200, ${centerY - 20} 220, ${centerY - 20} 220, ${centerY - 15} 210, ${centerY} 220, ${centerY + 15} 220, ${centerY + 20} 200, ${centerY + 20}`}
                     fill="#36c8d2"
                 />
-                <g ref={this.verticalSpeedIndicatorRef}>
+                <g transform={this.vsIndicatorTransform}>
                     <path
                         class="vertical-speed-indicator"
                         d={`M210 ${centerY} L235 ${centerY + 25} H330 V${centerY - 25} H235 Z`}
@@ -754,7 +752,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     fill="#1a1d21"
                 />
                 <text
-                    ref={this.selectedVSTextRef}
                     class="selected-VS-text"
                     x="237.5"
                     y="-15"
@@ -763,7 +760,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     font-family={GF_font}
                     text-anchor="middle"
                 >
-                    ----
+                    {this.props.referenceVspeed}
                 </text>
             </g>
         )

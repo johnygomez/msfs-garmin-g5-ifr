@@ -225,11 +225,11 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 if (ht) diffAndSetText(ht, value)
             }, true),
 
-            this.props.groundSpeedValue.sub(_value => {}, true),
+            this.props.groundSpeedValue.sub(_ => {}, true),
 
-            this.props.waypointDistanceValue.sub(_value => {}, true),
+            this.props.waypointDistanceValue.sub(_ => {}, true),
 
-            this.props.waypointMode.sub(_mode => {}, true)
+            this.props.waypointMode.sub(_ => {}, true)
         )
     }
 
