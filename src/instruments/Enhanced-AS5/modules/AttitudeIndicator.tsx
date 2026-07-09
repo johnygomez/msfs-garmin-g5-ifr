@@ -118,11 +118,11 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         super(props)
         const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
 
-        this.pitch = ConsumerSubject.create(sub.on('pitch_deg').withPrecision(0), 0)
-        this.bank = ConsumerSubject.create(sub.on('roll_deg').withPrecision(0), 0)
+        this.pitch = ConsumerSubject.create(sub.on('pitch_deg').withPrecision(2), 0)
+        this.bank = ConsumerSubject.create(sub.on('roll_deg').withPrecision(2), 0)
         this.slipSkid = ConsumerSubject.create(sub.on('turn_coordinator_ball').withPrecision(2), 0)
-        this.fdPitch = ConsumerSubject.create(sub.on('flight_director_pitch').withPrecision(0), 0)
-        this.fdBark = ConsumerSubject.create(sub.on('flight_director_bank').withPrecision(0), 0)
+        this.fdPitch = ConsumerSubject.create(sub.on('flight_director_pitch').withPrecision(2), 0)
+        this.fdBark = ConsumerSubject.create(sub.on('flight_director_bank').withPrecision(2), 0)
         this.fdActive = ConsumerSubject.create(sub.on('flight_director_is_active'), false)
         this.maxBankValue = ConsumerSubject.create(sub.on('ap_max_bank_value').withPrecision(0), 30)
 
