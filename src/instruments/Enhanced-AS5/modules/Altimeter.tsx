@@ -29,13 +29,6 @@ export interface AltimeterComponentProps extends ComponentProps {
     verticalDeviationValue: Subject<number>
 }
 
-/** State for all six split-flap cursor digit elements, derived from indicated altitude. */
-interface CursorDigitState {
-    d1: { top: { text: string; transform: string }; bot: { text: string; transform: string } }
-    d2: { top: { text: string; transform: string }; bot: { text: string; transform: string } }
-    d3: { top: { text: string; transform: string }; bot: { text: string; transform: string } }
-}
-
 interface IndicatedAltDisplayBoxProps extends ComponentProps {
     /** Whether to show the display. */
     show: Subscribable<boolean>
@@ -88,7 +81,7 @@ class IndicatedAltDisplayBox extends DisplayComponent<IndicatedAltDisplayBoxProp
 
         this.scrollerRefs.push(
             tensScrollerRef,
-            tensScrollerRef,
+            thousandsScrollerRef,
             hundredsScrollerRef,
             tenThousandsScrollerRef
         )
@@ -204,8 +197,6 @@ class IndicatedAltDisplayBox extends DisplayComponent<IndicatedAltDisplayBoxProp
 
 export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps> {
     private readonly rootRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorGroupRef = FSComponent.createRef<SVGElement>()
     private readonly indicatedAltBoxRef = FSComponent.createRef<IndicatedAltDisplayBox>()
     private readonly minimumAltitudeBugRef = FSComponent.createRef<SVGElement>()
     private readonly trendElementRef = FSComponent.createRef<SVGElement>()
@@ -221,7 +212,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly selectedVSBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly indicatorTextRef = FSComponent.createRef<SVGElement>()
 
-    // Legacy ref arrays — kept to avoid breaking any parent-level access patterns
     private gradTextRefs: NodeReference<SVGElement>[] = []
     private gradRectRefs: NodeReference<SVGElement>[] = []
 
@@ -266,11 +256,8 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly trendY: MappedSubject<[number], number>
     private readonly trendHeight: MappedSubject<[number], number>
 
-    // Reactive graduation & digit subjects
+    // Reactive graduation subjects
     private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
-    private readonly endDigitTextSubjects: MappedSubject<[number], string>[] = []
-    private readonly endDigitTransform: MappedSubject<[number], string>
-    private readonly cursorState: MappedSubject<[number], CursorDigitState>
     private readonly showIndicatedAltData = SubscribableUtils.toSubscribable(true, true)
 
     /** Altitude at the bottom of the tape (snapped to 100‑ft boundaries).
@@ -367,34 +354,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                 )
             )
         }
-
-        // --- End-digit (rotating drum) subjects ---
-        // The drum shows the last two digits of altitude.  Five text elements are
-        // stacked vertically and scroll as the ones digit changes.
-        this.endDigitTransform = MappedSubject.create(([alt]) => {
-            const endValue = alt % 100
-            const endCenter = Math.round(endValue / 10) * 10
-            return `translate(0, ${((endValue - endCenter) * 60) / 10})`
-        }, this.indicatedAlt)
-
-        // Each drum text shows the tens value at (altitude + offset) % 100.
-        // The offset increases by 10 ft for each text above the bottom one.
-        // Bottom text (i=4, idx=2) = alt+0, centre text (i=2, idx=0) = alt+20, etc.
-        for (let i = -2; i <= 2; i++) {
-            const idx = i
-            this.endDigitTextSubjects.push(
-                MappedSubject.create(([alt]) => {
-                    const digitValue = Math.round((((2 - idx) * 10 + alt) % 100) / 10) * 10
-                    return fastToFixed(Math.abs((digitValue % 100) / 10), 0) + '0'
-                }, this.indicatedAlt)
-            )
-        }
-
-        // --- Cursor (split-flap) digit state ---
-        this.cursorState = MappedSubject.create(
-            ([alt]) => this.computeCursorDigitState(alt),
-            this.indicatedAlt
-        )
 
         // --- Tape transform: centre indicated altitude on the cursor ---
         const centerPx = (props.height - 100) / 2
@@ -512,99 +471,9 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.trendHeight.destroy()
 
         this.gradTextSubjects.forEach(s => s.destroy())
-        this.endDigitTextSubjects.forEach(s => s.destroy())
-        this.endDigitTransform.destroy()
-        this.cursorState.destroy()
         this.currentMinimumSub.destroy()
 
         super.destroy()
-    }
-
-    /**
-     * Compute the split-flap cursor digit state from indicated altitude.
-     * Ported from the pre-FSComponent Altimeter.ts attributeChangedCallback.
-     */
-    private computeCursorDigitState(altitude: number): CursorDigitState {
-        const blank = (): { text: string; transform: string } => ({ text: '', transform: '' })
-        const state: CursorDigitState = {
-            d1: { top: blank(), bot: blank() },
-            d2: { top: blank(), bot: blank() },
-            d3: { top: blank(), bot: blank() },
-        }
-
-        const absAlt = Math.abs(altitude)
-        const endValue = altitude % 100
-        const isRolling = endValue > 90 || endValue < -90
-        const rollingTranslate = (endValue > 0 ? endValue - 90 : endValue + 100) * 5.7
-        const rollingTransform = isRolling ? `translate(0, ${rollingTranslate})` : ''
-
-        if (absAlt < 90) {
-            if (altitude < 0) state.d3.bot.text = '-'
-            return state
-        }
-
-        const d3Value = (absAlt % 1000) / 100
-        const d2Value = absAlt >= 990 ? (absAlt % 10000) / 1000 : 0
-        const d1Value = absAlt >= 9990 ? (absAlt % 100000) / 10000 : 0
-
-        const d3RollsOver = d3Value > 9
-        const d2RollsOver = d2Value > 9
-
-        // --- digit3 (hundreds) ---
-        const floorD3 = Math.floor(d3Value)
-        const nextD3 = (floorD3 + 1) % 10
-
-        state.d3.bot.text = absAlt < 100 ? '' : fastToFixed(floorD3, 0)
-        state.d3.top.text = fastToFixed(nextD3, 0)
-
-        if (isRolling) {
-            if (endValue < 0) {
-                state.d3.bot.text = fastToFixed(nextD3, 0)
-                state.d3.top.text = absAlt < 100 ? '' : fastToFixed(floorD3, 0)
-            }
-            state.d3.bot.transform = rollingTransform
-            state.d3.top.transform = rollingTransform
-        }
-
-        // --- digit2 (thousands) ---
-        if (absAlt >= 990) {
-            const floorD2 = Math.floor(d2Value)
-            const nextD2 = (floorD2 + 1) % 10
-
-            state.d2.bot.text = absAlt < 1000 ? '' : fastToFixed(floorD2, 0)
-            state.d2.top.text = fastToFixed(nextD2, 0)
-
-            if (isRolling && d3RollsOver) {
-                if (endValue < 0) {
-                    state.d2.bot.text = fastToFixed(nextD2, 0)
-                    state.d2.top.text = absAlt < 1000 ? '' : fastToFixed(floorD2, 0)
-                }
-                state.d2.bot.transform = rollingTransform
-                state.d2.top.transform = rollingTransform
-            }
-
-            // --- digit1 (ten-thousands) ---
-            if (absAlt >= 9990) {
-                const floorD1 = Math.floor(d1Value)
-                const nextD1 = (floorD1 + 1) % 10
-
-                state.d1.bot.text = absAlt < 10000 ? '' : fastToFixed(floorD1, 0)
-                state.d1.top.text = fastToFixed(nextD1, 0)
-
-                if (isRolling && d3RollsOver && d2RollsOver) {
-                    if (endValue < 0) {
-                        state.d1.bot.text = fastToFixed(nextD1, 0)
-                        state.d1.top.text = absAlt < 10000 ? '' : fastToFixed(floorD1, 0)
-                    }
-                    state.d1.bot.transform = rollingTransform
-                    state.d1.top.transform = rollingTransform
-                }
-            }
-        } else {
-            if (altitude < 0) state.d2.bot.text = '-'
-        }
-
-        return state
     }
 
     onAfterRender(): void {
