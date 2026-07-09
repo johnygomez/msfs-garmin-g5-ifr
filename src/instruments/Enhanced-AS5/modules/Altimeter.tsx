@@ -193,6 +193,78 @@ class IndicatedAltDisplayBox extends DisplayComponent<IndicatedAltDisplayBoxProp
     }
 }
 
+export interface VerticalSpeedIndicatorProps extends ComponentProps {
+    verticalSpeed: Subscribable<number>
+}
+
+class VerticalSpeedIndicator extends DisplayComponent<VerticalSpeedIndicatorProps> {
+    private readonly vsBarStyleProp: MappedSubject<[number], string>
+    private readonly vsBarArrowStyleProp: MappedSubject<[number], string>
+
+    constructor(props: VerticalSpeedIndicatorProps) {
+        super(props)
+
+        this.vsBarStyleProp = MappedSubject.create(([vs]) => {
+            const clamped = Math.max(-3000, Math.min(3000, vs))
+            const barHeight = Math.abs((clamped / 6000) * 100)
+            const translateY = clamped < 0 ? 0 : 100
+            return `height: ${barHeight}%; transform: translateY(-${translateY}%);`
+        }, props.verticalSpeed).pause()
+
+        this.vsBarArrowStyleProp = MappedSubject.create(([vs]) => {
+            const top = vs > 0 ? 0 : 100
+            return `top: ${top}%`
+        }, props.verticalSpeed).pause()
+    }
+
+    public destroy(): void {
+        this.vsBarStyleProp.destroy()
+        this.vsBarArrowStyleProp.destroy()
+
+        super.destroy()
+    }
+
+    public onAfterRender(): void {
+        this.vsBarStyleProp.resume()
+        this.vsBarArrowStyleProp.resume()
+    }
+
+    public render(): VNode {
+        const numTicks = 31
+        const texts = ['', '20', '10', '', '10', '20', '']
+
+        return (
+            <div id="VerticalSpeedIndicator" class="vertical-speed-indicator">
+                <div class="vertical-speed-indicator-bar" style={this.vsBarStyleProp}>
+                    <svg
+                        width="10"
+                        height="20"
+                        class="vertical-speed-indicator-arrow"
+                        viewBox="-2 -2 10 20"
+                        style={this.vsBarArrowStyleProp}
+                    >
+                        <polygon points="10,10 0,0 0,20" fill="white" stroke="black" />
+                    </svg>
+                </div>
+                <div class="vertical-speed-ticks">
+                    {Array.from({ length: numTicks }).map((_, i) => (
+                        <div
+                            class="vertical-speed-tick"
+                            style={`top: ${(i / (numTicks - 1)) * 100}%`}
+                        >
+                            {i % 5 === 0 && (
+                                <span class="vertical-speed-tick-label">
+                                    {texts[Math.floor(i / 5)]}
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+}
+
 export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps> {
     private readonly rootRef = FSComponent.createRef<SVGElement>()
     private readonly indicatedAltBoxRef = FSComponent.createRef<IndicatedAltDisplayBox>()
@@ -206,7 +278,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly bugsGroupRef = FSComponent.createRef<SVGElement>()
     private readonly selectedAltitudeFixedBugRef = FSComponent.createRef<SVGElement>()
     private readonly pressureBackgroundRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedVSBugRef = FSComponent.createRef<SVGElement>()
 
     private gradTextRefs: NodeReference<SVGElement>[] = []
     private gradRectRefs: NodeReference<SVGElement>[] = []
@@ -246,11 +317,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly diamondDisplay: MappedSubject<[string], string>
     private readonly hollowDiamondDisplay: MappedSubject<[string], string>
     private readonly deviationTransform: MappedSubject<[number], string>
-    private readonly vsBarY: MappedSubject<[number], number>
-    private readonly vsBarHeight: MappedSubject<[number], number>
-    private readonly vsIndicatorTransform: MappedSubject<[number], string>
-    private readonly trendY: MappedSubject<[number], number>
-    private readonly trendHeight: MappedSubject<[number], number>
 
     // Reactive graduation subjects
     private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
@@ -308,13 +374,11 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             sub.on('altimeter_baro_setting_inhg').withPrecision(2),
             29.92
         )
-        this.verticalSpd = ConsumerSubject.create(sub.on('vertical_speed').withPrecision(0), 0)
+        this.verticalSpd = ConsumerSubject.create(sub.on('vertical_speed').withPrecision(1), 0)
         this.refAltitude = ConsumerSubject.create(
             sub.on('ap_altitude_selected').withPrecision(0),
             0
         )
-
-        const centerY = props.height / 2 - 100
 
         // --- G3X‑style tape sizing ---
         this.TAPE_WINDOW_PX = props.height - 100
@@ -413,36 +477,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             const offsetY = Math.max(-1, Math.min(1, val)) * 132
             return `translate(0, ${offsetY})`
         }, props.verticalDeviationValue)
-
-        this.vsBarY = MappedSubject.create(([vs]) => {
-            const clamped = Math.max(-2000, Math.min(2000, vs))
-            const barY = centerY - (clamped / 2000) * 240
-            return Math.min(centerY, barY)
-        }, this.verticalSpd)
-
-        this.vsBarHeight = MappedSubject.create(([vs]) => {
-            const clamped = Math.max(-2000, Math.min(2000, vs))
-            return Math.abs((clamped / 2000) * 240)
-        }, this.verticalSpd)
-
-        this.vsIndicatorTransform = MappedSubject.create(([vs]) => {
-            const clamped = Math.max(-2000, Math.min(2000, vs))
-            return `translate(0, ${(clamped / 2000) * 240})`
-        }, this.verticalSpd)
-
-        this.trendY = MappedSubject.create(([vs]) => {
-            const clamped = Math.max(-2000, Math.min(2000, vs))
-            const rawY = centerY + (clamped / 10) * -1.5
-            const trendVal = Math.max(-50, Math.min(props.height - 150, rawY))
-            return Math.min(trendVal, centerY)
-        }, this.verticalSpd)
-
-        this.trendHeight = MappedSubject.create(([vs]) => {
-            const clamped = Math.max(-2000, Math.min(2000, vs))
-            const rawY = centerY + (clamped / 10) * -1.5
-            const trendVal = Math.max(-50, Math.min(props.height - 150, rawY))
-            return Math.abs(trendVal - centerY)
-        }, this.verticalSpd)
     }
 
     public destroy(): void {
@@ -460,11 +494,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.diamondDisplay.destroy()
         this.hollowDiamondDisplay.destroy()
         this.deviationTransform.destroy()
-        this.vsBarY.destroy()
-        this.vsBarHeight.destroy()
-        this.vsIndicatorTransform.destroy()
-        this.trendY.destroy()
-        this.trendHeight.destroy()
 
         this.gradTextSubjects.forEach(s => s.destroy())
         this.currentMinimumSub.destroy()
@@ -484,6 +513,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
         return (
             <>
+                <VerticalSpeedIndicator verticalSpeed={this.verticalSpd} />
                 <svg
                     ref={this.rootRef}
                     class="altimeter"
@@ -660,16 +690,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     >
                         {this.baroSetting.map(p => p.toFixed(2))}
                     </text>
-                    {this.buildCompactVS(centerY, GF_font)}
-                    <rect
-                        ref={this.trendElementRef}
-                        class="trend-element"
-                        x="0"
-                        y={this.trendY}
-                        width="8"
-                        height={this.trendHeight}
-                        fill="#d12bc7"
-                    />
                 </svg>
                 <IndicatedAltDisplayBox
                     ref={this.indicatedAltBoxRef}
@@ -794,66 +814,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     font-size="0"
                     font-family="OpenSans-Bold"
                 ></text>
-            </g>
-        )
-    }
-
-    private buildCompactVS(centerY: number, GF_font: string): VNode {
-        const dashes = [-240, -200, -160, -80, 80, 160, 200, 240]
-        const texts = ['10', '5', '0', '5', '10']
-        const height = 2.5
-        const width = 20
-        const fontSize = 30
-
-        return (
-            <g id="VerticalSpeed" transform="translate(52,0)">
-                <path
-                    class="vertical-speed-background"
-                    d={`M200 -50 v${this.props.height - 100} H250 V-${centerY + 25} l-40 -25 l40 -25 V-50 Z`}
-                    fill="#1a1d21"
-                    fill-opacity="0"
-                />
-                <rect
-                    class="vertical-speed-left-bar"
-                    x="210"
-                    y={this.vsBarY}
-                    height={this.vsBarHeight}
-                    width="2"
-                    fill="white"
-                />
-                {dashes.map((d, i) => (
-                    <>
-                        <rect
-                            class="vertical-speed-dash"
-                            x="200"
-                            y={centerY - d - height / 2}
-                            height={height}
-                            width={width}
-                            fill="white"
-                        />
-                        {texts[i] !== '' && (
-                            <text
-                                class="vertical-speed-dash-text"
-                                y={centerY - d - height / 2 + fontSize / 3}
-                                x="235"
-                                fill="white"
-                                font-size={fontSize}
-                                font-family={GF_font}
-                                text-anchor="middle"
-                            >
-                                {texts[i]}
-                            </text>
-                        )}
-                    </>
-                ))}
-                <polygon
-                    class="vertical-speed-indicator"
-                    points={`180,${centerY + 35} 215,${centerY} 180,${centerY - 35}`}
-                    fill="white"
-                    stroke="black"
-                    stroke-width="2.5"
-                    transform={this.vsIndicatorTransform}
-                />
             </g>
         )
     }

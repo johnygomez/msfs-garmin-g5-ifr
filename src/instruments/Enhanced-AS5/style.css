@@ -21,6 +21,9 @@
     --altimeter-indicatedalt-box-tens-line-height: 25px;
     --altimeter-indicatedalt-box-hundreds-offset-y: 3px;
     --altimeter-indicatedalt-box-tens-offset-y: 3px;
+
+    /* Colors */
+    --magenta: #d12bc7;
 }
 
 @keyframes TemporaryShow {
@@ -145,6 +148,76 @@ as5-element #PageContainer #PFD #Altimeter .vertical-deviation-diamond-bug {
 as5-element #PageContainer #PFD #Altimeter .vertical-deviation-chevron-bug {
     stroke: black;
     stroke-width: 3;
+}
+
+as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator {
+    position: absolute;
+    width: 30px;
+    height: calc(100% - 50px);
+    top: 23px;
+    right: 0;
+}
+
+as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator .vertical-speed-indicator-bar {
+    position: absolute;
+    width: 7px;
+    max-height: 50%;
+    background-color: var(--magenta);
+    top: 50%;
+    right: 0;
+}
+
+as5-element
+    #PageContainer
+    #PFD
+    #Altimeter
+    #VerticalSpeedIndicator
+    .vertical-speed-indicator-bar
+    > svg {
+    position: absolute;
+    right: 7px;
+    margin-top: -10px;
+    z-index: 2;
+}
+
+as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator .vertical-speed-ticks {
+    height: 100%;
+    width: 10px;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+as5-element
+    #PageContainer
+    #PFD
+    #Altimeter
+    #VerticalSpeedIndicator
+    .vertical-speed-tick:nth-child(5n + 1) {
+    width: 10px;
+}
+
+as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator .vertical-speed-tick {
+    position: absolute;
+    right: 0;
+    height: 2px;
+    width: 5px;
+    background-color: white;
+    transform: translateY(-50%);
+}
+
+as5-element
+    #PageContainer
+    #PFD
+    #Altimeter
+    #VerticalSpeedIndicator
+    .vertical-speed-tick
+    .vertical-speed-tick-label {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
 }
 
 as5-element #PageContainer #PFD #Airspeed {
