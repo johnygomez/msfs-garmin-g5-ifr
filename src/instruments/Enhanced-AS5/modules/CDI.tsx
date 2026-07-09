@@ -112,7 +112,6 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                             x="10"
                             y={`${svgHeight - 1}`}
                             font-size="5"
-                            font-family="Roboto-Bold"
                         >
                             AUTO
                         </text>
@@ -123,7 +122,6 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                             x="90"
                             y={`${svgHeight - 1}`}
                             font-size="5"
-                            font-family="Roboto-Bold"
                         >
                             5NM
                         </text>

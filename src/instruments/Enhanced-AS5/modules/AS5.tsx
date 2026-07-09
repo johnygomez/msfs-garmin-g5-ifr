@@ -99,9 +99,7 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                     <AltimeterComponent
                         bus={this.props.bus}
                         height={1020}
-                        VSStyle="Compact"
                         altitudeAlertState={alt.altitudeAlertState}
-                        referenceVspeed={alt.referenceVspeed}
                         verticalDeviationMode={alt.verticalDeviationMode}
                         verticalDeviationValue={alt.verticalDeviationValue}
                     />
@@ -199,19 +197,8 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
                         noCenterText={false}
                         noBackground={false}
                         noAffectSimRadioNav={false}
-                        largeCompass={false}
                         displayStyle={HSIndicatorDisplayType.GlassCockpit}
-                        fmsAlias=""
                         heading={hsi.heading}
-                        course={hsi.course}
-                        cdiDeviation={hsi.cdiDeviation}
-                        bearing1={hsi.bearing1}
-                        bearing2={hsi.bearing2}
-                        dmeDistance={hsi.dmeDistance}
-                        headingValue={hsi.headingValue}
-                        groundSpeedValue={hsi.groundSpeedValue}
-                        waypointDistanceValue={hsi.waypointDistanceValue}
-                        waypointMode={hsi.waypointMode}
                         onApi={instance => this.props.hsi.hsiComponent.set(instance)}
                     />
                 </div>
@@ -353,7 +340,6 @@ export class AS5 extends NavSystem {
             verticalSpeed: Subject.create(0),
             referenceAltitude: Subject.create(0),
             altitudeAlertState: Subject.create('BlueText'),
-            referenceVspeed: Subject.create('----'),
             verticalDeviationMode: Subject.create('None'),
             verticalDeviationValue: Subject.create(0),
         }

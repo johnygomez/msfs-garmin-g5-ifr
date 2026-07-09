@@ -210,7 +210,6 @@ export interface AltimeterSubjects {
     verticalSpeed: Subject<number>
     referenceAltitude: Subject<number>
     altitudeAlertState: Subject<string>
-    referenceVspeed: Subject<string>
     verticalDeviationMode: Subject<string>
     verticalDeviationValue: Subject<number>
 }
@@ -262,16 +261,6 @@ export class PFD_Altimeter extends NavSystemElement {
             this.lastAltitude = altitude
         }
         this.subjects.verticalSpeed.set(Simplane.getVerticalSpeed())
-        if (SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD', SimVarValueType.Bool)) {
-            this.subjects.referenceVspeed.set(
-                fastToFixed(
-                    SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD VAR', SimVarValueType.FPM),
-                    0
-                )
-            )
-        } else {
-            this.subjects.referenceVspeed.set('----')
-        }
         const altitudeRefActive = true
         if (altitudeRefActive) {
             if (selectedAltitude != this.lastSelectedAltitude) {

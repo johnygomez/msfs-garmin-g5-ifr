@@ -22,9 +22,7 @@ import { G5CustomEvents } from './G5CustomPublisher'
 export interface AltimeterComponentProps extends ComponentProps {
     bus: EventBus
     height: number
-    VSStyle: 'Default' | 'Compact'
     altitudeAlertState: Subject<string>
-    referenceVspeed: Subject<string>
     verticalDeviationMode: Subject<string>
     verticalDeviationValue: Subject<number>
 }
@@ -209,8 +207,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly selectedAltitudeFixedBugRef = FSComponent.createRef<SVGElement>()
     private readonly pressureBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly selectedVSBugRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedVSBackgroundRef = FSComponent.createRef<SVGElement>()
-    private readonly indicatorTextRef = FSComponent.createRef<SVGElement>()
 
     private gradTextRefs: NodeReference<SVGElement>[] = []
     private gradRectRefs: NodeReference<SVGElement>[] = []
@@ -483,9 +479,8 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     render(): VNode {
         const centerY = this.props.height / 2 - 100
         const center = (this.props.height - 100) / 2
-        const compactVs = this.props.VSStyle === 'Compact'
         const GF_font = 'OpenSans-Bold'
-        const viewBoxWidth = compactVs ? 300 : 380
+        const viewBoxWidth = 300
 
         return (
             <>
@@ -609,26 +604,18 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         </g>
                     </svg>
                     <rect
-                        class="cursor-shadow"
-                        fill="url(#altshadowGradient)"
-                        x="148"
-                        y={this.props.height / 2 - 175}
-                        width="74"
-                        height="152"
-                    />
-                    <rect
                         class="selected-altitude-shadow"
                         fill="url(#underShadowGradient)"
                         x="0"
                         y="-36"
-                        width={compactVs ? 320 : 200}
+                        width={320}
                         height="30"
                     />
                     <rect
                         class="selected-altitude-background"
                         x="0"
                         y="-100"
-                        width={compactVs ? 320 : 200}
+                        width={320}
                         height="60"
                         fill={this.alertBgFill}
                         stroke="white"
@@ -673,9 +660,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     >
                         {this.baroSetting.map(p => p.toFixed(2))}
                     </text>
-                    {compactVs
-                        ? this.buildCompactVS(centerY, GF_font)
-                        : this.buildDefaultVS(centerY, GF_font)}
+                    {this.buildCompactVS(centerY, GF_font)}
                     <rect
                         ref={this.trendElementRef}
                         class="trend-element"
@@ -815,7 +800,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
     private buildCompactVS(centerY: number, GF_font: string): VNode {
         const dashes = [-240, -200, -160, -80, 80, 160, 200, 240]
-        const texts = ['2', '', '1', '.5', '.5', '1', '', '2']
+        const texts = ['10', '5', '0', '5', '10']
         const height = 2.5
         const width = 20
         const fontSize = 30
@@ -862,12 +847,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     </>
                 ))}
                 <polygon
-                    ref={this.selectedVSBugRef}
-                    class="selected-VS-bug"
-                    points={`200, ${centerY - 20} 220, ${centerY - 20} 220, ${centerY - 15} 210, ${centerY} 220, ${centerY + 15} 220, ${centerY + 20} 200, ${centerY + 20}`}
-                    fill="#36c8d2"
-                />
-                <polygon
                     class="vertical-speed-indicator"
                     points={`180,${centerY + 35} 215,${centerY} 180,${centerY - 35}`}
                     fill="white"
@@ -875,94 +854,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     stroke-width="2.5"
                     transform={this.vsIndicatorTransform}
                 />
-            </g>
-        )
-    }
-
-    private buildDefaultVS(centerY: number, GF_font: string): VNode {
-        const dashes = [-200, -150, -100, -50, 50, 100, 150, 200]
-        const height = 3
-        const width = 10
-        const fontSize = 30
-
-        return (
-            <g id="VerticalSpeed" transform="translate(52,0)">
-                <path
-                    class="vertical-speed-background"
-                    d={`M200 0 V${this.props.height - 200} H275 V${centerY + 50} L210 ${centerY} L275 ${centerY - 50} V0 Z`}
-                    fill="#1a1d21"
-                    fill-opacity="0"
-                />
-                {dashes.map(d => (
-                    <>
-                        <rect
-                            class="vertical-speed-dash"
-                            x="200"
-                            y={centerY - d - height / 2}
-                            height={height}
-                            width={d % 100 == 0 ? 2 * width : width}
-                            fill="white"
-                        />
-                        {d % 100 == 0 && (
-                            <text
-                                class="vertical-speed-dash-text"
-                                y={centerY - d - height / 2 + fontSize / 3}
-                                x={200 + 3 * width}
-                                fill="white"
-                                font-size={fontSize}
-                                font-family={GF_font}
-                            >
-                                {d / 100}
-                            </text>
-                        )}
-                    </>
-                ))}
-                <polygon
-                    ref={this.selectedVSBugRef}
-                    class="selected-VS-bug"
-                    points={`200, ${centerY - 20} 220, ${centerY - 20} 220, ${centerY - 15} 210, ${centerY} 220, ${centerY + 15} 220, ${centerY + 20} 200, ${centerY + 20}`}
-                    fill="#36c8d2"
-                />
-                <g transform={this.vsIndicatorTransform}>
-                    <path
-                        class="vertical-speed-indicator"
-                        d={`M210 ${centerY} L235 ${centerY + 25} H330 V${centerY - 25} H235 Z`}
-                        fill="#1a1d21"
-                    />
-                    <text
-                        ref={this.indicatorTextRef}
-                        class="vertical-speed-indicator-text"
-                        x="235"
-                        y={centerY + 10}
-                        fill="white"
-                        font-size={fontSize}
-                        font-family={GF_font}
-                    >
-                        {this.verticalSpd.map(v =>
-                            Math.abs(v) >= 100 ? fastToFixed(Math.round(v / 50) * 50, 0) : ''
-                        )}
-                    </text>
-                </g>
-                <rect
-                    ref={this.selectedVSBackgroundRef}
-                    class="selected-VS-background"
-                    x="200"
-                    y="-50"
-                    width="75"
-                    height="50"
-                    fill="#1a1d21"
-                />
-                <text
-                    class="selected-VS-text"
-                    x="237.5"
-                    y="-15"
-                    fill="#36c8d2"
-                    font-size="25"
-                    font-family={GF_font}
-                    text-anchor="middle"
-                >
-                    {this.props.referenceVspeed}
-                </text>
             </g>
         )
     }

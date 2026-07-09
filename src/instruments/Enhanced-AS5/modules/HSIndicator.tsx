@@ -24,9 +24,7 @@ export interface HSIComponentProps extends ComponentProps {
     noCenterText: boolean
     noBackground: boolean
     noAffectSimRadioNav: boolean
-    largeCompass: boolean
     displayStyle: HSIndicatorDisplayType
-    fmsAlias: string
     onApi?: (instance: HSIComponent) => void
     /** External SVG element for GSI chevron bug (NAV1). */
     chevronBug2?: SVGElement
@@ -34,32 +32,7 @@ export interface HSIComponentProps extends ComponentProps {
     diamondBug2?: SVGElement
     /** External SVG element for GSI hollow diamond bug (NAV1/NAV2). */
     hollowDiamondBug2?: SVGElement
-    /**
-     * @deprecated No longer used internally — magnetic heading comes from the EventBus.
-     * Kept for backward compatibility with existing callers.
-     */
     heading?: Subject<number>
-    /**
-     * @deprecated No longer used internally — course is computed from CDI source.
-     * Kept for backward compatibility with existing callers.
-     */
-    course?: Subject<number>
-    /**
-     * @deprecated No longer used internally — deviation is computed from CDI source.
-     * Kept for backward compatibility with existing callers.
-     */
-    cdiDeviation?: Subject<number>
-    /**
-     * @deprecated No longer used internally — bearing angles are computed in update().
-     * Kept for backward compatibility with existing callers.
-     */
-    bearing1?: Subject<number>
-    bearing2?: Subject<number>
-    dmeDistance?: Subject<number>
-    headingValue?: Subject<string>
-    groundSpeedValue?: Subject<string>
-    waypointDistanceValue?: Subject<string>
-    waypointMode?: Subject<string>
 }
 
 export class HSIComponent extends DisplayComponent<HSIComponentProps> {
@@ -159,30 +132,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     // Subscriptions bag
     private readonly subs: Subscription[] = []
-
-    // ---- Simple getters ----
-    get noCenterText() {
-        return this.props.noCenterText
-    }
-    get noBackground() {
-        return this.props.noBackground
-    }
-    get noAffectSimRadioNav() {
-        return this.props.noAffectSimRadioNav
-    }
-    get largeCompass() {
-        return this.props.largeCompass
-    }
-    get displayStyle() {
-        return this.props.displayStyle
-    }
-    get fmsAlias() {
-        return this.props.fmsAlias
-    }
-
-    get displayHeight() {
-        return this.largeCompass ? 156 : 116
-    }
 
     // ---- Constructor ----
     constructor(props: HSIComponentProps) {
@@ -332,7 +281,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     onEvent(_event: any) {
         switch (_event) {
             case 'CRS_INC':
-                if (!this.noAffectSimRadioNav) {
+                if (!this.props.noAffectSimRadioNav) {
                     if (this.logic_cdiSource == 1) {
                         SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0)
                     } else if (this.logic_cdiSource == 2) {
@@ -343,7 +292,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 }
                 break
             case 'CRS_DEC':
-                if (!this.noAffectSimRadioNav) {
+                if (!this.props.noAffectSimRadioNav) {
                     if (this.logic_cdiSource == 1) {
                         SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0)
                     } else if (this.logic_cdiSource == 2) {
@@ -354,7 +303,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 }
                 break
             case 'CRS_PUSH':
-                if (!this.noAffectSimRadioNav) {
+                if (!this.props.noAffectSimRadioNav) {
                     if (this.logic_cdiSource == 1) {
                         SimVar.SetSimVarValue(
                             'K:VOR1_SET',
@@ -374,7 +323,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 break
             case 'SoftKeys_PFD_DME':
                 this.isDmeDisplayed = !this.isDmeDisplayed
-                if (!this.noAffectSimRadioNav) {
+                if (!this.props.noAffectSimRadioNav) {
                     SimVar.SetSimVarValue(
                         'L:PFD_DME_Displayed',
                         SimVarValueType.Number,
@@ -387,7 +336,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             case 'BRG1Switch':
                 this.logic_brg1Source =
                     (SimVar.GetSimVarValue('L:PFD_BRG1_Source', SimVarValueType.Number) + 1) % 5
-                if (!this.noAffectSimRadioNav) {
+                if (!this.props.noAffectSimRadioNav) {
                     SimVar.SetSimVarValue(
                         'L:PFD_BRG1_Source',
                         SimVarValueType.Number,
@@ -402,7 +351,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             case 'BRG2Switch':
                 this.logic_brg2Source =
                     (SimVar.GetSimVarValue('L:PFD_BRG2_Source', SimVarValueType.Number) + 1) % 5
-                if (!this.noAffectSimRadioNav) {
+                if (!this.props.noAffectSimRadioNav) {
                     SimVar.SetSimVarValue(
                         'L:PFD_BRG2_Source',
                         SimVarValueType.Number,
@@ -423,7 +372,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 ) {
                     this.logic_cdiSource = 3
                 }
-                if (!this.noAffectSimRadioNav) {
+                if (!this.props.noAffectSimRadioNav) {
                     if ((this.logic_cdiSource == 3) != isGPSDrived) {
                         SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Bool, 0)
                     }
@@ -444,7 +393,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         const approachType = Simplane.getAutoPilotApproachType()
 
         if (
-            !this.noAffectSimRadioNav &&
+            !this.props.noAffectSimRadioNav &&
             apprHold &&
             approachType != ApproachType.APPROACH_TYPE_RNAV &&
             apprHold != this._lastAPPRHold
@@ -464,8 +413,8 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
         // HUD styles: read bearing sources every frame
         if (
-            this.displayStyle === HSIndicatorDisplayType.HUD ||
-            this.displayStyle === HSIndicatorDisplayType.HUD_Simplified
+            this.props.displayStyle === HSIndicatorDisplayType.HUD ||
+            this.props.displayStyle === HSIndicatorDisplayType.HUD_Simplified
         ) {
             this.logic_brg1Source = SimVar.GetSimVarValue(
                 'L:PFD_BRG1_Source',
@@ -798,47 +747,39 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     // ========================================================================
 
     render(): VNode {
-        const viewBox = this.largeCompass ? '-28 -28 156 156' : '-28 -15 156 116'
+        const viewBox = '-28 -15 156 116'
 
         return (
             <svg ref={this.rootRef} class="hsi" width="100%" height="100%" viewBox={viewBox}>
                 {/* Compass lines */}
-                {!this.largeCompass &&
-                    [-135, -90, -45, 45, 90, 135].map(angle => (
-                        <rect
-                            key={`compass-line-${angle}`}
-                            x="49.5"
-                            y="-7"
-                            width="1"
-                            height="6"
-                            transform={`rotate(${angle} 50 50)`}
-                            fill="white"
-                        />
-                    ))}
+                {[-135, -90, -45, 45, 90, 135].map(angle => (
+                    <rect
+                        key={`compass-line-${angle}`}
+                        x="49.5"
+                        y="-7"
+                        width="1"
+                        height="6"
+                        transform={`rotate(${angle} 50 50)`}
+                        fill="white"
+                    />
+                ))}
 
                 {/* Rotating rose group — transform is now declarative */}
                 <g ref={this.rotatingRoseRef} transform={this.roseTransform}>
-                    {!this.noBackground && (
-                        <circle
-                            cx="50"
-                            cy="50"
-                            r={this.largeCompass ? '65' : '50'}
-                            fill="#1a1d21"
-                            fill-opacity="0.25"
-                        />
+                    {!this.props.noBackground && (
+                        <circle cx="50" cy="50" r="50" fill="#1a1d21" fill-opacity="0.25" />
                     )}
 
                     {/* Tick marks — 72 ticks at 5-degree intervals */}
                     {[...Array(72)].map((_, i) => {
-                        let length = i % 2 == 0 ? 4 : 2
-                        if (this.largeCompass && i % 6 === 0) length = 6
+                        const length = i % 2 == 0 ? 4 : 2
                         const angle = (i * (2 * Math.PI)) / 72
                         const rotation = (-angle / Math.PI) * 180 + 180
                         return (
                             <rect
                                 key={`tick-${i}`}
                                 x="49.5"
-                                y={this.largeCompass ? 115 - length : 100 - length}
+                                y={100 - length}
                                 width="1"
                                 height={String(length)}
                                 transform={`rotate(${rotation} 50 50)`}
@@ -855,13 +796,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                 <text
                                     key={`label-${i}`}
                                     x="50"
-                                    y={this.largeCompass ? '-5' : i % 3 == 0 ? '12' : '9'}
+                                    y={i % 3 == 0 ? '12' : '9'}
                                     fill="white"
-                                    font-size={this.largeCompass ? '7' : i % 3 == 0 ? '15' : '8'}
-                                    font-family={'Roboto-Bold'}
+                                    font-size={i % 3 == 0 ? '12' : '10'}
                                     text-anchor="middle"
                                     alignment-baseline="central"
                                     transform={`rotate(${angle} 50 50)`}
+                                    font-family="OpenSans-Bold"
                                 >
                                     {text}
                                 </text>
@@ -871,11 +812,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
                     {/* Heading bug */}
                     <polygon
-                        points={
-                            this.largeCompass
-                                ? '42,-19 47,-19 50,-16 53,-19 58,-19 58,-15 42,-15'
-                                : '46,0 47,0 50,4 53,0 54,0 54,5 46,5'
-                        }
+                        points="46,0 47,0 50,4 53,0 54,0 54,5 46,5"
                         fill="aqua"
                         transform={this.headingBugTransform}
                     />
@@ -891,7 +828,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                         display={this.innerCircleVisible}
                     />
 
-                    {this.displayStyle != HSIndicatorDisplayType.HUD_Simplified && (
+                    {this.props.displayStyle != HSIndicatorDisplayType.HUD_Simplified && (
                         <>
                             {/* Current track indicator */}
                             <polygon
@@ -971,30 +908,24 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                 />
 
                                 {/* CDI scale circles */}
-                                {(this.largeCompass ? [-30, -15, 15, 30] : [-20, -10, 10, 20]).map(
-                                    pos => (
-                                        <circle
-                                            key={`cdi-dot-${pos}`}
-                                            cx={String(50 + pos)}
-                                            cy="50"
-                                            r={this.largeCompass ? '1.5' : '2'}
-                                            stroke="white"
-                                            stroke-width={this.largeCompass ? '0.8' : '1'}
-                                            fill-opacity="0"
-                                        />
-                                    )
-                                )}
+                                {[-20, -10, 10, 20].map(pos => (
+                                    <circle
+                                        key={`cdi-dot-${pos}`}
+                                        cx={String(50 + pos)}
+                                        cy="50"
+                                        r="2"
+                                        stroke="white"
+                                        stroke-width="1"
+                                        fill-opacity="0"
+                                    />
+                                ))}
                             </g>
                         </>
                     )}
                 </g>
 
                 {/* Top triangle (fixed, does not rotate) */}
-                <polygon
-                    points={this.largeCompass ? '48,-20 52,-20 50,-15' : '46,-3 54,-3 50,3'}
-                    fill="white"
-                    {...(this.largeCompass ? {} : { stroke: 'black' })}
-                />
+                <polygon points="46,-3 54,-3 50,3" fill="white" stroke="black" />
 
                 {/* Plane symbol (fixed) */}
                 <path
@@ -1003,26 +934,15 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 />
 
                 {/* Bearing text (shows current magnetic heading at top) */}
-                {!this.largeCompass && (
-                    <>
-                        <rect x="35" y="-15" height="12" width="30" fill="#1a1d21" />
-                        <text
-                            fill="white"
-                            text-anchor="middle"
-                            x="50"
-                            y="-5"
-                            font-size="11"
-                            font-family={'Roboto-Bold'}
-                        >
-                            {this.bearingTextValue}
-                        </text>
-                    </>
-                )}
+                <rect x="35" y="-15" height="12" width="30" fill="#1a1d21" />
+                <text fill="white" text-anchor="middle" x="50" y="-5" font-size="11">
+                    {this.bearingTextValue}
+                </text>
 
-                {this.displayStyle != HSIndicatorDisplayType.HUD_Simplified && (
+                {this.props.displayStyle != HSIndicatorDisplayType.HUD_Simplified && (
                     <>
                         {/* Center text: nav source, flight phase, XTK */}
-                        {!this.noCenterText && (
+                        {!this.props.noCenterText && (
                             <>
                                 <rect
                                     fill="#1a1d21"
@@ -1037,7 +957,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                     x="35"
                                     y="40"
                                     font-size="6"
-                                    font-family={'Roboto-Bold'}
                                     text-anchor="middle"
                                 >
                                     {this.navSource}
@@ -1057,7 +976,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                     x="65"
                                     y="40"
                                     font-size="6"
-                                    font-family={'Roboto-Bold'}
                                     text-anchor="middle"
                                     visibility={this.flightPhaseVisible}
                                 >
@@ -1078,7 +996,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                     x="50"
                                     y="66"
                                     font-size="6"
-                                    font-family={'Roboto-Bold'}
                                     text-anchor="middle"
                                     visibility={this.xtkVisible}
                                 >
@@ -1093,44 +1010,16 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                 d={this.getExternalTextZonePath(57, 0, -0.58, -28)}
                                 fill="#1a1d21"
                             />
-                            <text
-                                fill="white"
-                                x="-27"
-                                y="57"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="start"
-                            >
+                            <text fill="white" x="-27" y="57" font-size="6" text-anchor="start">
                                 DME
                             </text>
-                            <text
-                                fill="aqua"
-                                x="-27"
-                                y="64"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="start"
-                            >
+                            <text fill="aqua" x="-27" y="64" font-size="6" text-anchor="start">
                                 {this.dmeSourceDisplay}
                             </text>
-                            <text
-                                fill="aqua"
-                                x="-27"
-                                y="71"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="start"
-                            >
+                            <text fill="aqua" x="-27" y="71" font-size="6" text-anchor="start">
                                 {this.dmeIdentDisplay}
                             </text>
-                            <text
-                                fill="white"
-                                x="-27"
-                                y="78"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="start"
-                            >
+                            <text fill="white" x="-27" y="78" font-size="6" text-anchor="start">
                                 {this.dmeDistDisplay}
                             </text>
                         </g>
@@ -1141,34 +1030,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                 d={this.getExternalTextZonePath(57, -0.6, -1.1, -28)}
                                 fill="#1a1d21"
                             />
-                            <text
-                                fill="white"
-                                x="-27"
-                                y="88"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="start"
-                            >
+                            <text fill="white" x="-27" y="88" font-size="6" text-anchor="start">
                                 {this.bearing1Dist}
                             </text>
-                            <text
-                                fill="aqua"
-                                x="-27"
-                                y="94"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="start"
-                            >
+                            <text fill="aqua" x="-27" y="94" font-size="6" text-anchor="start">
                                 {this.bearing1Ident}
                             </text>
-                            <text
-                                fill="white"
-                                x="-27"
-                                y="100"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="left"
-                            >
+                            <text fill="white" x="-27" y="100" font-size="6" text-anchor="left">
                                 {this.bearing1Source}
                             </text>
                             {/* Bearing 1 pointer tab */}
@@ -1203,34 +1071,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                 )}
                                 fill="#1a1d21"
                             />
-                            <text
-                                fill="white"
-                                x="127"
-                                y="88"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="end"
-                            >
+                            <text fill="white" x="127" y="88" font-size="6" text-anchor="end">
                                 {this.bearing2Dist}
                             </text>
-                            <text
-                                fill="aqua"
-                                x="127"
-                                y="94"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="end"
-                            >
+                            <text fill="aqua" x="127" y="94" font-size="6" text-anchor="end">
                                 {this.bearing2Ident}
                             </text>
-                            <text
-                                fill="white"
-                                x="127"
-                                y="100"
-                                font-size="6"
-                                font-family={'Roboto-Bold'}
-                                text-anchor="end"
-                            >
+                            <text fill="white" x="127" y="100" font-size="6" text-anchor="end">
                                 {this.bearing2Source}
                             </text>
                             <path
