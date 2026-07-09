@@ -1,7 +1,7 @@
 :root {
     --bodyHeightScale: 1;
 
-      /* Indicated alt display box vars */
+    /* Indicated alt display box vars */
     --altimeter-indicatedalt-box-margin-left: 45px;
     --altimeter-indicatedalt-box-width: 88px;
     --altimeter-indicatedalt-box-height: 60px;
@@ -410,88 +410,94 @@ as5-element #PFD .airspeed-indicator .mach-text {
 /* PFD Altimeter styles */
 
 .altimeter-indicatedalt-box {
-  position: absolute;
-  left: var(--altimeter-indicatedalt-box-margin-left);
-  top: 50%;
-  width: var(--altimeter-indicatedalt-box-width);
-  height: var(--altimeter-indicatedalt-box-height);
-  transform: translateY(-50%);
-  color: white;
+    position: absolute;
+    left: var(--altimeter-indicatedalt-box-margin-left);
+    top: 50%;
+    width: var(--altimeter-indicatedalt-box-width);
+    height: var(--altimeter-indicatedalt-box-height);
+    transform: translateY(-50%);
+    color: white;
 }
 
 .altimeter-indicatedalt-box-bg {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 100%;
-  height: 100%;
-  fill: black;
-  stroke: white;
-  stroke-width: 1px;
-  overflow: visible;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    fill: black;
+    stroke: white;
+    stroke-width: 1px;
+    overflow: visible;
 }
 
 .altimeter-indicatedalt-box-scrollers {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-flow: row nowrap;
-  justify-content: flex-end;
-  align-items: center;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-end;
+    align-items: center;
 }
 
 .altimeter-indicatedalt-box-digit-container {
-  position: relative;
-  width: var(--altimeter-indicatedalt-box-digit-container-width);
-  height: var(--altimeter-indicatedalt-box-digit-container-height);
-  font-size: var(--altimeter-indicatedalt-box-large-font-size);
-  overflow: hidden;
+    position: relative;
+    width: var(--altimeter-indicatedalt-box-digit-container-width);
+    height: var(--altimeter-indicatedalt-box-digit-container-height);
+    font-size: var(--altimeter-indicatedalt-box-large-font-size);
+    overflow: hidden;
 }
 
 .altimeter-indicatedalt-box-digit-container.altimeter-indicatedalt-box-hundreds {
-  width: var(--altimeter-indicatedalt-box-hundreds-width);
-  font-size: var(--altimeter-indicatedalt-box-small-font-size);
+    width: var(--altimeter-indicatedalt-box-hundreds-width);
+    font-size: var(--altimeter-indicatedalt-box-small-font-size);
 
-  --digit-scroller-line-offset-y: var(--altimeter-indicatedalt-box-hundreds-offset-y);
+    --digit-scroller-line-offset-y: var(--altimeter-indicatedalt-box-hundreds-offset-y);
 }
 
 .altimeter-indicatedalt-box-digit-container.altimeter-indicatedalt-box-tens {
-  width: var(--altimeter-indicatedalt-box-tens-width);
-  height: var(--altimeter-indicatedalt-box-tens-height);
-  font-size: var(--altimeter-indicatedalt-box-small-font-size);
+    width: var(--altimeter-indicatedalt-box-tens-width);
+    height: var(--altimeter-indicatedalt-box-tens-height);
+    font-size: var(--altimeter-indicatedalt-box-small-font-size);
 
-  --digit-scroller-line-height: var(--altimeter-indicatedalt-box-tens-line-height);
-  --digit-scroller-line-offset-y: var(--altimeter-indicatedalt-box-tens-offset-y);
+    --digit-scroller-line-height: var(--altimeter-indicatedalt-box-tens-line-height);
+    --digit-scroller-line-offset-y: var(--altimeter-indicatedalt-box-tens-offset-y);
 }
 
 .altimeter-indicatedalt-box-digit-container .digit-scroller {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  text-align: center;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    text-align: center;
 }
 
 .altimeter-indicatedalt-box-negative-sign {
-  position: absolute;
-  left: 0;
-  top: calc(50% + var(--digit-scroller-line-offset-y));
-  width: 100%;
-  transform: translateY(-50%);
-  text-align: center;
+    position: absolute;
+    left: 0;
+    top: calc(50% + var(--digit-scroller-line-offset-y));
+    width: 100%;
+    transform: translateY(-50%);
+    text-align: center;
 }
 
 .altimeter-indicatedalt-box-scroller-mask {
-  position: absolute;
-  left: -1px;
-  top: -1px;
-  right: -1px;
-  bottom: -1px;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 1) 5%, rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0) 80%, rgba(0, 0, 0, 1) 95%);
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 1) 5%,
+        rgba(0, 0, 0, 0) 20%,
+        rgba(0, 0, 0, 0) 80%,
+        rgba(0, 0, 0, 1) 95%
+    );
 }
 
 /* AP info bar */
