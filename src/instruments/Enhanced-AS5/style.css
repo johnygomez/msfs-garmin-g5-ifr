@@ -155,8 +155,8 @@ as5-element #PageContainer #PFD #Horizon svg #turnRateIndicator {
 as5-element #PageContainer #PFD #Altimeter {
     position: absolute;
     width: 150px;
-    height: calc(100% - 18px);
-    top: 18px;
+    height: 100%;
+    top: 0;
     right: 0;
 }
 
@@ -172,13 +172,13 @@ as5-element #PageContainer #PFD #Altimeter .vertical-deviation-chevron-bug {
 as5-element #PageContainer #PFD #Airspeed {
     position: absolute;
     width: 20%;
-    height: calc(100% - 18px);
-    top: 18px;
+    height: 100%;
+    top: 0;
     left: 0;
 }
 as5-element #PageContainer #PFD #Compass {
     position: absolute;
-    top: 18px;
+    top: 0;
     left: 80px;
     width: 323px;
 }

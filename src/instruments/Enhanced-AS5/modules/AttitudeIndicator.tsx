@@ -27,7 +27,6 @@ export interface AttitudeIndicatorComponentProps extends ComponentProps {
 }
 
 export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicatorComponentProps> {
-    private readonly horizonGroupRef = FSComponent.createRef<SVGElement>()
     private readonly horizonTopRef = FSComponent.createRef<SVGElement>()
     private readonly horizonBottomRef = FSComponent.createRef<SVGElement>()
     private readonly horizonSeparatorRef = FSComponent.createRef<SVGElement>()
@@ -62,6 +61,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
 
     // Derived Subscribables for declarative JSX attribute bindings
     private readonly rootTransform: MappedSubject<[number], string>
+    private readonly horizonTransform: MappedSubject<[number], string>
     private readonly pitchTransform: MappedSubject<[number], string>
     private readonly skidBallCx: MappedSubject<[number], number>
     private readonly skidLeftX: MappedSubject<[number], number>
@@ -138,6 +138,12 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
             this.pitch
         )
 
+        // Sky/ground horizon shares the same pitch-driven translation as the pitch ladder
+        this.horizonTransform = MappedSubject.create(
+            ([p]) => `translate(0, ${p * pitchScale})`,
+            this.pitch
+        )
+
         this.skidBallCx = MappedSubject.create(
             ([s]) => Math.min(Math.max(s, -1), 1) * 15,
             this.slipSkid
@@ -197,14 +203,12 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         return (
             <div class="attitude-indicator" style="position:relative; width:100%; height:100%;">
                 <svg
-                    class="horizon-svg"
+                    class="attitude-root"
                     width="100%"
                     height="100%"
                     viewBox={this.viewBox}
-                    x="-100"
-                    y="-100"
                     overflow="visible"
-                    style="position:absolute; z-index: -2; width: 100%; height:100%;"
+                    style="position:absolute"
                 >
                     <defs>
                         <linearGradient id="skyGradient" gradientTransform="rotate(90)">
@@ -217,46 +221,41 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             <stop offset="10%" stop-color={this.horizonBottomColor} />
                         </linearGradient>
                     </defs>
-                    <rect
-                        ref={this.horizonTopRef}
-                        class="horizon-top"
-                        fill="url(#skyGradient)"
-                        x="-1000"
-                        y="-1000"
-                        width="2000"
-                        height="2000"
-                    />
-                    <g ref={this.horizonGroupRef}>
-                        <rect
-                            ref={this.horizonBottomRef}
-                            class="horizon-bottom"
-                            fill="url(#groundGradient)"
-                            x="-1500"
-                            y="0"
-                            width="3000"
-                            height="3000"
-                        />
-                        <rect
-                            ref={this.horizonSeparatorRef}
-                            class="horizon-separator"
-                            fill="white"
-                            x="-1500"
-                            y="-3"
-                            width="3000"
-                            height="4"
-                        />
-                    </g>
-                </svg>
-                <div id="Attitude" style="width:100%; height:100%; position:absolute">
-                    <svg
-                        class="attitude-root"
-                        transform={this.rootTransform}
-                        width="100%"
-                        height="100%"
-                        viewBox={this.viewBox}
-                        overflow="visible"
-                        style="position:absolute"
-                    >
+
+                    {/* Root rotation group — bank angle rotates everything relative to the aircraft */}
+                    <g transform={this.rootTransform}>
+                        {/* Sky / ground / horizon line — moves with pitch */}
+                        <g transform={this.horizonTransform}>
+                            <rect
+                                ref={this.horizonTopRef}
+                                class="horizon-top"
+                                fill="url(#skyGradient)"
+                                x="-1000"
+                                y="-1000"
+                                width="2000"
+                                height="2000"
+                            />
+                            <rect
+                                ref={this.horizonBottomRef}
+                                class="horizon-bottom"
+                                fill="url(#groundGradient)"
+                                x="-1500"
+                                y="0"
+                                width="3000"
+                                height="3000"
+                            />
+                            <rect
+                                ref={this.horizonSeparatorRef}
+                                class="horizon-separator"
+                                fill="white"
+                                x="-1500"
+                                y="-3"
+                                width="3000"
+                                height="4"
+                            />
+                        </g>
+
+                        {/* Pitch ladder and flight director */}
                         <svg
                             class="attitude_pitch_container"
                             transform={this.pitchTransform}
@@ -272,15 +271,18 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             </g>
                             {this.buildFlightDirector()}
                         </svg>
+
+                        {/* Bank arc and reference marks */}
                         <g ref={this.bankGroupRef} class="attitude_bank">
                             {this.buildBankGroup()}
                         </g>
+
                         {this.buildTurnRateIndicator()}
                         {this.buildCursors()}
                         {this.buildSlipSkid()}
                         {this.buildLowBankMode()}
-                    </svg>
-                </div>
+                    </g>
+                </svg>
             </div>
         )
     }
