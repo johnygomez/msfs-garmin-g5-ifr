@@ -47,9 +47,9 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
         super(props)
         const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
 
-        this.heading = ConsumerSubject.create(sub.on('hdg_deg').withPrecision(0), 0)
-        this.track = ConsumerSubject.create(sub.on('track_angle_magnetic').withPrecision(0), 0)
-        this.course = ConsumerSubject.create(sub.on('ap_heading_selected').withPrecision(0), 0)
+        this.heading = ConsumerSubject.create(sub.on('hdg_deg').withPrecision(2), 0)
+        this.track = ConsumerSubject.create(sub.on('track_angle_magnetic').withPrecision(2), 0)
+        this.course = ConsumerSubject.create(sub.on('ap_heading_selected').withPrecision(2), 0)
 
         const pxPerDeg = props.spacing / 10
 

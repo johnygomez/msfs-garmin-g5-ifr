@@ -1,4 +1,5 @@
 import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
+import { ContextualMenuElementData } from './ContextualMenu'
 export class NavSystem extends BaseInstrument {
     static _iterations: number = 0
     static maxTimeUpdateAllTime: number = 0
@@ -29,7 +30,6 @@ export class NavSystem extends BaseInstrument {
     currentInteractionState: number
     cursorIndex: number
     currentSelectableArray: any[]
-    currentContextualMenu: any
     currentSearchFieldWaypoint: any
     contextualMenuDisplayBeginIndex: number
     menuMaxElems: number
@@ -41,8 +41,6 @@ export class NavSystem extends BaseInstrument {
     forcedAspectRatio: number
     forcedScreenRatio: number
     contextualMenu: any
-    contextualMenuTitle: any
-    contextualMenuElements: any
     menuSlider: any
     menuSliderCursor: any
     currFlightPlanManager: any
@@ -55,6 +53,9 @@ export class NavSystem extends BaseInstrument {
     readonly contextualMenuState = Subject.create('Inactive')
     readonly sliderState = Subject.create('Inactive')
     readonly sliderCursorStyle = Subject.create('')
+    readonly menuElementsSub = Subject.create<ContextualMenuElementData[]>([])
+    readonly menuCursorIndexSub = Subject.create(0)
+    readonly menuDisplayBeginIndexSub = Subject.create(0)
 
     get flightPlanManager() {
         return this.currFlightPlanManager
@@ -81,7 +82,6 @@ export class NavSystem extends BaseInstrument {
         this.currentInteractionState = 0
         this.cursorIndex = 0
         this.currentSelectableArray = []
-        this.currentContextualMenu = null
         this.currentSearchFieldWaypoint = null
         this.contextualMenuDisplayBeginIndex = 0
         this.menuMaxElems = 6
@@ -104,8 +104,6 @@ export class NavSystem extends BaseInstrument {
     connectedCallback() {
         super.connectedCallback()
         this.contextualMenu = this.getChildById('ContextualMenu')
-        this.contextualMenuTitle = this.getChildById('ContextualMenuTitle')
-        this.contextualMenuElements = this.getChildById('ContextualMenuElements')
         this.menuSlider = this.getChildById('SliderMenu')
         this.menuSliderCursor = this.getChildById('SliderMenuCursor')
         if (this.manageFlightPlan && typeof FlightPlanManager !== 'undefined') {
@@ -220,15 +218,15 @@ export class NavSystem extends BaseInstrument {
                     break
                 case 2:
                     if (_event == 'NavigationSmallInc') {
+                        const menuElems = this.menuElementsSub.get()
+                        if (menuElems.length === 0) break
                         let count = 0
                         do {
-                            this.cursorIndex =
-                                (this.cursorIndex + 1) % this.currentContextualMenu.elements.length
+                            this.cursorIndex = (this.cursorIndex + 1) % menuElems.length
                             count++
                         } while (
-                            this.currentContextualMenu.elements[this.cursorIndex].isInactive() ==
-                                true &&
-                            count < this.currentContextualMenu.elements.length
+                            menuElems[this.cursorIndex].isInactive() == true &&
+                            count < menuElems.length
                         )
                         if (this.cursorIndex < this.contextualMenuDisplayBeginIndex) {
                             this.contextualMenuDisplayBeginIndex = this.cursorIndex
@@ -240,19 +238,22 @@ export class NavSystem extends BaseInstrument {
                                 this.cursorIndex -
                                 (this.contextualMenuDisplayBeginIndex + (this.menuMaxElems - 1))
                         }
+                        this.menuCursorIndexSub.set(this.cursorIndex)
+                        this.menuDisplayBeginIndexSub.set(this.contextualMenuDisplayBeginIndex)
                     }
                     if (_event == 'NavigationSmallDec') {
+                        const menuElems = this.menuElementsSub.get()
+                        if (menuElems.length === 0) break
                         let count = 0
                         do {
                             this.cursorIndex =
                                 this.cursorIndex - 1 < 0
-                                    ? this.currentContextualMenu.elements.length - 1
+                                    ? menuElems.length - 1
                                     : this.cursorIndex - 1
                             count++
                         } while (
-                            this.currentContextualMenu.elements[this.cursorIndex].isInactive() ==
-                                true &&
-                            count < this.currentContextualMenu.elements.length
+                            menuElems[this.cursorIndex].isInactive() == true &&
+                            count < menuElems.length
                         )
                         if (this.cursorIndex < this.contextualMenuDisplayBeginIndex) {
                             this.contextualMenuDisplayBeginIndex = this.cursorIndex
@@ -264,12 +265,17 @@ export class NavSystem extends BaseInstrument {
                                 this.cursorIndex -
                                 (this.contextualMenuDisplayBeginIndex + (this.menuMaxElems - 1))
                         }
+                        this.menuCursorIndexSub.set(this.cursorIndex)
+                        this.menuDisplayBeginIndexSub.set(this.contextualMenuDisplayBeginIndex)
                     }
                     if (_event == 'MENU_Push') {
                         this.SwitchToInteractionState(0)
                     }
                     if (_event == 'ENT_Push') {
-                        this.currentContextualMenu.elements[this.cursorIndex].SendEvent()
+                        const menuElems = this.menuElementsSub.get()
+                        if (menuElems.length > 0) {
+                            menuElems[this.cursorIndex].callback()
+                        }
                     }
                     break
                 case 3:
@@ -460,7 +466,7 @@ export class NavSystem extends BaseInstrument {
                 }
                 break
             case 2:
-                this.currentContextualMenu.Update(this, this.menuMaxElems)
+                // Menu is reactive via Subjects — no per-frame Update call needed
                 break
         }
         this.onUpdate(this.deltaTime)
@@ -517,17 +523,6 @@ export class NavSystem extends BaseInstrument {
     }
     GetNavStandbyFreq() {
         return this.frequencyFormat(Simplane.getNavSbyFreq1(), 2)
-    }
-    UpdateSlider(_slider, _cursor, _index, _nbElem, _maxElems) {
-        if (_nbElem > _maxElems) {
-            const cursorHeight = (_maxElems * 100) / _nbElem
-            const pct = _index / (_nbElem - _maxElems)
-            const cursorTop = Math.min(pct, 1.0) * (100 - cursorHeight)
-            this.sliderState.set('Active')
-            this.sliderCursorStyle.set('height:' + cursorHeight + '%; top:' + cursorTop + '%')
-        } else {
-            this.sliderState.set('Inactive')
-        }
     }
     frequencyFormat(_frequency, _nbDigits) {
         const IntPart = Math.floor(_frequency)
@@ -619,14 +614,15 @@ export class NavSystem extends BaseInstrument {
                 break
             case 2:
                 this.contextualMenuState.set('Inactive')
+                this.menuElementsSub.set([])
                 break
         }
     }
     InteractionStateIn() {
         switch (this.currentInteractionState) {
             case 0:
-                if (this.currentContextualMenu) {
-                    this.currentContextualMenu = null
+                if (this.menuElementsSub.get().length > 0) {
+                    this.menuElementsSub.set([])
                     if (this.popUpElement && this.interactionStateBeforeMenu > 0) {
                         this.SwitchToInteractionState(this.interactionStateBeforeMenu)
                         this.interactionStateBeforeMenu = -1
@@ -640,7 +636,10 @@ export class NavSystem extends BaseInstrument {
                 this.contextualMenuState.set('Active')
                 this.contextualMenuDisplayBeginIndex = 0
                 this.cursorIndex = 0
-                if (this.currentContextualMenu.elements[0].isInactive()) {
+                this.menuCursorIndexSub.set(0)
+                this.menuDisplayBeginIndexSub.set(0)
+                const menuElems = this.menuElementsSub.get()
+                if (menuElems.length > 0 && menuElems[0].isInactive()) {
                     this.computeEvent('NavigationSmallInc')
                 }
                 break
@@ -651,13 +650,14 @@ export class NavSystem extends BaseInstrument {
         this.currentInteractionState = _newState
         this.InteractionStateIn()
     }
-    ShowContextualMenu(_menu) {
+    ShowContextualMenu(_menuData: ContextualMenuElementData[]) {
         if (this.popUpElement) {
             this.interactionStateBeforeMenu = this.GetInteractionState()
         }
-        this.currentContextualMenu = _menu
+        this.menuElementsSub.set(_menuData)
+        this.menuCursorIndexSub.set(0)
+        this.menuDisplayBeginIndexSub.set(0)
         this.SwitchToInteractionState(2)
-        this.currentContextualMenu.Update(this, this.menuMaxElems)
     }
     ActiveSelection(_selectables) {
         this.currentSelectableArray = _selectables
@@ -677,7 +677,7 @@ export class NavSystem extends BaseInstrument {
         if (this.overridePage) {
             this.overridePage.onExit()
         }
-        if (this.currentContextualMenu) {
+        if (this.menuElementsSub.get().length > 0) {
             this.SwitchToInteractionState(0)
         }
         this.overridePage = _page
@@ -687,7 +687,7 @@ export class NavSystem extends BaseInstrument {
         if (this.overridePage) {
             this.overridePage.onExit()
         }
-        if (this.currentContextualMenu) {
+        if (this.menuElementsSub.get().length > 0) {
             this.SwitchToInteractionState(0)
         }
         this.overridePage = null
@@ -707,7 +707,7 @@ export class NavSystem extends BaseInstrument {
             this.currentEventLinkedPageGroup = null
         }
         this.pageGroups[this.currentPageGroupIndex].onExit()
-        if (this.currentContextualMenu) {
+        if (this.menuElementsSub.get().length > 0) {
             this.SwitchToInteractionState(0)
         }
         for (let i = 0; i < this.pageGroups.length; i++) {
@@ -722,7 +722,7 @@ export class NavSystem extends BaseInstrument {
         this.lastRelevantICAO = null
         this.lastRelevantICAOType = null
         this.pageGroups[this.currentPageGroupIndex].onExit()
-        if (this.currentContextualMenu) {
+        if (this.menuElementsSub.get().length > 0) {
             this.SwitchToInteractionState(0)
         }
         for (let i = 0; i < this.pageGroups.length; i++) {
@@ -789,7 +789,7 @@ export class NavSystem extends BaseInstrument {
         }
         this.popUpElement = null
         this.popUpCloseCallback = null
-        if (this.currentContextualMenu) {
+        if (this.menuElementsSub.get().length > 0) {
             this.SwitchToInteractionState(0)
         }
         if (this.interactionStateBeforePopup >= 0) {
@@ -831,7 +831,7 @@ export class NavSystem extends BaseInstrument {
             }
         }
         this.interactionStateBeforePopup = -1
-        if (this.currentContextualMenu) {
+        if (this.menuElementsSub.get().length > 0) {
             this.SwitchToInteractionState(0)
         } else {
             this.interactionStateBeforePopup = this.GetInteractionState()
@@ -1018,7 +1018,7 @@ export class NavSystemEventLinkedPageGroup {
     }
 }
 export class NavSystemElementContainer {
-    defaultMenu: any
+    defaultMenu: ContextualMenuElementData[]
 
     gps: any
 

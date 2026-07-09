@@ -293,8 +293,8 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
         // ---- Derived visibility Subjects ----
         // Inner circle visible when either bearing is shown
-        this.subs.push(this.bearing1Vis.sub(v => this.updateInnerCircle()))
-        this.subs.push(this.bearing2Vis.sub(v => this.updateInnerCircle()))
+        this.subs.push(this.bearing1Vis.sub(_ => this.updateInnerCircle()))
+        this.subs.push(this.bearing2Vis.sub(_ => this.updateInnerCircle()))
     }
 
     // ---- Lifecycle ----
@@ -505,11 +505,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             this.bearing1Source,
             this.bearing1Ident,
             this.bearing1Dist,
-            this.bearing1Angle,
-            this.bearing1Vis,
-            (ang: number) => {
-                this.bearing1Angle.set(ang)
-            }
+            this.bearing1Angle
         )
 
         // ----- Bearing 2 -----
@@ -520,11 +516,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             this.bearing2Source,
             this.bearing2Ident,
             this.bearing2Dist,
-            this.bearing2Angle,
-            this.bearing2Vis,
-            (ang: number) => {
-                this.bearing2Angle.set(ang)
-            }
+            this.bearing2Angle
         )
 
         // ----- DME -----
@@ -715,9 +707,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         srcSubj: Subject<string>,
         identSubj: Subject<string>,
         distSubj: Subject<string>,
-        angleSubj: Subject<number>,
-        visSubj: Subject<string>,
-        setAngle: (ang: number) => void
+        angleSubj: Subject<number>
     ): void {
         const compass = this.magneticHeading.get()
 
