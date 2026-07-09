@@ -43,6 +43,11 @@ export default {
                     cpSync(imagesSrc, pathResolve(outDir, "Images"), { recursive: true })
                 }
 
+                const fontsSrc = "src/instruments/Enhanced-AS5/Fonts"
+                if (existsSync(fontsSrc)) {
+                    cpSync(fontsSrc, pathResolve(outDir, "Fonts"), { recursive: true })
+                }
+
                 if (!existsSync(shimOutDir)) {
                     mkdirSync(shimOutDir, { recursive: true })
                 }

@@ -484,7 +484,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         const centerY = this.props.height / 2 - 100
         const center = (this.props.height - 100) / 2
         const compactVs = this.props.VSStyle === 'Compact'
-        const GF_font = 'Montserrat-Bold'
+        const GF_font = 'OpenSans-Bold'
         const viewBoxWidth = compactVs ? 300 : 380
 
         return (
@@ -743,7 +743,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         y={fastToFixed(y + 16, 0)}
                         fill="white"
                         font-size="64"
-                        font-family="Montserrat-Bold"
+                        font-family="OpenSans-Bold"
                     >
                         {gradSubject.map(v => v)}
                     </text>
@@ -807,7 +807,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     y="0"
                     fill="white"
                     font-size="0"
-                    font-family="Montserrat-Bold"
+                    font-family="OpenSans-Bold"
                 ></text>
             </g>
         )

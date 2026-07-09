@@ -77,7 +77,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     private readonly horizonBottomColor = '#864B01'
     private readonly horizonTopColorLight = '#5F8AE0'
     private readonly horizonBottomColorLight = '#A66C1D'
-    private readonly fontFamily = 'Montserrat-Bold'
+    private readonly fontFamily = 'OpenSans-Bold'
 
     get verticalCenter(): boolean {
         return this.props.verticalCenter

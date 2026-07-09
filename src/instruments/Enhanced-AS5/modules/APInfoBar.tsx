@@ -84,7 +84,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
         const white = '#F3F3F3'
         const green = '#32bd28'
         const black = '#020202'
-        const fontFamily = 'Montserrat-Bold'
+        const fontFamily = 'OpenSans-Bold'
         const fontSize = 18
         const textBase = 15
 

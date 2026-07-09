@@ -123,7 +123,7 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
         return (this.width + (this.truncateRight - this.truncateLeft) / 2) / 2
     }
     get fontFamily(): string {
-        return 'Montserrat-Bold'
+        return 'OpenSans-Bold'
     }
 
     render(): VNode {

@@ -67,38 +67,15 @@ html body {
     display: none;
 }
 @font-face {
-    font-family: 'Arial';
-    src: url('/Fonts/arial.ttf') format('truetype');
+    font-family: 'OpenSans';
+    src: url('./Fonts/OpenSans-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
+
 @font-face {
-    font-family: 'Roboto-Light';
-    src: url('/Fonts/RobotoMono-Light.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'Roboto-Bold';
-    src: url('/Fonts/RobotoMono-Bold.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'Arial-Bold';
-    src: url('/Fonts/arialbd.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'Ariel-Bold';
-    src: url('/Fonts/arialbd.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'Montserrat-Bold';
-    src: url('/Fonts/Montserrat-Bold.otf') format('truetype');
+    font-family: 'OpenSans-Bold';
+    src: url('./Fonts/OpenSans-Bold.ttf') format('truetype');
     font-weight: bold;
     font-style: normal;
 }
@@ -114,7 +91,7 @@ as5-element #Mainframe {
 }
 as5-element #PageContainer {
     font-size: 5vh;
-    font-family: Arial-Bold;
+    font-family: OpenSans-Bold;
 }
 as5-element #PageContainer[state='PFD'] #PFD,
 as5-element #PageContainer[state='MFD'] #MFD {
@@ -234,7 +211,7 @@ as5-element #PageContainer #MFD #Infos #SelectedHeading #SelectedHeadingValue {
     color: aqua;
     bottom: -15%;
     font-size: 32px;
-    font-family: 'Roboto-Bold';
+    font-family: 'OpenSans-Bold';
 }
 as5-element #PageContainer #MFD #Infos #GroundSpeed {
     position: absolute;
@@ -245,7 +222,7 @@ as5-element #PageContainer #MFD #Infos #GroundSpeed {
     border: solid 2px grey;
     text-align: center;
     line-height: 1.1;
-    font-family: 'Roboto-Bold';
+    font-family: 'OpenSans-Bold';
     font-size: 20px;
 }
 as5-element #PageContainer #MFD #Infos #GroundSpeed #GroundSpeedValue {
@@ -262,7 +239,7 @@ as5-element #PageContainer #MFD #Infos #WaypointDistance {
     border: solid 2px grey;
     text-align: center;
     line-height: 1.1;
-    font-family: 'Roboto-Bold';
+    font-family: 'OpenSans-Bold';
     font-size: 20px;
 }
 as5-element #PageContainer #MFD #Infos #WaypointDistance #WaypointDistanceValue {

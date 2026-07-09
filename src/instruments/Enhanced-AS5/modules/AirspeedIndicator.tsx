@@ -362,7 +362,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         this.gradTextRefs.length = 0
         const height = this.props.height
         const noColor = this.props.noColor
-        const GF_font = 'Montserrat-Bold'
+        const GF_font = 'OpenSans-Bold'
         const refBarWidth = 25
         const endDigitSpace = 70
         const center = (height - 100) / 2
