@@ -5,17 +5,24 @@ import {
     ComponentProps,
     NodeReference,
     Subject,
+    Subscription,
     EventBus,
     ConsumerSubject,
     MappedSubject,
     AdcEvents,
+    Subscribable,
+    DigitScroller,
+    ObjectSubject,
+    SubscribableMapFunctions,
+    ArrayUtils,
+    SubscribableUtils,
 } from '@microsoft/msfs-sdk'
 import { G5CustomEvents } from './G5CustomPublisher'
 
 export interface AltimeterComponentProps extends ComponentProps {
     bus: EventBus
     height: number
-    VSStyle: string
+    VSStyle: 'Default' | 'Compact'
     altitudeAlertState: Subject<string>
     referenceVspeed: Subject<string>
     verticalDeviationMode: Subject<string>
@@ -29,10 +36,177 @@ interface CursorDigitState {
     d3: { top: { text: string; transform: string }; bot: { text: string; transform: string } }
 }
 
+interface IndicatedAltDisplayBoxProps extends ComponentProps {
+    /** Whether to show the display. */
+    show: Subscribable<boolean>
+
+    /** The indicated altitude value to display. */
+    indicatedAlt: Subscribable<number>
+}
+
+class IndicatedAltDisplayBox extends DisplayComponent<IndicatedAltDisplayBoxProps> {
+    private readonly scrollerRefs: NodeReference<DigitScroller>[] = []
+
+    private readonly rootStyle = ObjectSubject.create({
+        display: 'none',
+    })
+
+    private readonly indicatedAlt = this.props.indicatedAlt
+        .map(SubscribableMapFunctions.identity())
+        .pause()
+
+    private readonly negativeSignHidden = ArrayUtils.create(3, index => {
+        const topThreshold = index === 0 ? 0 : Math.pow(10, index + 1) - 20
+        const bottomThreshold = Math.pow(10, index + 2) - 20
+
+        return this.indicatedAlt.map(indicatedAlt => {
+            return indicatedAlt >= -topThreshold || indicatedAlt < -bottomThreshold
+        })
+    })
+
+    private showSub?: Subscription
+
+    /** @inheritDoc */
+    public onAfterRender(): void {
+        this.showSub = this.props.show.sub(show => {
+            if (show) {
+                this.rootStyle.set('display', '')
+                this.indicatedAlt.resume()
+            } else {
+                this.rootStyle.set('display', 'none')
+                this.indicatedAlt.pause()
+            }
+        }, true)
+    }
+
+    /** @inheritDoc */
+    public render(): VNode {
+        const tensScrollerRef = FSComponent.createRef<DigitScroller>()
+        const hundredsScrollerRef = FSComponent.createRef<DigitScroller>()
+        const thousandsScrollerRef = FSComponent.createRef<DigitScroller>()
+        const tenThousandsScrollerRef = FSComponent.createRef<DigitScroller>()
+
+        this.scrollerRefs.push(
+            tensScrollerRef,
+            tensScrollerRef,
+            hundredsScrollerRef,
+            tenThousandsScrollerRef
+        )
+
+        return (
+            <div class="altimeter-indicatedalt-box" style={this.rootStyle}>
+                <svg
+                    viewBox="0 0 88 60"
+                    class="altimeter-indicatedalt-box-bg"
+                    preserveAspectRatio="none"
+                >
+                    <path
+                        vector-effect="non-scaling-stroke"
+                        d="M 0 30 l 7 -7 v -6 c 0 -2.21 1.79 -4 4 -4 h 47 v -9 c 0 -2.21 1.79 -4 4 -4 h 22 c 2.21 0 4 1.79 4 4 v 52 c 0 2.21 -1.79 4 -4 4 h -22 c -2.21 0 -4 -1.79 -4 -4 v -8 h -47 c -2.21 0 -4 -1.79 -4 -4 v -7 l -7 -7 Z"
+                    />
+                </svg>
+                <div class="altimeter-indicatedalt-box-scrollers">
+                    <div class="altimeter-indicatedalt-box-digit-container altimeter-indicatedalt-box-ten-thousands">
+                        <DigitScroller
+                            ref={tenThousandsScrollerRef}
+                            value={this.indicatedAlt}
+                            base={10}
+                            factor={10000}
+                            scrollThreshold={9980}
+                            renderDigit={(digit): string =>
+                                digit === 0 ? ' ' : (Math.abs(digit) % 10).toString()
+                            }
+                        />
+                        <div
+                            class={{
+                                'altimeter-indicatedalt-box-negative-sign': true,
+                                hidden: this.negativeSignHidden[2],
+                            }}
+                        >
+                            -
+                        </div>
+                    </div>
+                    <div class="altimeter-indicatedalt-box-digit-container altimeter-indicatedalt-box-thousands">
+                        <DigitScroller
+                            ref={thousandsScrollerRef}
+                            value={this.indicatedAlt}
+                            base={10}
+                            factor={1000}
+                            scrollThreshold={980}
+                            renderDigit={(digit): string =>
+                                digit === 0 ? ' ' : (Math.abs(digit) % 10).toString()
+                            }
+                        />
+                        <div
+                            class={{
+                                'altimeter-indicatedalt-box-negative-sign': true,
+                                hidden: this.negativeSignHidden[1],
+                            }}
+                        >
+                            -
+                        </div>
+                    </div>
+                    <div class="altimeter-indicatedalt-box-digit-container altimeter-indicatedalt-box-hundreds">
+                        <DigitScroller
+                            ref={hundredsScrollerRef}
+                            value={this.indicatedAlt}
+                            base={10}
+                            factor={100}
+                            scrollThreshold={80}
+                            renderDigit={(digit): string =>
+                                digit === 0 ? ' ' : (Math.abs(digit) % 10).toString()
+                            }
+                        />
+                        <div
+                            class={{
+                                'altimeter-indicatedalt-box-negative-sign': true,
+                                hidden: this.negativeSignHidden[0],
+                            }}
+                        >
+                            -
+                        </div>
+                    </div>
+                    <div class="altimeter-indicatedalt-box-digit-container altimeter-indicatedalt-box-tens">
+                        <DigitScroller
+                            ref={tensScrollerRef}
+                            value={this.indicatedAlt}
+                            base={5}
+                            factor={20}
+                            renderDigit={(digit): string =>
+                                ((Math.abs(digit) % 5) * 20).toString().padStart(2, '0')
+                            }
+                            nanString={'––'}
+                        />
+                        <div class="altimeter-indicatedalt-box-scroller-mask"></div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    /** @inheritDoc */
+    public destroy(): void {
+        for (const hidden of this.negativeSignHidden) {
+            hidden.destroy()
+        }
+
+        for (const ref of this.scrollerRefs) {
+            ref.getOrDefault()?.destroy()
+        }
+
+        this.indicatedAlt.destroy()
+
+        this.showSub?.destroy()
+
+        super.destroy()
+    }
+}
+
 export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps> {
     private readonly rootRef = FSComponent.createRef<SVGElement>()
     private readonly cursorRef = FSComponent.createRef<SVGElement>()
     private readonly cursorGroupRef = FSComponent.createRef<SVGElement>()
+    private readonly indicatedAltBoxRef = FSComponent.createRef<IndicatedAltDisplayBox>()
     private readonly minimumAltitudeBugRef = FSComponent.createRef<SVGElement>()
     private readonly trendElementRef = FSComponent.createRef<SVGElement>()
     private readonly verticalDeviationTextRef = FSComponent.createRef<SVGElement>()
@@ -53,8 +227,22 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
     private readonly gradCount: number
 
-    /** Pixels per 1000 ft on the tape (60 px per 100 ft). */
-    private readonly GRADUATION_PX_PER_1000FT = 600
+    // --- G3X‑style tape layout ---
+    /** Visible altitude window in feet (maps to the pixel height of the tape viewport). */
+    private readonly ALT_WINDOW_FT = 400
+    /** Feet between labelled major ticks. */
+    private readonly MAJOR_TICK_INTERVAL = 100
+    /** Number of minor intervals per major-tick span (minor ticks every MAJOR_TICK_INTERVAL / MINOR_TICK_FACTOR ft). */
+    private readonly MINOR_TICK_FACTOR = 5
+
+    /** Total altitude range the tape covers (ft). */
+    private readonly TAPE_FT: number
+    /** Number of major (labelled) ticks on the tape. */
+    private readonly MAJOR_TICK_COUNT: number
+    /** Pixel height of the visible tape window. */
+    private readonly TAPE_WINDOW_PX: number
+    /** Pixels per foot on the tape. */
+    private readonly PX_PER_FT: number
 
     // ConsumerSubjects from the EventBus
     private readonly indicatedAlt: ConsumerSubject<number>
@@ -78,17 +266,61 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly trendY: MappedSubject<[number], number>
     private readonly trendHeight: MappedSubject<[number], number>
 
-    // New: reactive graduation & digit subjects (replaces imperative onAfterRender)
+    // Reactive graduation & digit subjects
     private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
     private readonly endDigitTextSubjects: MappedSubject<[number], string>[] = []
     private readonly endDigitTransform: MappedSubject<[number], string>
     private readonly cursorState: MappedSubject<[number], CursorDigitState>
+    private readonly showIndicatedAltData = SubscribableUtils.toSubscribable(true, true)
+
+    /** Altitude at the bottom of the tape (snapped to 100‑ft boundaries).
+     *  Updated with hysteresis — only recentres when indicated altitude
+     *  drifts outside the centre 50 % of the tape window (G3X behaviour). */
+    private readonly currentMinimum = Subject.create(0)
+    private readonly currentMinimumSub: Subscription
+
+    private readonly minimum = SubscribableUtils.toSubscribable(-9999, true)
+    private readonly maximum = SubscribableUtils.toSubscribable(99999, true)
+
+    private readonly isIndicatedAltBelowScale: MappedSubject<[number, number], boolean>
+    private readonly isIndicatedAltAboveScale: MappedSubject<[number, number], boolean>
+    private readonly isIndicatedAltOffScale: MappedSubject<[boolean, boolean], boolean>
+    private readonly indicatedAltBoxValue: MappedSubject<[number, boolean], number>
 
     constructor(props: AltimeterComponentProps) {
         super(props)
         const sub = props.bus.getSubscriber<AdcEvents & G5CustomEvents>()
 
         this.indicatedAlt = ConsumerSubject.create(sub.on('indicated_alt').withPrecision(0), 0)
+        this.isIndicatedAltBelowScale = MappedSubject.create(
+            ([indicatedAlt, minimum]): boolean => {
+                return indicatedAlt < minimum
+            },
+            this.indicatedAlt,
+            this.minimum
+        ).pause()
+        this.isIndicatedAltAboveScale = MappedSubject.create(
+            ([indicatedAlt, maximum]): boolean => {
+                return indicatedAlt > maximum
+            },
+            this.indicatedAlt,
+            this.maximum
+        )
+        this.isIndicatedAltOffScale = MappedSubject.create(
+            ([isIndicatedAltBelowScale, isIndicatedAltAboveScale]): boolean => {
+                return isIndicatedAltBelowScale || isIndicatedAltAboveScale
+            },
+            this.isIndicatedAltBelowScale,
+            this.isIndicatedAltAboveScale
+        )
+
+        this.indicatedAltBoxValue = MappedSubject.create(
+            ([indicatedAlt, isIndicatedAltOffScale]): number => {
+                return isIndicatedAltOffScale ? NaN : indicatedAlt
+            },
+            this.indicatedAlt,
+            this.isIndicatedAltOffScale
+        ).pause()
         this.baroSetting = ConsumerSubject.create(
             sub.on('altimeter_baro_setting_inhg').withPrecision(2),
             29.92
@@ -100,34 +332,54 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         )
 
         const centerY = props.height / 2 - 100
-        // Main graduations every 100 ft → spacing = GRADUATION_PX_PER_1000FT / 10 px
-        const gradSpacingPx = this.GRADUATION_PX_PER_1000FT / 10
-        const gradN = Math.ceil((props.height - 100) / gradSpacingPx)
-        this.gradCount = gradN
 
-        // --- Graduation text subjects ---
-        // One MappedSubject per graduation tick, indexed in the same order as the
-        // loop in buildGraduationGroup (i = -n … +n). 100‑ft intervals, higher
-        // altitude at the top (G3X convention).
-        for (let i = -gradN; i <= gradN; i++) {
+        // --- G3X‑style tape sizing ---
+        this.TAPE_WINDOW_PX = props.height - 100
+        this.PX_PER_FT = this.TAPE_WINDOW_PX / this.ALT_WINDOW_FT
+        this.MAJOR_TICK_COUNT = Math.ceil(this.ALT_WINDOW_FT / this.MAJOR_TICK_INTERVAL) * 2 + 1
+        this.TAPE_FT = (this.MAJOR_TICK_COUNT - 1) * this.MAJOR_TICK_INTERVAL
+        this.gradCount = this.MAJOR_TICK_COUNT
+
+        // --- currentMinimum: lowest altitude shown on tape (G3X-style hysteresis) ---
+        const recenterThreshold = this.TAPE_FT * 0.25 // 200 ft on each side
+        this.currentMinimumSub = this.indicatedAlt.sub(alt => {
+            const oldMin = this.currentMinimum.get()
+            const lowerBound = oldMin + recenterThreshold
+            const upperBound = oldMin + this.TAPE_FT - recenterThreshold
+
+            if (alt < lowerBound || alt > upperBound) {
+                const newMin =
+                    Math.floor((alt - this.TAPE_FT / 2) / this.MAJOR_TICK_INTERVAL) *
+                    this.MAJOR_TICK_INTERVAL
+                if (newMin !== oldMin) {
+                    this.currentMinimum.set(newMin)
+                }
+            }
+        }, true)
+
+        // --- Graduation text subjects (G3X‑style: labels are currentMinimum + i*100) ---
+        for (let i = 0; i < this.MAJOR_TICK_COUNT; i++) {
             const idx = i
             this.gradTextSubjects.push(
-                MappedSubject.create(([alt]) => {
-                    const gradCenter = Math.round(alt / 100) * 100
-                    return fastToFixed(gradCenter - idx * 100, 0)
-                }, this.indicatedAlt)
+                MappedSubject.create(
+                    ([min]) => fastToFixed(min + idx * this.MAJOR_TICK_INTERVAL, 0),
+                    this.currentMinimum
+                )
             )
         }
 
         // --- End-digit (rotating drum) subjects ---
-        // 5 digits showing the last two digits of altitude ±20,
-        // plus a group transform for the rolling animation.
+        // The drum shows the last two digits of altitude.  Five text elements are
+        // stacked vertically and scroll as the ones digit changes.
         this.endDigitTransform = MappedSubject.create(([alt]) => {
             const endValue = alt % 100
             const endCenter = Math.round(endValue / 10) * 10
             return `translate(0, ${((endValue - endCenter) * 60) / 10})`
         }, this.indicatedAlt)
 
+        // Each drum text shows the tens value at (altitude + offset) % 100.
+        // The offset increases by 10 ft for each text above the bottom one.
+        // Bottom text (i=4, idx=2) = alt+0, centre text (i=2, idx=0) = alt+20, etc.
         for (let i = -2; i <= 2; i++) {
             const idx = i
             this.endDigitTextSubjects.push(
@@ -138,24 +390,29 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             )
         }
 
-        // --- Cursor digit state ---
-        // Single MappedSubject that computes all split-flap digit text & transforms.
+        // --- Cursor (split-flap) digit state ---
         this.cursorState = MappedSubject.create(
             ([alt]) => this.computeCursorDigitState(alt),
             this.indicatedAlt
         )
 
-        // --- Existing derived transforms for declarative JSX bindings ---
+        // --- Tape transform: centre indicated altitude on the cursor ---
+        const centerPx = (props.height - 100) / 2
+        this.tapeTransform = MappedSubject.create(
+            ([alt, min]) => {
+                const yIndicated = (min + this.TAPE_FT - alt) * this.PX_PER_FT
+                const offset = centerPx - yIndicated
+                return `translate(0, ${offset.toFixed(1)})`
+            },
+            this.indicatedAlt,
+            this.currentMinimum
+        )
 
-        this.tapeTransform = MappedSubject.create(([alt]) => {
-            const offset = (alt % 1000) * (this.GRADUATION_PX_PER_1000FT / 1000)
-            return `translate(0, ${-offset.toFixed(1)})`
-        }, this.indicatedAlt)
-
+        // --- Selected-altitude bug transform ---
         this.bugTransform = MappedSubject.create(
             ([refAlt, indAlt]) => {
-                const diff = (((refAlt - indAlt) % 1000) / 1000) * this.GRADUATION_PX_PER_1000FT
-                return `translate(0, ${-diff})`
+                const diffPx = (indAlt - refAlt) * this.PX_PER_FT
+                return `translate(0, ${diffPx.toFixed(1)})`
             },
             this.refAltitude,
             this.indicatedAlt
@@ -239,7 +496,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.verticalSpd.destroy()
         this.refAltitude.destroy()
 
-        // Destroy derived subjects
         this.tapeTransform.destroy()
         this.bugTransform.destroy()
         this.alertFill.destroy()
@@ -259,6 +515,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.endDigitTextSubjects.forEach(s => s.destroy())
         this.endDigitTransform.destroy()
         this.cursorState.destroy()
+        this.currentMinimumSub.destroy()
 
         super.destroy()
     }
@@ -344,11 +601,14 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                 }
             }
         } else {
-            // absAlt < 990: clear digit1 & digit2
             if (altitude < 0) state.d2.bot.text = '-'
         }
 
         return state
+    }
+
+    onAfterRender(): void {
+        this.indicatedAltBoxValue.resume()
     }
 
     render(): VNode {
@@ -356,359 +616,270 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         const center = (this.props.height - 100) / 2
         const compactVs = this.props.VSStyle === 'Compact'
         const GF_font = 'Montserrat-Bold'
-        const endDigitSpace = 60
         const viewBoxWidth = compactVs ? 300 : 380
 
         return (
-            <svg
-                ref={this.rootRef}
-                class="altimeter"
-                width="100%"
-                height="100%"
-                id="AltimeterRoot"
-                viewBox={`-55 -100 ${viewBoxWidth} ${this.props.height}`}
-            >
-                <g class="vertical-deviation-group" visibility={this.deviationVisibility}>
+            <>
+                <svg
+                    ref={this.rootRef}
+                    class="altimeter"
+                    width="100%"
+                    height="100%"
+                    id="AltimeterRoot"
+                    viewBox={`-55 -100 ${viewBoxWidth} ${this.props.height}`}
+                >
+                    <g class="vertical-deviation-group" visibility={this.deviationVisibility}>
+                        <rect
+                            class="vertical-deviation-background"
+                            x="-50"
+                            y={centerY - 200}
+                            width="50"
+                            height="400"
+                            fill="#1a1d21"
+                            fill-opacity="0.25"
+                        />
+                        <rect
+                            class="vertical-deviation-top-background"
+                            x="-50"
+                            y={centerY - 250}
+                            width="50"
+                            height="50"
+                            fill="#1a1d21"
+                        />
+                        <text
+                            ref={this.verticalDeviationTextRef}
+                            x="-25"
+                            y={centerY - 210}
+                            fill="#d12bc7"
+                            font-size="45"
+                            font-family={GF_font}
+                            text-anchor="middle"
+                        >
+                            V
+                        </text>
+                        {[-2, -1, 1, 2].map(i => (
+                            <circle
+                                class="vertical-deviation-grad"
+                                cx="-25"
+                                cy={centerY + 66 * i}
+                                r="6"
+                                stroke="white"
+                                stroke-width="3"
+                                fill-opacity="0"
+                            />
+                        ))}
+                        <polygon
+                            class="vertical-deviation-chevron-bug"
+                            points={`-45,${centerY} -10,${centerY - 20} -10,${centerY - 10} -25,${centerY} -10,${centerY + 10} -10,${centerY + 20}`}
+                            fill="#d12bc7"
+                            display={this.chevronDisplay}
+                            transform={this.deviationTransform}
+                        />
+                        <polygon
+                            class="vertical-deviation-diamond-bug"
+                            points={`-40,${centerY} -25,${centerY - 15} -10,${centerY} -25,${centerY + 15}`}
+                            fill="#10c210"
+                            display={this.diamondDisplay}
+                            transform={this.deviationTransform}
+                        />
+                        <polygon
+                            class="vertical-deviation-hollow-diamond-bug"
+                            points={`-40,${centerY} -25,${centerY - 15} -10,${centerY} -25,${centerY + 15} -25,${centerY + 5} -20,${centerY} -25,${centerY - 5} -30,${centerY} -25,${centerY + 5} -25,${centerY + 15}`}
+                            fill="#DFDFDF"
+                            display={this.hollowDiamondDisplay}
+                            transform={this.deviationTransform}
+                        />
+                    </g>
                     <rect
-                        class="vertical-deviation-background"
-                        x="-50"
-                        y={centerY - 200}
-                        width="50"
-                        height="400"
+                        class="background"
+                        x="0"
+                        y="-50"
+                        width="350"
+                        height={this.props.height - 100}
                         fill="#1a1d21"
                         fill-opacity="0.25"
                     />
-                    <rect
-                        class="vertical-deviation-top-background"
-                        x="-50"
-                        y={centerY - 250}
-                        width="50"
-                        height="50"
-                        fill="#1a1d21"
-                    />
-                    <text
-                        ref={this.verticalDeviationTextRef}
-                        x="-25"
-                        y={centerY - 210}
-                        fill="#d12bc7"
-                        font-size="45"
-                        font-family={GF_font}
-                        text-anchor="middle"
+                    <defs>
+                        <linearGradient id="altshadowGradient" gradientTransform="rotate(90)">
+                            <stop offset="0%" stop-color="rgb(0,0,0)" stop-opacity="0.8" />
+                            <stop offset="15%" stop-color="rgb(0,0,0)" stop-opacity="0" />
+                            <stop offset="85%" stop-color="rgb(0,0,0)" stop-opacity="0" />
+                            <stop offset="100%" stop-color="rgb(0,0,0)" stop-opacity="0.8" />
+                        </linearGradient>
+                        <linearGradient id="underShadowGradient" gradientTransform="rotate(90)">
+                            <stop offset="0%" stop-color="rgb(0,0,0)" stop-opacity="0.8" />
+                            <stop offset="100%" stop-color="rgb(0,0,0)" stop-opacity="0" />
+                        </linearGradient>
+                    </defs>
+                    <svg
+                        id="GraduationSvg"
+                        x="0"
+                        y="-50"
+                        width="235"
+                        height={this.props.height - 100}
+                        viewBox={`0 0 235 ${this.props.height - 100}`}
                     >
-                        V
-                    </text>
-                    {[-2, -1, 1, 2].map(i => (
-                        <circle
-                            class="vertical-deviation-grad"
-                            cx="-25"
-                            cy={centerY + 66 * i}
-                            r="6"
-                            stroke="white"
-                            stroke-width="3"
-                            fill-opacity="0"
-                        />
-                    ))}
-                    <polygon
-                        class="vertical-deviation-chevron-bug"
-                        points={`-45,${centerY} -10,${centerY - 20} -10,${centerY - 10} -25,${centerY} -10,${centerY + 10} -10,${centerY + 20}`}
-                        fill="#d12bc7"
-                        display={this.chevronDisplay}
-                        transform={this.deviationTransform}
+                        {this.buildGraduationGroup()}
+                        {this.buildGroundLine()}
+                        <g ref={this.bugsGroupRef} class="bugs-group">
+                            <polygon
+                                class="selected-altitude-bug"
+                                points={`0,${center - 50} 25,${center - 50} 25,${center - 22} 0,${center} 25,${center + 22} 25,${center + 50} 0,${center + 50}`}
+                                fill="#36c8d2"
+                                transform={this.bugTransform}
+                            />
+                            <polyline
+                                ref={this.minimumAltitudeBugRef}
+                                class="minimum-altitude-bug"
+                                points={`20,${center - 40} 20,${center - 27} 0,${center} 20,${center + 27} 20,${center + 40}`}
+                                stroke="#36c8d2"
+                                fill="none"
+                                display="none"
+                                stroke-width="5"
+                            />
+                        </g>
+                    </svg>
+                    <rect
+                        class="cursor-shadow"
+                        fill="url(#altshadowGradient)"
+                        x="148"
+                        y={this.props.height / 2 - 175}
+                        width="74"
+                        height="152"
                     />
-                    <polygon
-                        class="vertical-deviation-diamond-bug"
-                        points={`-40,${centerY} -25,${centerY - 15} -10,${centerY} -25,${centerY + 15}`}
-                        fill="#10c210"
-                        display={this.diamondDisplay}
-                        transform={this.deviationTransform}
+                    <rect
+                        class="selected-altitude-shadow"
+                        fill="url(#underShadowGradient)"
+                        x="0"
+                        y="-36"
+                        width={compactVs ? 320 : 200}
+                        height="30"
                     />
-                    <polygon
-                        class="vertical-deviation-hollow-diamond-bug"
-                        points={`-40,${centerY} -25,${centerY - 15} -10,${centerY} -25,${centerY + 15} -25,${centerY + 5} -20,${centerY} -25,${centerY - 5} -30,${centerY} -25,${centerY + 5} -25,${centerY + 15}`}
-                        fill="#DFDFDF"
-                        display={this.hollowDiamondDisplay}
-                        transform={this.deviationTransform}
-                    />
-                </g>
-                <rect
-                    class="background"
-                    x="0"
-                    y="-50"
-                    width="350"
-                    height={this.props.height - 100}
-                    fill="#1a1d21"
-                    fill-opacity="0.25"
-                />
-                <defs>
-                    <linearGradient id="altshadowGradient" gradientTransform="rotate(90)">
-                        <stop offset="0%" stop-color="rgb(0,0,0)" stop-opacity="0.8" />
-                        <stop offset="15%" stop-color="rgb(0,0,0)" stop-opacity="0" />
-                        <stop offset="85%" stop-color="rgb(0,0,0)" stop-opacity="0" />
-                        <stop offset="100%" stop-color="rgb(0,0,0)" stop-opacity="0.8" />
-                    </linearGradient>
-                    <linearGradient id="underShadowGradient" gradientTransform="rotate(90)">
-                        <stop offset="0%" stop-color="rgb(0,0,0)" stop-opacity="0.8" />
-                        <stop offset="100%" stop-color="rgb(0,0,0)" stop-opacity="0" />
-                    </linearGradient>
-                </defs>
-                <svg
-                    id="GraduationSvg"
-                    x="0"
-                    y="-50"
-                    width="226"
-                    height={this.props.height - 100}
-                    viewBox={`0 0 226 ${this.props.height - 100}`}
-                >
-                    {this.buildGraduationGroup(center)}
-                    {this.buildGroundLine()}
-                    <path
-                        ref={this.cursorRef}
-                        class="cursor"
-                        d={`M0 ${center} L28 ${center - 20} L28 ${center - 50} L145 ${center - 50} L145 ${center - 80} L226 ${center - 80} L226 ${center + 80} L145 ${center + 80} L145 ${center + 50} L28 ${center + 50} L28 ${center + 20} L0 ${center}Z`}
-                        fill="#1a1d21"
+                    <rect
+                        class="selected-altitude-background"
+                        x="0"
+                        y="-100"
+                        width={compactVs ? 320 : 200}
+                        height="60"
+                        fill={this.alertBgFill}
                         stroke="white"
                         stroke-width="3"
                     />
-                    <svg
-                        ref={this.cursorGroupRef}
-                        class="cursor-svg"
-                        x="30"
-                        y={center - 48}
-                        width="120"
-                        height="80"
-                        viewBox="0 0 120 80"
+                    <polygon
+                        ref={this.selectedAltitudeFixedBugRef}
+                        class="selected-altitude-fixed-bug"
+                        points="10,-90 24,-90 24,-76 15,-70 24,-64 24,-50 10,-50"
+                        fill="#36c8d2"
+                    />
+                    <text
+                        class="selected-altitude-text"
+                        x="250"
+                        y="-50"
+                        fill={this.alertFill}
+                        font-size="56"
+                        font-family={GF_font}
+                        text-anchor="end"
                     >
-                        <g class="cursor-static-digit-group" transform="scale(1, 1.25)">
-                            {/* digit1 (ten-thousands) */}
-                            <text
-                                x="4"
-                                y="-1"
-                                fill="white"
-                                font-size="56"
-                                font-family={GF_font}
-                                transform={this.cursorState.map(s => s.d1.top.transform)}
-                            >
-                                {this.cursorState.map(s => s.d1.top.text)}
-                            </text>
-                            <text
-                                x="4"
-                                y="57"
-                                fill="white"
-                                font-size="56"
-                                font-family={GF_font}
-                                transform={this.cursorState.map(s => s.d1.bot.transform)}
-                            >
-                                {this.cursorState.map(s => s.d1.bot.text)}
-                            </text>
-                            {/* digit2 (thousands) */}
-                            <text
-                                x="42"
-                                y="-1"
-                                fill="white"
-                                font-size="56"
-                                font-family={GF_font}
-                                transform={this.cursorState.map(s => s.d2.top.transform)}
-                            >
-                                {this.cursorState.map(s => s.d2.top.text)}
-                            </text>
-                            <text
-                                x="42"
-                                y="57"
-                                fill="white"
-                                font-size="56"
-                                font-family={GF_font}
-                                transform={this.cursorState.map(s => s.d2.bot.transform)}
-                            >
-                                {this.cursorState.map(s => s.d2.bot.text)}
-                            </text>
-                            {/* digit3 (hundreds) */}
-                            <text
-                                x="80"
-                                y="-1"
-                                fill="white"
-                                font-size="48"
-                                font-family={GF_font}
-                                transform={this.cursorState.map(s => s.d3.top.transform)}
-                            >
-                                {this.cursorState.map(s => s.d3.top.text)}
-                            </text>
-                            <text
-                                x="80"
-                                y="54"
-                                fill="white"
-                                font-size="48"
-                                font-family={GF_font}
-                                transform={this.cursorState.map(s => s.d3.bot.transform)}
-                            >
-                                {this.cursorState.map(s => s.d3.bot.text)}
-                            </text>
-                        </g>
-                    </svg>
-                    <svg
-                        class="cursor-rotatating-group"
-                        x="140"
-                        y={center - 75}
-                        width="80"
-                        height="150"
-                        viewBox="0 -66 80 150"
+                        {this.refAltitude.map(a => Math.round(a).toString())}
+                    </text>
+                    <rect
+                        ref={this.pressureBackgroundRef}
+                        class="pressure-background"
+                        x="0"
+                        y={this.props.height - 100 - 75}
+                        width="310"
+                        height="70"
+                        fill="#1a1d21"
+                        stroke="#36c8d2"
+                        stroke-width="5"
+                    />
+                    <text
+                        class="pressure-text"
+                        x="20"
+                        y={this.props.height - 100 - 18}
+                        fill="#36c8d2"
+                        font-size="56"
+                        font-family={GF_font}
+                        letter-spacing="0.05em"
                     >
-                        <g class="cursor-rotatating-text-group" transform={this.endDigitTransform}>
-                            <g transform="scale(1, 1.15)">
-                                {this.buildEndDigits(GF_font, endDigitSpace)}
-                            </g>
-                        </g>
-                    </svg>
-                    <g ref={this.bugsGroupRef} class="bugs-group">
-                        <polygon
-                            class="selected-altitude-bug"
-                            points={`0,${center - 50} 25,${center - 50} 25,${center - 22} 0,${center} 25,${center + 22} 25,${center + 50} 0,${center + 50}`}
-                            fill="#36c8d2"
-                            transform={this.bugTransform}
-                        />
-                        <polyline
-                            ref={this.minimumAltitudeBugRef}
-                            class="minimum-altitude-bug"
-                            points={`20,${center - 40} 20,${center - 27} 0,${center} 20,${center + 27} 20,${center + 40}`}
-                            stroke="#36c8d2"
-                            fill="none"
-                            display="none"
-                            stroke-width="5"
-                        />
-                    </g>
+                        {this.baroSetting.map(p => p.toFixed(2))}
+                    </text>
+                    {compactVs
+                        ? this.buildCompactVS(centerY, GF_font)
+                        : this.buildDefaultVS(centerY, GF_font)}
+                    <rect
+                        ref={this.trendElementRef}
+                        class="trend-element"
+                        x="0"
+                        y={this.trendY}
+                        width="8"
+                        height={this.trendHeight}
+                        fill="#d12bc7"
+                    />
                 </svg>
-                <rect
-                    class="cursor-shadow"
-                    fill="url(#altshadowGradient)"
-                    x="148"
-                    y={this.props.height / 2 - 175}
-                    width="74"
-                    height="152"
+                <IndicatedAltDisplayBox
+                    ref={this.indicatedAltBoxRef}
+                    show={this.showIndicatedAltData}
+                    indicatedAlt={this.indicatedAltBoxValue}
                 />
-                <rect
-                    class="selected-altitude-shadow"
-                    fill="url(#underShadowGradient)"
-                    x="0"
-                    y="-36"
-                    width={compactVs ? 320 : 200}
-                    height="30"
-                />
-                <rect
-                    class="selected-altitude-background"
-                    x="0"
-                    y="-100"
-                    width={compactVs ? 320 : 200}
-                    height="60"
-                    fill={this.alertBgFill}
-                    stroke="white"
-                    stroke-width="3"
-                />
-                <polygon
-                    ref={this.selectedAltitudeFixedBugRef}
-                    class="selected-altitude-fixed-bug"
-                    points="10,-90 24,-90 24,-76 15,-70 24,-64 24,-50 10,-50"
-                    fill="#36c8d2"
-                />
-                <text
-                    class="selected-altitude-text"
-                    x="250"
-                    y="-50"
-                    fill={this.alertFill}
-                    font-size="56"
-                    font-family={GF_font}
-                    text-anchor="end"
-                >
-                    {this.refAltitude.map(a => Math.round(a).toString())}
-                </text>
-                <rect
-                    ref={this.pressureBackgroundRef}
-                    class="pressure-background"
-                    x="0"
-                    y={this.props.height - 100 - 75}
-                    width="310"
-                    height="70"
-                    fill="#1a1d21"
-                    stroke="#36c8d2"
-                    stroke-width="5"
-                />
-                <text
-                    class="pressure-text"
-                    x="20"
-                    y={this.props.height - 100 - 18}
-                    fill="#36c8d2"
-                    font-size="56"
-                    font-family={GF_font}
-                    letter-spacing="0.05em"
-                >
-                    {this.baroSetting.map(p => p.toFixed(2))}
-                </text>
-                {compactVs
-                    ? this.buildCompactVS(centerY, GF_font)
-                    : this.buildDefaultVS(centerY, GF_font)}
-                <rect
-                    ref={this.trendElementRef}
-                    class="trend-element"
-                    x="0"
-                    y={this.trendY}
-                    width="8"
-                    height={this.trendHeight}
-                    fill="#d12bc7"
-                />
-            </svg>
+            </>
         )
     }
 
-    private buildGraduationGroup(center: number): VNode {
-        const graduationSize = this.GRADUATION_PX_PER_1000FT / 10 // px per 100 ft
-        const n = Math.ceil((this.props.height - 100) / graduationSize)
+    /**
+     * Build the graduated tape strip (G3X‑style).
+     *
+     * Layout (bottom → top): i runs from 0 to totalLen where
+     *   totalLen = (MAJOR_TICK_COUNT - 1) * MINOR_TICK_FACTOR.
+     * A major (labelled) tick is drawn at i divisible by MINOR_TICK_FACTOR;
+     * a minor tick is drawn at every other i.
+     * The tape is positioned so that the current indicated altitude lands on
+     * the cursor centre after `tapeTransform` is applied.
+     */
+    private buildGraduationGroup(): VNode {
+        const majorSpacingPx = this.MAJOR_TICK_INTERVAL * this.PX_PER_FT
+        const minorSpacingPx = majorSpacingPx / this.MINOR_TICK_FACTOR
+        const totalLen = (this.MAJOR_TICK_COUNT - 1) * this.MINOR_TICK_FACTOR
+        const tapeBottom = this.TAPE_FT * this.PX_PER_FT
         const children: VNode[] = []
-        let subjectIdx = 0
 
-        for (let i = -n; i <= n; i++) {
-            const mainGradRef = FSComponent.createRef<SVGElement>()
-            this.gradRectRefs.push(mainGradRef)
+        for (let i = 0; i <= totalLen; i++) {
+            const y = tapeBottom - i * minorSpacingPx
+            const isMajor = i % this.MINOR_TICK_FACTOR === 0
+
+            const tickRef = FSComponent.createRef<SVGElement>()
+            this.gradRectRefs.push(tickRef)
             children.push(
                 <rect
-                    ref={mainGradRef}
-                    class="main-grad"
+                    ref={tickRef}
+                    class={isMajor ? 'main-grad' : 'grad'}
                     x="0"
-                    y={fastToFixed(center - 2 + i * graduationSize, 0)}
+                    y={fastToFixed(y - 2, 0)}
                     height="4"
-                    width="40"
+                    width={isMajor ? 40 : 15}
                     fill="white"
                 />
             )
 
-            const gradTextRef = FSComponent.createRef<SVGElement>()
-            this.gradTextRefs.push(gradTextRef)
-            const gradSubject = this.gradTextSubjects[subjectIdx++]
-            children.push(
-                <text
-                    ref={gradTextRef}
-                    class="graduation-text"
-                    x="50"
-                    y={fastToFixed(center + 16 + i * graduationSize, 0)}
-                    fill="white"
-                    font-size="64"
-                    font-family="Montserrat-Bold"
-                >
-                    {gradSubject.map(v => v)}
-                </text>
-            )
-
-            // Single sub-tick at the 50‑ft midpoint
-            const subGradRef = FSComponent.createRef<SVGElement>()
-            this.gradRectRefs.push(subGradRef)
-            children.push(
-                <rect
-                    ref={subGradRef}
-                    class="grad"
-                    x="0"
-                    y={fastToFixed(center - 2 + i * graduationSize + graduationSize / 2, 0)}
-                    height="4"
-                    width="15"
-                    fill="white"
-                />
-            )
+            if (isMajor) {
+                const labelIdx = i / this.MINOR_TICK_FACTOR
+                const gradTextRef = FSComponent.createRef<SVGElement>()
+                this.gradTextRefs.push(gradTextRef)
+                const gradSubject = this.gradTextSubjects[labelIdx]
+                children.push(
+                    <text
+                        ref={gradTextRef}
+                        class="graduation-text"
+                        x="50"
+                        y={fastToFixed(y + 16, 0)}
+                        fill="white"
+                        font-size="64"
+                        font-family="Montserrat-Bold"
+                    >
+                        {gradSubject.map(v => v)}
+                    </text>
+                )
+            }
         }
 
         return (
@@ -716,26 +887,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                 {children}
             </g>
         )
-    }
-
-    private buildEndDigits(GF_font: string, endDigitSpace: number): VNode[] {
-        const children: VNode[] = []
-        for (let i = 0; i < 5; i++) {
-            const subject = this.endDigitTextSubjects[i]
-            children.push(
-                <text
-                    x="46"
-                    y={27 + endDigitSpace * (i - 2)}
-                    fill="white"
-                    font-size="56"
-                    font-family={GF_font}
-                    text-anchor="middle"
-                >
-                    {subject.map(v => v)}
-                </text>
-            )
-        }
-        return children
     }
 
     private buildGroundLine(): VNode {

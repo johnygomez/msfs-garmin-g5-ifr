@@ -14,6 +14,7 @@
   "author": "Jan Gamec",
   "license": "MIT",
   "devDependencies": {
+    "@microsoft/msfs-garminsdk": "^2.3.4",
     "@microsoft/msfs-sdk": "^2.3.3",
     "@microsoft/msfs-types": "^1.14.6",
     "@rollup/plugin-node-resolve": "^16.0.3",

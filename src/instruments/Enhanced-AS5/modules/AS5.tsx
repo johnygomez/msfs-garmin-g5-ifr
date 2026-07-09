@@ -6,11 +6,7 @@ import {
     NavSystemElementGroup,
     NavSystemElementContainer,
 } from './NavSystem'
-import {
-    ContextualMenu,
-    ContextualMenuElementImage,
-    ContextualMenuElementValue,
-} from './ContextualMenu'
+import { ContextualMenuComponent, ContextualMenuElementData } from './ContextualMenu'
 import {
     PFD_AutopilotDisplay,
     PFD_Attitude,
@@ -314,6 +310,14 @@ export class AS5 extends NavSystem {
     private navComPublisher?: NavComSimVarPublisher
     private customPublisher?: G5CustomPublisher
 
+    // Reactive Subjects for contextual menu dynamic values
+    readonly menuHeadingTextSub = Subject.create('---°')
+    readonly menuAltitudeTextSub = Subject.create('-----ft')
+    readonly menuCourseTextSub = Subject.create('---°')
+    private _lastMenuHeadingText = ''
+    private _lastMenuAltitudeText = ''
+    private _lastMenuCourseText = ''
+
     constructor() {
         super()
         this.pageGroups = [new NavSystemPageGroup('Main', this, [new AS5_PFD(), new AS5_MFD()])]
@@ -428,6 +432,19 @@ export class AS5 extends NavSystem {
             />,
             this.getChildById('Electricity')
         )
+
+        // Mount the declarative contextual menu component
+        FSComponent.render(
+            <ContextualMenuComponent
+                elements={this.menuElementsSub}
+                cursorIndex={this.menuCursorIndexSub}
+                displayBeginIndex={this.menuDisplayBeginIndexSub}
+                maxVisibleElements={this.menuMaxElems}
+                sliderState={this.sliderState}
+                sliderCursorStyle={this.sliderCursorStyle}
+            />,
+            this.getChildById('ContextualMenuElements')
+        )
     }
 
     onUpdate(_deltaTime) {
@@ -436,6 +453,23 @@ export class AS5 extends NavSystem {
         this.navComPublisher?.onUpdate()
         this.customPublisher?.onUpdate()
         this.updateKnobTooltipValue()
+
+        // Update menu value Subjects (only when value changes)
+        const hdg = this.getMenuHeadingText()
+        if (hdg !== this._lastMenuHeadingText) {
+            this.menuHeadingTextSub.set(hdg)
+            this._lastMenuHeadingText = hdg
+        }
+        const alt = this.getMenuAltitudeText()
+        if (alt !== this._lastMenuAltitudeText) {
+            this.menuAltitudeTextSub.set(alt)
+            this._lastMenuAltitudeText = alt
+        }
+        const crs = this.getMenuCrsText()
+        if (crs !== this._lastMenuCourseText) {
+            this.menuCourseTextSub.set(crs)
+            this._lastMenuCourseText = crs
+        }
     }
 
     syncCrs() {}
@@ -497,21 +531,6 @@ export class AS5 extends NavSystem {
             SimVarValueType.Number,
             unit
         )
-    }
-    UpdateSlider(_slider, _cursor, _index, _nbElem, _maxElems) {
-        if (_nbElem > _maxElems) {
-            const cursorWidth = (_maxElems * 100) / _nbElem
-            const pct = _index / (_nbElem - _maxElems)
-            const cursorLeft = Math.min(pct, 1.0) * (100 - cursorWidth)
-            diffAndSetAttribute(_slider, 'state', 'Active')
-            diffAndSetAttribute(
-                _cursor,
-                'style',
-                'width:' + cursorWidth + '%; left:' + cursorLeft + '%'
-            )
-        } else {
-            diffAndSetAttribute(_slider, 'state', 'Inactive')
-        }
     }
     getMenuHeadingText() {
         let hdg = fastToFixed(Simplane.getAutoPilotHeadingLockValueDegrees(), 0)
@@ -634,7 +653,7 @@ export class AS5 extends NavSystem {
 export class AS5_PFD extends NavSystemPage {
     gps: any
     element: NavSystemElementGroup
-    defaultMenu: ContextualMenu
+    defaultMenu: ContextualMenuElementData[]
 
     constructor() {
         super('PFD', 'PFD', null)
@@ -650,33 +669,38 @@ export class AS5_PFD extends NavSystemPage {
 
     init() {
         super.init()
-        this.defaultMenu = new ContextualMenu('', [
-            new ContextualMenuElementImage(
-                'Back',
-                this.gps.SwitchToInteractionState.bind(this.gps, 0),
-                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
-                false
-            ),
-            new ContextualMenuElementValue(
-                'Heading',
-                this.gps.menuHeadingEnter.bind(this.gps),
-                this.gps.getMenuHeadingText.bind(this.gps),
-                false
-            ),
-            new ContextualMenuElementValue(
-                'Altitude',
-                this.gps.menuAltitudeEnter.bind(this.gps),
-                this.gps.getMenuAltitudeText.bind(this.gps),
-                false
-            ),
-            new ContextualMenuElementValue('Pitch', null, () => '-----°', true),
-            new ContextualMenuElementImage(
-                'MFD',
-                this.gps.SwitchToPageName.bind(this.gps, 'Main', 'MFD'),
-                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/MFD.png',
-                false
-            ),
-        ])
+        this.defaultMenu = [
+            {
+                name: 'Back',
+                callback: this.gps.SwitchToInteractionState.bind(this.gps, 0),
+                isInactive: () => false,
+                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
+            },
+            {
+                name: 'Heading',
+                callback: this.gps.menuHeadingEnter.bind(this.gps),
+                isInactive: () => false,
+                value: (this.gps as AS5).menuHeadingTextSub,
+            },
+            {
+                name: 'Altitude',
+                callback: this.gps.menuAltitudeEnter.bind(this.gps),
+                isInactive: () => false,
+                value: (this.gps as AS5).menuAltitudeTextSub,
+            },
+            {
+                name: 'Pitch',
+                callback: () => false,
+                isInactive: () => true,
+                value: Subject.create('-----°'),
+            },
+            {
+                name: 'MFD',
+                callback: this.gps.SwitchToPageName.bind(this.gps, 'Main', 'MFD'),
+                isInactive: () => false,
+                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/MFD.png',
+            },
+        ]
     }
 
     onUpdate(deltaTime) {
@@ -686,7 +710,7 @@ export class AS5_PFD extends NavSystemPage {
 export class AS5_MFD extends NavSystemPage {
     gps: any
     element: NavSystemElementGroup
-    defaultMenu: ContextualMenu
+    defaultMenu: ContextualMenuElementData[]
 
     constructor() {
         super('MFD', 'MFD', null)
@@ -695,32 +719,32 @@ export class AS5_MFD extends NavSystemPage {
 
     init() {
         super.init()
-        this.defaultMenu = new ContextualMenu('', [
-            new ContextualMenuElementImage(
-                'Back',
-                this.gps.SwitchToInteractionState.bind(this.gps, 0),
-                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
-                false
-            ),
-            new ContextualMenuElementValue(
-                'Heading',
-                this.gps.menuHeadingEnter.bind(this.gps),
-                this.gps.getMenuHeadingText.bind(this.gps),
-                false
-            ),
-            new ContextualMenuElementValue(
-                'Course',
-                this.gps.menuCrsEnter.bind(this.gps),
-                this.gps.getMenuCrsText.bind(this.gps),
-                false
-            ),
-            new ContextualMenuElementImage(
-                'PFD',
-                this.gps.SwitchToPageName.bind(this.gps, 'Main', 'PFD'),
-                '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png',
-                false
-            ),
-        ])
+        this.defaultMenu = [
+            {
+                name: 'Back',
+                callback: this.gps.SwitchToInteractionState.bind(this.gps, 0),
+                isInactive: () => false,
+                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
+            },
+            {
+                name: 'Heading',
+                callback: this.gps.menuHeadingEnter.bind(this.gps),
+                isInactive: () => false,
+                value: (this.gps as AS5).menuHeadingTextSub,
+            },
+            {
+                name: 'Course',
+                callback: this.gps.menuCrsEnter.bind(this.gps),
+                isInactive: () => false,
+                value: (this.gps as AS5).menuCourseTextSub,
+            },
+            {
+                name: 'PFD',
+                callback: this.gps.SwitchToPageName.bind(this.gps, 'Main', 'PFD'),
+                isInactive: () => false,
+                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png',
+            },
+        ]
     }
 }
 export class AS5_PFD_Compass extends NavSystemElement {
