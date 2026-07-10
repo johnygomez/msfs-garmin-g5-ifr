@@ -127,10 +127,55 @@ as5-element #PageContainer #PFD #Horizon {
     left: 50%;
     transform: translate(-50%, -50%);
 }
-
-as5-element #PageContainer #PFD #Horizon svg #slipSkid,
-as5-element #PageContainer #PFD #Horizon svg #turnRateIndicator {
-    transform: translateY(-20px);
+as5-element #PageContainer #PFD #BottomIndicators {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 280px;
+    height: 40px;
+}
+as5-element #PageContainer #PFD #BottomIndicators > * {
+    width: 100%;
+}
+as5-element #PageContainer #PFD #BottomIndicators > .slip-skid-indicator-root {
+    height: 30px;
+}
+as5-element #PageContainer #PFD #BottomIndicators > .turn-rate-indicator-root {
+    position: relative;
+    height: 10px;
+    overflow: hidden;
+    margin-top: -5px;
+}
+as5-element #PageContainer #PFD #BottomIndicators .turn-rate-left-marker {
+    position: absolute;
+    left: 10%;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: white;
+}
+as5-element #PageContainer #PFD #BottomIndicators .turn-rate-right-marker {
+    position: absolute;
+    right: 10%;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: white;
+}
+as5-element #PageContainer #PFD #BottomIndicators .turn-rate-center-marker {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    background: black;
+}
+as5-element #PageContainer #PFD #BottomIndicators .turn-rate-bar {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: var(--magenta);
 }
 
 as5-element #PageContainer #PFD #Altimeter {
@@ -237,7 +282,7 @@ as5-element #PageContainer #PFD #CDI {
     position: absolute;
     left: 32.5%;
     width: 35%;
-    bottom: 10%;
+    bottom: 45px;
 }
 as5-element #PageContainer #PFD .cdi polygon {
     stroke-width: 1;
@@ -583,4 +628,46 @@ as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
     100% {
         fill: white;
     }
+}
+
+/* ---- Selected altitude box blink animations ---- */
+
+@keyframes alt-alert-flash {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.selected-altitude-bg-overlay {
+    fill: #36c8d2;
+    opacity: 0;
+}
+
+.selected-altitude-bg-overlay.alt-alert-within1000-flash {
+    animation: alt-alert-flash 500ms steps(2) infinite;
+    opacity: 1;
+}
+
+.selected-altitude-bg-overlay.alt-alert-within1000 {
+    opacity: 1;
+}
+
+.selected-altitude-text {
+    fill: #36c8d2;
+}
+
+.selected-altitude-text.alt-alert-within200-flash {
+    animation: alt-alert-flash 500ms steps(2) infinite;
+}
+
+.selected-altitude-text.alt-alert-deviation-flash {
+    animation: alt-alert-flash 500ms steps(2) infinite;
+    fill: yellow;
+}
+
+.selected-altitude-text.alt-alert-deviation {
+    fill: yellow;
 }

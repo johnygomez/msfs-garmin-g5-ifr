@@ -209,7 +209,6 @@ export interface AltimeterSubjects {
     baroPressure: Subject<number>
     verticalSpeed: Subject<number>
     referenceAltitude: Subject<number>
-    altitudeAlertState: Subject<string>
     verticalDeviationMode: Subject<string>
     verticalDeviationValue: Subject<number>
 }
@@ -217,9 +216,6 @@ export class PFD_Altimeter extends NavSystemElement {
     lastAltitude: number
     lastPressure: number
     lastSelectedAltitude: number
-    selectedAltWasCaptured: boolean
-    blinkTime: number
-    alertState: number
     altimeterIndex: number
     readyToSet: boolean
     altitudeType: any
@@ -230,9 +226,6 @@ export class PFD_Altimeter extends NavSystemElement {
         this.lastAltitude = -10000
         this.lastPressure = -10000
         this.lastSelectedAltitude = -10000
-        this.selectedAltWasCaptured = false
-        this.blinkTime = 0
-        this.alertState = 0
         this.altimeterIndex = 0
         this.readyToSet = false
         this.altitudeType = _altitudeType
@@ -261,78 +254,10 @@ export class PFD_Altimeter extends NavSystemElement {
             this.lastAltitude = altitude
         }
         this.subjects.verticalSpeed.set(Simplane.getVerticalSpeed())
-        const altitudeRefActive = true
-        if (altitudeRefActive) {
-            if (selectedAltitude != this.lastSelectedAltitude) {
-                this.subjects.referenceAltitude.set(selectedAltitude)
-                this.lastSelectedAltitude = selectedAltitude
-                this.selectedAltWasCaptured = false
-            }
-            if (!this.selectedAltWasCaptured) {
-                if (Math.abs(altitude - selectedAltitude) <= 200) {
-                    this.selectedAltWasCaptured = true
-                    if (this.alertState < 2) {
-                        this.blinkTime = 5000
-                    }
-                    if (this.blinkTime > 0) {
-                        this.subjects.altitudeAlertState.set(
-                            Math.floor(this.blinkTime / 250) % 2 == 0 ? 'BlueText' : 'Empty'
-                        )
-                        this.blinkTime -= _deltaTime
-                    } else {
-                        this.subjects.altitudeAlertState.set('BlueText')
-                    }
-                } else if (Math.abs(altitude - selectedAltitude) <= 1000) {
-                    if (this.alertState < 1) {
-                        this.blinkTime = 5000
-                    }
-                    if (this.blinkTime > 0) {
-                        this.subjects.altitudeAlertState.set(
-                            Math.floor(this.blinkTime / 250) % 2 == 0
-                                ? 'BlueBackground'
-                                : 'BlueText'
-                        )
-                        this.blinkTime -= _deltaTime
-                    } else {
-                        this.subjects.altitudeAlertState.set('BlueBackground')
-                    }
-                } else {
-                    this.alertState = 0
-                    this.subjects.altitudeAlertState.set('BlueText')
-                }
-            } else {
-                if (Math.abs(altitude - selectedAltitude) <= 200) {
-                    if (this.alertState != 2) {
-                        this.blinkTime = 5000
-                        this.alertState = 2
-                    }
-                    if (this.blinkTime > 0) {
-                        this.subjects.altitudeAlertState.set(
-                            Math.floor(this.blinkTime / 250) % 2 == 0 ? 'BlueText' : 'Empty'
-                        )
-                        this.blinkTime -= _deltaTime
-                    } else {
-                        this.subjects.altitudeAlertState.set('BlueText')
-                    }
-                } else {
-                    if (this.alertState != 3) {
-                        this.blinkTime = 5000
-                        this.gps.playInstrumentSound('tone_altitude_alert_default')
-                        this.alertState = 3
-                    }
-                    if (this.blinkTime > 0) {
-                        this.subjects.altitudeAlertState.set(
-                            Math.floor(this.blinkTime / 250) % 2 == 0 ? 'YellowText' : 'Empty'
-                        )
-                        this.blinkTime -= _deltaTime
-                    } else {
-                        this.subjects.altitudeAlertState.set('YellowText')
-                    }
-                }
-            }
-        } else {
-            this.subjects.referenceAltitude.set(0)
-            this.subjects.altitudeAlertState.set('BlueText')
+        // Keep the reference-altitude subject in sync (consumed by the MFD side if at all)
+        if (selectedAltitude != this.lastSelectedAltitude) {
+            this.subjects.referenceAltitude.set(selectedAltitude)
+            this.lastSelectedAltitude = selectedAltitude
         }
         const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
             ? 3
@@ -1046,7 +971,7 @@ export class PFD_Annunciations extends Annunciations {
                 if (message.Type == Annunciation_MessageType.CAUTION && masterCautionAcknowledged) {
                     this.needReload = true
                     message.Acknowledged = true
-                    if (this.firstAcknowledge && this.isAnnunciationsManager) {
+                    if (this.firstAcknowledge) {
                         if (this.gps.playInstrumentSound('aural_warning_ok'))
                             this.firstAcknowledge = false
                     }
@@ -1070,11 +995,7 @@ export class PFD_Annunciations extends Annunciations {
             let newAnnunc = ''
             let acknowledgedAnnunc = ''
             this.alertLevel = 0
-            let warningOn = false
-            let cautionOn = false
             this.alert = false
-            let warningCount = 0
-            let cautionCount = 0
             this.needReload = false
             for (let i = 0; i < this.allMessages.length; i++) {
                 const message = this.allMessages[i]
@@ -1084,9 +1005,7 @@ export class PFD_Annunciations extends Annunciations {
                         case Annunciation_MessageType.WARNING:
                             if (!message.Acknowledged) {
                                 this.alertLevel = 3
-                                warningOn = true
                             }
-                            warningCount++
                             break
                         case Annunciation_MessageType.CAUTION:
                             if (!message.Acknowledged) {
@@ -1097,9 +1016,7 @@ export class PFD_Annunciations extends Annunciations {
                                     }
                                     this.alertLevel = 2
                                 }
-                                cautionOn = true
                             }
-                            cautionCount++
                             break
                         case Annunciation_MessageType.ADVISORY:
                             if (!message.Acknowledged && this.alertLevel < 1) {
@@ -1173,46 +1090,6 @@ export class PFD_Annunciations extends Annunciations {
             } else {
                 this.annunciationsStateSub.set('Hidden')
             }
-            if (this.isAnnunciationsManager) {
-                const masterWarningActive = SimVar.GetSimVarValue(
-                    'MASTER WARNING ACTIVE',
-                    SimVarValueType.Bool
-                )
-                if (warningCount > 0 != masterWarningActive || warningOn) {
-                    SimVar.SetSimVarValue(
-                        'K:MASTER_WARNING_SET',
-                        SimVarValueType.Bool,
-                        warningCount > 0
-                    )
-                }
-                if (warningCount > 0 && !warningOn) {
-                    SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                }
-                const masterCautionActive = SimVar.GetSimVarValue(
-                    'MASTER CAUTION ACTIVE',
-                    SimVarValueType.Bool
-                )
-                if (cautionCount > 0 != masterCautionActive || cautionOn) {
-                    SimVar.SetSimVarValue(
-                        'K:MASTER_CAUTION_SET',
-                        SimVarValueType.Bool,
-                        cautionCount > 0
-                    )
-                }
-                if (cautionCount > 0 && !cautionOn) {
-                    SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                }
-                SimVar.SetSimVarValue(
-                    'L:Generic_Master_Warning_Active',
-                    SimVarValueType.Bool,
-                    warningOn
-                )
-                SimVar.SetSimVarValue(
-                    'L:Generic_Master_Caution_Active',
-                    SimVarValueType.Bool,
-                    cautionOn
-                )
-            }
         }
         if (this.alertLevel == 3 && !this.isPlayingWarningTone) {
             const res = this.gps.playInstrumentSound('tone_warning')
@@ -1244,22 +1121,10 @@ export class PFD_Annunciations extends Annunciations {
             }
         }
     }
+
     onEvent(_event) {
-        switch (_event) {
-            case 'SoftKeys_ALERT':
-                if (this.alertLevel > 0) {
-                    SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                    SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                } else {
-                    this.gps.computeEvent('Toggle_Alerts')
-                }
-                break
-            case 'Master_Caution_Push':
-                SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                break
-            case 'Master_Warning_Push':
-                SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                break
+        if (_event === 'SoftKeys_ALERT' && this.alertLevel <= 0) {
+            this.gps.computeEvent('Toggle_Alerts')
         }
     }
 

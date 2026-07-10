@@ -84,7 +84,7 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                     width="100"
                     height={`${svgHeight}`}
                     fill="#1a1d21"
-                    fill-opacity="0.25"
+                    fill-opacity="0.75"
                     stroke="white"
                     stroke-width="0.75"
                 />

@@ -28,6 +28,8 @@ import {
     AdcPublisher,
     AhrsPublisher,
     NavComSimVarPublisher,
+    ConsumerSubject,
+    AhrsEvents,
 } from '@microsoft/msfs-sdk'
 import { G5CustomPublisher } from './G5CustomPublisher'
 import { HorizontalCompassComponent } from './HorizontalCompass'
@@ -35,7 +37,11 @@ import { CDIComponent } from './CDI'
 import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
 import { HighlightComponent, HighlightElementRefs } from './Highlight'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
-import { AttitudeIndicatorComponent, SlipSkidDisplayMode } from './AttitudeIndicator'
+import {
+    AttitudeIndicatorComponent,
+    TurnRateIndicatorComponent,
+    SlipSkidIndicatorComponent,
+} from './AttitudeIndicator'
 import { AltimeterComponent } from './Altimeter'
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 
@@ -76,6 +82,22 @@ interface PfdContentProps extends ComponentProps {
 }
 
 class PfdContent extends DisplayComponent<PfdContentProps> {
+    private readonly turnRate: ConsumerSubject<number>
+    private readonly slipSkid: ConsumerSubject<number>
+
+    constructor(props: PfdContentProps) {
+        super(props)
+        const sub = props.bus.getSubscriber<AhrsEvents>()
+        this.turnRate = ConsumerSubject.create(sub.on('delta_heading_rate').withPrecision(2), 0)
+        this.slipSkid = ConsumerSubject.create(sub.on('turn_coordinator_ball').withPrecision(2), 0)
+    }
+
+    destroy(): void {
+        this.turnRate.destroy()
+        this.slipSkid.destroy()
+        super.destroy()
+    }
+
     render(): VNode {
         const spd = this.props.airspeed
         const alt = this.props.altimeter
@@ -88,9 +110,6 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                     <AttitudeIndicatorComponent
                         bus={this.props.bus}
                         verticalCenter={true}
-                        bottomY={215}
-                        slipSkidDisplayMode={SlipSkidDisplayMode.ROUND}
-                        showTurnRate={true}
                         bankSizeRatio={-12}
                         isBackup={false}
                     />
@@ -99,7 +118,6 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                     <AltimeterComponent
                         bus={this.props.bus}
                         height={1020}
-                        altitudeAlertState={alt.altitudeAlertState}
                         verticalDeviationMode={alt.verticalDeviationMode}
                         verticalDeviationValue={alt.verticalDeviationValue}
                     />
@@ -136,6 +154,10 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                         cdiDeviation={this.props.cdiDeviation}
                         isVisible={this.props.cdiVisible}
                     />
+                </div>
+                <div id="BottomIndicators">
+                    <SlipSkidIndicatorComponent slipSkid={this.slipSkid} />
+                    <TurnRateIndicatorComponent turnRate={this.turnRate} />
                 </div>
             </>
         )
@@ -339,7 +361,6 @@ export class AS5 extends NavSystem {
             baroPressure: Subject.create(0),
             verticalSpeed: Subject.create(0),
             referenceAltitude: Subject.create(0),
-            altitudeAlertState: Subject.create('BlueText'),
             verticalDeviationMode: Subject.create('None'),
             verticalDeviationValue: Subject.create(0),
         }

@@ -8,20 +8,117 @@ import {
     ConsumerSubject,
     MappedSubject,
     AhrsEvents,
+    Subscribable,
 } from '@microsoft/msfs-sdk'
 import { G5CustomEvents } from './G5CustomPublisher'
 
-export enum SlipSkidDisplayMode {
-    ROUND = 0,
-    DEFAULT = 1,
+export interface TurnRateIndicatorProps extends ComponentProps {
+    turnRate: Subscribable<number>
+}
+
+export class TurnRateIndicatorComponent extends DisplayComponent<TurnRateIndicatorProps> {
+    private readonly barStyle: MappedSubject<[number], string>
+
+    constructor(props: TurnRateIndicatorProps) {
+        super(props)
+
+        this.barStyle = MappedSubject.create(([r]) => {
+            const clamped = Math.min(Math.max(r, -6), 6)
+            const widthPct = (Math.abs(clamped) * 40) / 3
+            const leftPct = clamped <= 0 ? 50 - widthPct : 50
+            const borderRadius = clamped <= 0 ? '5px 0 0 5px' : '0 5px 5px 0'
+            return `width: ${widthPct}%; left: ${leftPct}%; border-radius: ${borderRadius}`
+        }, props.turnRate).pause()
+    }
+
+    destroy(): void {
+        this.barStyle.destroy()
+        super.destroy()
+    }
+
+    onAfterRender(): void {
+        this.barStyle.resume()
+    }
+
+    render(): VNode {
+        return (
+            <div class="turn-rate-indicator-root">
+                <div class="turn-rate-bar" style={this.barStyle}></div>
+                <div class="turn-rate-left-marker"></div>
+                <div class="turn-rate-right-marker"></div>
+                <div class="turn-rate-center-marker"></div>
+            </div>
+        )
+    }
+}
+
+export interface SlipSkidIndicatorProps extends ComponentProps {
+    slipSkid: Subscribable<number>
+}
+
+export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicatorProps> {
+    private readonly ballCx: MappedSubject<[number], number>
+
+    constructor(props: SlipSkidIndicatorProps) {
+        super(props)
+
+        this.ballCx = MappedSubject.create(
+            ([s]) => Math.min(Math.max(s, -1), 1) * 35,
+            props.slipSkid
+        ).pause()
+    }
+
+    destroy(): void {
+        this.ballCx.destroy()
+        super.destroy()
+    }
+
+    onAfterRender(): void {
+        this.ballCx.resume()
+    }
+
+    render(): VNode {
+        return (
+            <svg
+                class="slip-skid-indicator-root"
+                width="100%"
+                viewBox="-35 -15 70 30"
+                overflow="visible"
+            >
+                <circle
+                    class="slip-skid-ball"
+                    cx={this.ballCx}
+                    cy="0"
+                    r="10"
+                    fill="white"
+                    stroke="black"
+                />
+                <rect
+                    class="slip-skid-left-marker"
+                    x="-11"
+                    y="-15"
+                    width="4"
+                    height="30"
+                    fill="white"
+                    stroke="black"
+                />
+                <rect
+                    class="slip-skid-right-marker"
+                    x="11"
+                    y="-15"
+                    width="4"
+                    height="30"
+                    fill="white"
+                    stroke="black"
+                />
+            </svg>
+        )
+    }
 }
 
 export interface AttitudeIndicatorComponentProps extends ComponentProps {
     bus: EventBus
     verticalCenter: boolean
-    bottomY: number
-    slipSkidDisplayMode: SlipSkidDisplayMode
-    showTurnRate: boolean
     bankSizeRatio: number
     isBackup: boolean
 }
@@ -33,10 +130,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     private readonly pitchGradationsRef = FSComponent.createRef<SVGElement>()
     private readonly bankGroupRef = FSComponent.createRef<SVGElement>()
     private readonly bankArcRef = FSComponent.createRef<SVGElement>()
-    private readonly turnRateIndicatorRef = FSComponent.createRef<SVGElement>()
-    private readonly turnRateLeftMarkerRef = FSComponent.createRef<SVGElement>()
-    private readonly turnRateRightMarkerRef = FSComponent.createRef<SVGElement>()
-    private readonly turnRateCenterMarkerRef = FSComponent.createRef<SVGElement>()
     private readonly cursorLeftLowerRef = FSComponent.createRef<SVGElement>()
     private readonly cursorLeftUpperRef = FSComponent.createRef<SVGElement>()
     private readonly cursorRightLowerRef = FSComponent.createRef<SVGElement>()
@@ -53,7 +146,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     // ConsumerSubjects from the EventBus — reactive values for geometry transforms
     private readonly pitch: ConsumerSubject<number>
     private readonly bank: ConsumerSubject<number>
-    private readonly slipSkid: ConsumerSubject<number>
     private readonly fdPitch: ConsumerSubject<number>
     private readonly fdBark: ConsumerSubject<number>
     private readonly fdActive: ConsumerSubject<boolean>
@@ -63,9 +155,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     private readonly rootTransform: MappedSubject<[number], string>
     private readonly horizonTransform: MappedSubject<[number], string>
     private readonly pitchTransform: MappedSubject<[number], string>
-    private readonly skidBallCx: MappedSubject<[number], number>
-    private readonly skidLeftX: MappedSubject<[number], number>
-    private readonly skidRightX: MappedSubject<[number], number>
     private readonly fdVisibility: MappedSubject<[boolean], string>
     private readonly fdPitchTransform: MappedSubject<[number], string>
     private readonly fdBarkRotation: MappedSubject<[number], string>
@@ -82,20 +171,11 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     get verticalCenter(): boolean {
         return this.props.verticalCenter
     }
-    get bottomY(): number {
-        return this.props.bottomY
-    }
-    get showTurnRate(): boolean {
-        return this.props.showTurnRate
-    }
     get bankSizeRatio(): number {
         return this.props.bankSizeRatio
     }
     get isBackup(): boolean {
         return this.props.isBackup
-    }
-    get slipSkidDisplayMode(): SlipSkidDisplayMode {
-        return this.props.slipSkidDisplayMode
     }
 
     private get topY(): number {
@@ -120,7 +200,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
 
         this.pitch = ConsumerSubject.create(sub.on('pitch_deg').withPrecision(2), 0)
         this.bank = ConsumerSubject.create(sub.on('roll_deg').withPrecision(2), 0)
-        this.slipSkid = ConsumerSubject.create(sub.on('turn_coordinator_ball').withPrecision(2), 0)
         this.fdPitch = ConsumerSubject.create(sub.on('flight_director_pitch').withPrecision(2), 0)
         this.fdBark = ConsumerSubject.create(sub.on('flight_director_bank').withPrecision(2), 0)
         this.fdActive = ConsumerSubject.create(sub.on('flight_director_is_active'), false)
@@ -142,21 +221,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         this.horizonTransform = MappedSubject.create(
             ([p]) => `translate(0, ${p * pitchScale})`,
             this.pitch
-        )
-
-        this.skidBallCx = MappedSubject.create(
-            ([s]) => Math.min(Math.max(s, -1), 1) * 15,
-            this.slipSkid
-        )
-
-        this.skidLeftX = MappedSubject.create(
-            ([s]) => -15 + Math.min(Math.max(s, -1), 1) * 15,
-            this.slipSkid
-        )
-
-        this.skidRightX = MappedSubject.create(
-            ([s]) => 11 + Math.min(Math.max(s, -1), 1) * 15,
-            this.slipSkid
         )
 
         this.fdVisibility = MappedSubject.create(([a]) => (a ? 'inherit' : 'none'), this.fdActive)
@@ -187,7 +251,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     destroy(): void {
         this.pitch.destroy()
         this.bank.destroy()
-        this.slipSkid.destroy()
         this.fdPitch.destroy()
         this.fdBark.destroy()
         this.fdActive.destroy()
@@ -277,11 +340,9 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             {this.buildBankGroup()}
                         </g>
 
-                        {this.buildTurnRateIndicator()}
-                        {this.buildCursors()}
-                        {this.buildSlipSkid()}
                         {this.buildLowBankMode()}
                     </g>
+                    {this.buildCursors()}
                 </svg>
             </div>
         )
@@ -509,58 +570,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         return children
     }
 
-    private buildTurnRateIndicator(): VNode[] {
-        if (!this.showTurnRate) {
-            return []
-        }
-
-        const turnRateIndicatorY = this.bottomY - 15
-        const turnRateIndicatorHeight = 15
-        const markerW = 2
-        const markerX = 80
-
-        return [
-            <g id="turnRateIndicator">
-                <rect
-                    ref={this.turnRateIndicatorRef}
-                    class="turn-rate-indicator"
-                    fill="#eb008b"
-                    width="0"
-                    height={`${turnRateIndicatorHeight}`}
-                    x="0"
-                    y={`${turnRateIndicatorY}`}
-                />
-                <rect
-                    ref={this.turnRateLeftMarkerRef}
-                    class="turn-rate-left-marker"
-                    fill="white"
-                    width={`${markerW}`}
-                    height={`${turnRateIndicatorHeight}`}
-                    x={`${-markerX - markerW / 2}`}
-                    y={`${turnRateIndicatorY}`}
-                />
-                <rect
-                    ref={this.turnRateRightMarkerRef}
-                    class="turn-rate-right-marker"
-                    fill="white"
-                    width={`${markerW}`}
-                    height={`${turnRateIndicatorHeight}`}
-                    x={`${markerX - markerW / 2}`}
-                    y={`${turnRateIndicatorY}`}
-                />
-                <rect
-                    ref={this.turnRateCenterMarkerRef}
-                    class="turn-rate-center-marker"
-                    fill="black"
-                    width="1"
-                    height={`${turnRateIndicatorHeight}`}
-                    x="-0.5"
-                    y={`${turnRateIndicatorY}`}
-                />
-            </g>,
-        ]
-    }
-
     private buildCursors(): VNode[] {
         const topY = this.topY
 
@@ -638,52 +647,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                 fill="white"
             />,
         ]
-    }
-
-    private buildSlipSkid(): VNode[] {
-        const bottomY = this.bottomY
-        const topY = this.topY
-
-        switch (this.slipSkidDisplayMode) {
-            case SlipSkidDisplayMode.ROUND: {
-                const y = bottomY - 30
-                return [
-                    <g id="slipSkid">
-                        <circle
-                            class="slip-skid-ball"
-                            cx={this.skidBallCx}
-                            cy={`${y}`}
-                            r="10"
-                            fill="white"
-                            stroke="black"
-                        />
-                        <rect
-                            class="slip-skid-left-marker"
-                            x={this.skidLeftX}
-                            y={`${y - 11}`}
-                            width="4"
-                            height="22"
-                            fill="white"
-                            stroke="black"
-                        />
-                        <rect
-                            class="slip-skid-right-marker"
-                            x={this.skidRightX}
-                            y={`${y - 11}`}
-                            width="4"
-                            height="22"
-                            fill="white"
-                            stroke="black"
-                        />
-                    </g>,
-                ]
-            }
-            case SlipSkidDisplayMode.DEFAULT:
-            default:
-                return [
-                    <path id="slipSkid" d={`M-20 ${topY + 30} l4 -6 h32 l4 6 Z`} fill="white" />,
-                ]
-        }
     }
 
     private buildLowBankMode(): VNode[] {
