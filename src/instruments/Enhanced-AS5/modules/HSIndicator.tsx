@@ -139,7 +139,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
         // Wire ConsumerSubjects to the event bus
         const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
-        this.magneticHeading = ConsumerSubject.create(sub.on('hdg_deg').withPrecision(1), 0)
+        this.magneticHeading = ConsumerSubject.create(sub.on('actual_hdg_deg').withPrecision(1), 0)
         this.apHeadingBug = ConsumerSubject.create(
             sub.on('ap_heading_selected').withPrecision(1),
             0
