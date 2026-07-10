@@ -22,9 +22,10 @@ export default {
         name: "garminG5",
         globals: {
             "@microsoft/msfs-sdk": "msfssdk",
+            "@microsoft/msfs-garminsdk": "garminsdk",
         },
     },
-    external: ["@microsoft/msfs-sdk"],
+    external: ["@microsoft/msfs-sdk", "@microsoft/msfs-garminsdk"],
     plugins: [
         resolve(),
         typescript({
@@ -35,6 +36,13 @@ export default {
             name: "copy-static",
             writeBundle() {
                 copyFileSync("src/instruments/Enhanced-AS5/style.css", pathResolve(outDir, "AS5.css"))
+
+                copyFileSync("src/instruments/Enhanced-AS5/garminsdk-shim.js", pathResolve(outDir, "garminsdk-shim.js"))
+
+                copyFileSync(
+                    "node_modules/@microsoft/msfs-garminsdk/garminsdk-iife.js",
+                    pathResolve(outDir, "garminsdk.js")
+                )
 
                 copyFileSync("src/instruments/Enhanced-AS5/AS5.html", pathResolve(outDir, "AS5.html"))
 
