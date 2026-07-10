@@ -24,6 +24,7 @@
 
     /* Colors */
     --magenta: #d12bc7;
+    --cyan: #36c8d2;
 }
 
 @keyframes TemporaryShow {
@@ -634,6 +635,9 @@ as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
 
 @keyframes alt-alert-flash {
     0% {
+        opacity: 0;
+    }
+    50% {
         opacity: 1;
     }
     100% {
@@ -642,32 +646,24 @@ as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
 }
 
 .selected-altitude-bg-overlay {
-    fill: #36c8d2;
+    fill: var(--cyan);
     opacity: 0;
 }
 
 .selected-altitude-bg-overlay.alt-alert-within1000-flash {
-    animation: alt-alert-flash 500ms steps(2) infinite;
-    opacity: 1;
-}
-
-.selected-altitude-bg-overlay.alt-alert-within1000 {
+    animation: alt-alert-flash 1s step-end infinite;
     opacity: 1;
 }
 
 .selected-altitude-text {
-    fill: #36c8d2;
+    fill: var(--cyan);
 }
 
 .selected-altitude-text.alt-alert-within200-flash {
-    animation: alt-alert-flash 500ms steps(2) infinite;
+    animation: alt-alert-flash 1s step-end infinite;
 }
 
 .selected-altitude-text.alt-alert-deviation-flash {
-    animation: alt-alert-flash 500ms steps(2) infinite;
-    fill: yellow;
-}
-
-.selected-altitude-text.alt-alert-deviation {
+    animation: alt-alert-flash 1s step-end infinite;
     fill: yellow;
 }

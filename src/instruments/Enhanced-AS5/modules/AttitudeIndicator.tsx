@@ -95,7 +95,7 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
                 />
                 <rect
                     class="slip-skid-left-marker"
-                    x="-11"
+                    x="-13"
                     y="-15"
                     width="4"
                     height="30"
@@ -104,7 +104,7 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
                 />
                 <rect
                     class="slip-skid-right-marker"
-                    x="11"
+                    x="13"
                     y="-15"
                     width="4"
                     height="30"

@@ -1,4 +1,5 @@
 import {
+    AltitudeSelectEvents,
     DisplayComponent,
     FSComponent,
     VNode,
@@ -16,15 +17,19 @@ import {
     SubscribableMapFunctions,
     ArrayUtils,
     SubscribableUtils,
+    SetSubject,
+    DebounceTimer,
 } from '@microsoft/msfs-sdk'
 import { G5CustomEvents } from './G5CustomPublisher'
-
+import { AltitudeAlertState, AltitudeAlerter } from '@microsoft/msfs-garminsdk'
 export interface AltimeterComponentProps extends ComponentProps {
     bus: EventBus
     height: number
-    altitudeAlertState: Subject<string>
     verticalDeviationMode: Subject<string>
     verticalDeviationValue: Subject<number>
+    /** Optional callback for the altitude deviation aural alert.
+     *  Passed through to {@link SelectedAltitudeBox}. */
+    onDeviationAlert?: () => void
 }
 
 interface IndicatedAltDisplayBoxProps extends ComponentProps {
@@ -265,24 +270,155 @@ class VerticalSpeedIndicator extends DisplayComponent<VerticalSpeedIndicatorProp
     }
 }
 
+interface AltitudeAlerterEvents {
+    adc_indicated_alt_1: number
+}
+
+export interface SelectedAltitudeBoxProps extends ComponentProps {
+    /** The altitude alert state, driven by an {@link AltitudeAlerter}. */
+    altitudeAlertState: Subscribable<AltitudeAlertState>
+    /** Selected (reference) altitude, in feet. */
+    selectedAlt: Subscribable<number>
+    /** Callback invoked when the aircraft deviates from the selected altitude
+     *  by more than 200 ft after having captured it. Fires the aural alert. */
+    onDeviationAlert?: () => void
+}
+
+/**
+ * The fixed selected-altitude display box at the top of the altimeter tape.
+ *
+ * Alert state machine is driven by the garminsdk {@link AltitudeAlerter};
+ * this component only manages CSS class toggling for the visual alert
+ * indications, following the same pattern as the G3X Touch
+ * SelectedAltitudeDisplay.
+ */
+class SelectedAltitudeBox extends DisplayComponent<SelectedAltitudeBoxProps> {
+    private static readonly ALERT_FLASH_DURATION = 5000
+
+    private readonly bgClassSet = SetSubject.create(['selected-altitude-bg-overlay'])
+    private readonly textClassSet = SetSubject.create(['selected-altitude-text'])
+
+    private readonly animationTimer = new DebounceTimer()
+
+    private lastAlertState: AltitudeAlertState | undefined = undefined
+
+    private alertStateSub?: Subscription
+
+    public onAfterRender(): void {
+        this.alertStateSub = this.props.altitudeAlertState.sub(state => {
+            this.bgClassSet.delete('alt-alert-within1000-flash')
+            this.bgClassSet.delete('alt-alert-within1000')
+            this.textClassSet.delete('alt-alert-deviation-flash')
+            this.textClassSet.delete('alt-alert-deviation')
+
+            if (
+                !(
+                    state === AltitudeAlertState.Captured &&
+                    this.lastAlertState === AltitudeAlertState.Within200
+                )
+            ) {
+                this.textClassSet.delete('alt-alert-within200-flash')
+                this.animationTimer.clear()
+            }
+
+            switch (state) {
+                case AltitudeAlertState.Within1000:
+                    if (this.lastAlertState === AltitudeAlertState.Armed) {
+                        this.bgClassSet.add('alt-alert-within1000-flash')
+                        this.animationTimer.schedule(() => {
+                            this.bgClassSet.delete('alt-alert-within1000-flash')
+                            this.bgClassSet.add('alt-alert-within1000')
+                        }, SelectedAltitudeBox.ALERT_FLASH_DURATION)
+                    } else {
+                        this.bgClassSet.add('alt-alert-within1000')
+                    }
+                    break
+
+                case AltitudeAlertState.Within200:
+                    if (this.lastAlertState === AltitudeAlertState.Within1000) {
+                        this.textClassSet.add('alt-alert-within200-flash')
+                        this.animationTimer.schedule(() => {
+                            this.textClassSet.delete('alt-alert-within200-flash')
+                        }, SelectedAltitudeBox.ALERT_FLASH_DURATION)
+                    }
+                    break
+
+                case AltitudeAlertState.Deviation:
+                    this.textClassSet.add('alt-alert-deviation-flash')
+                    this.animationTimer.schedule(() => {
+                        this.textClassSet.delete('alt-alert-deviation-flash')
+                        this.textClassSet.add('alt-alert-deviation')
+                    }, SelectedAltitudeBox.ALERT_FLASH_DURATION)
+                    this.props.onDeviationAlert?.()
+                    break
+            }
+
+            this.lastAlertState = state
+        }, true)
+    }
+
+    public destroy(): void {
+        this.animationTimer.clear()
+        this.alertStateSub?.destroy()
+        super.destroy()
+    }
+
+    public render(): VNode {
+        return (
+            <>
+                <rect
+                    class="selected-altitude-shadow"
+                    fill="url(#underShadowGradient)"
+                    x="0"
+                    y="-36"
+                    width={320}
+                    height="30"
+                />
+                <rect
+                    class="selected-altitude-background"
+                    x="0"
+                    y="-100"
+                    width={320}
+                    height="60"
+                    fill="#1a1d21"
+                    stroke="white"
+                    stroke-width="3"
+                />
+                <rect class={this.bgClassSet} x="0" y="-100" width={320} height="60" />
+                <polygon
+                    class="selected-altitude-fixed-bug"
+                    points="10,-90 24,-90 24,-76 15,-70 24,-64 24,-50 10,-50"
+                    fill="#36c8d2"
+                />
+                <text
+                    class={this.textClassSet}
+                    x="250"
+                    y="-50"
+                    font-size="56"
+                    font-family="OpenSans-Bold"
+                    text-anchor="end"
+                >
+                    {this.props.selectedAlt.map(a => Math.round(a).toString())}
+                </text>
+            </>
+        )
+    }
+}
+
 export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps> {
     private readonly rootRef = FSComponent.createRef<SVGElement>()
     private readonly indicatedAltBoxRef = FSComponent.createRef<IndicatedAltDisplayBox>()
     private readonly minimumAltitudeBugRef = FSComponent.createRef<SVGElement>()
-    private readonly trendElementRef = FSComponent.createRef<SVGElement>()
     private readonly verticalDeviationTextRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineBackgroundRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineScaleRef = FSComponent.createRef<SVGElement>()
     private readonly groundLineAltRef = FSComponent.createRef<SVGElement>()
     private readonly bugsGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedAltitudeFixedBugRef = FSComponent.createRef<SVGElement>()
     private readonly pressureBackgroundRef = FSComponent.createRef<SVGElement>()
 
     private gradTextRefs: NodeReference<SVGElement>[] = []
     private gradRectRefs: NodeReference<SVGElement>[] = []
-
-    private readonly gradCount: number
 
     // --- G3X‑style tape layout ---
     /** Visible altitude window in feet (maps to the pixel height of the tape viewport). */
@@ -307,11 +443,11 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly verticalSpd: ConsumerSubject<number>
     private readonly refAltitude: ConsumerSubject<number>
 
+    private readonly altitudeAlerter: AltitudeAlerter
+
     // Derived Subscribables for declarative JSX attribute bindings
     private readonly tapeTransform: MappedSubject<[number], string>
     private readonly bugTransform: MappedSubject<[number, number], string>
-    private readonly alertFill: MappedSubject<[string], string>
-    private readonly alertBgFill: MappedSubject<[string], string>
     private readonly deviationVisibility: MappedSubject<[string], string>
     private readonly chevronDisplay: MappedSubject<[string], string>
     private readonly diamondDisplay: MappedSubject<[string], string>
@@ -375,19 +511,29 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             29.92
         )
         this.verticalSpd = ConsumerSubject.create(sub.on('vertical_speed').withPrecision(1), 0)
-        this.refAltitude = ConsumerSubject.create(
-            sub.on('ap_altitude_selected').withPrecision(0),
-            0
-        )
+        this.refAltitude = ConsumerSubject.create(sub.on('ap_altitude_selected'), 0)
+        sub.on('indicated_alt')
+            .withPrecision(0)
+            .handle(alt =>
+                props.bus
+                    .getPublisher<AltitudeAlerterEvents>()
+                    .pub('adc_indicated_alt_1', alt, true, true)
+            )
+        sub.on('ap_altitude_selected')
+            .withPrecision(1)
+            .handle(() =>
+                props.bus
+                    .getPublisher<AltitudeSelectEvents>()
+                    .pub('alt_select_is_initialized', true, true, true)
+            )
 
-        // --- G3X‑style tape sizing ---
+        this.altitudeAlerter = new AltitudeAlerter(1, this.props.bus, 1)
+
         this.TAPE_WINDOW_PX = props.height - 100
         this.PX_PER_FT = this.TAPE_WINDOW_PX / this.ALT_WINDOW_FT
         this.MAJOR_TICK_COUNT = Math.ceil(this.ALT_WINDOW_FT / this.MAJOR_TICK_INTERVAL) * 2 + 1
         this.TAPE_FT = (this.MAJOR_TICK_COUNT - 1) * this.MAJOR_TICK_INTERVAL
-        this.gradCount = this.MAJOR_TICK_COUNT
 
-        // --- currentMinimum: lowest altitude shown on tape (G3X-style hysteresis) ---
         const recenterThreshold = this.TAPE_FT * 0.25 // 200 ft on each side
         this.currentMinimumSub = this.indicatedAlt.sub(alt => {
             const oldMin = this.currentMinimum.get()
@@ -404,7 +550,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             }
         }, true)
 
-        // --- Graduation text subjects (G3X‑style: labels are currentMinimum + i*100) ---
         for (let i = 0; i < this.MAJOR_TICK_COUNT; i++) {
             const idx = i
             this.gradTextSubjects.push(
@@ -415,7 +560,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             )
         }
 
-        // --- Tape transform: centre indicated altitude on the cursor ---
         const centerPx = (props.height - 100) / 2
         this.tapeTransform = MappedSubject.create(
             ([alt, min]) => {
@@ -427,7 +571,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             this.currentMinimum
         )
 
-        // --- Selected-altitude bug transform ---
         this.bugTransform = MappedSubject.create(
             ([refAlt, indAlt]) => {
                 const diffPx = (indAlt - refAlt) * this.PX_PER_FT
@@ -435,22 +578,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             },
             this.refAltitude,
             this.indicatedAlt
-        )
-
-        this.alertFill = MappedSubject.create(([state]) => {
-            switch (state) {
-                case 'Empty':
-                    return 'transparent'
-                case 'YellowText':
-                    return 'yellow'
-                default:
-                    return '#36c8d2'
-            }
-        }, props.altitudeAlertState)
-
-        this.alertBgFill = MappedSubject.create(
-            ([state]) => (state === 'BlueBackground' ? '#36c8d2' : '#1a1d21'),
-            props.altitudeAlertState
         )
 
         this.deviationVisibility = MappedSubject.create(
@@ -480,6 +607,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     }
 
     public destroy(): void {
+        this.altitudeAlerter.destroy()
         this.indicatedAlt.destroy()
         this.baroSetting.destroy()
         this.verticalSpd.destroy()
@@ -487,8 +615,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
         this.tapeTransform.destroy()
         this.bugTransform.destroy()
-        this.alertFill.destroy()
-        this.alertBgFill.destroy()
         this.deviationVisibility.destroy()
         this.chevronDisplay.destroy()
         this.diamondDisplay.destroy()
@@ -502,6 +628,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     }
 
     onAfterRender(): void {
+        this.altitudeAlerter.init()
         this.indicatedAltBoxValue.resume()
     }
 
@@ -633,41 +760,11 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                             />
                         </g>
                     </svg>
-                    <rect
-                        class="selected-altitude-shadow"
-                        fill="url(#underShadowGradient)"
-                        x="0"
-                        y="-36"
-                        width={320}
-                        height="30"
+                    <SelectedAltitudeBox
+                        altitudeAlertState={this.altitudeAlerter.state}
+                        selectedAlt={this.refAltitude}
+                        onDeviationAlert={this.props.onDeviationAlert}
                     />
-                    <rect
-                        class="selected-altitude-background"
-                        x="0"
-                        y="-100"
-                        width={320}
-                        height="60"
-                        fill={this.alertBgFill}
-                        stroke="white"
-                        stroke-width="3"
-                    />
-                    <polygon
-                        ref={this.selectedAltitudeFixedBugRef}
-                        class="selected-altitude-fixed-bug"
-                        points="10,-90 24,-90 24,-76 15,-70 24,-64 24,-50 10,-50"
-                        fill="#36c8d2"
-                    />
-                    <text
-                        class="selected-altitude-text"
-                        x="250"
-                        y="-50"
-                        fill={this.alertFill}
-                        font-size="56"
-                        font-family={GF_font}
-                        text-anchor="end"
-                    >
-                        {this.refAltitude.map(a => Math.round(a).toString())}
-                    </text>
                     <rect
                         ref={this.pressureBackgroundRef}
                         class="pressure-background"
