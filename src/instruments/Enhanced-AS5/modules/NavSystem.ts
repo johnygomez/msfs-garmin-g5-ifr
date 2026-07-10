@@ -2334,7 +2334,6 @@ export class Annunciations extends NavSystemElement {
     alert: boolean
     needReload: boolean
     rootElementName: string
-    isAnnunciationsManager: boolean
     engineType: any
     annunciations: HTMLElement
 
@@ -2345,7 +2344,6 @@ export class Annunciations extends NavSystemElement {
         this.alert = false
         this.needReload = true
         this.rootElementName = 'Annunciations'
-        this.isAnnunciationsManager = false
     }
 
     init(_root) {
@@ -2360,10 +2358,6 @@ export class Annunciations extends NavSystemElement {
                     this.addXmlMessage(annunciations[i])
                 }
             }
-        }
-        if (!SimVar.GetSimVarValue('L:Annunciations_Manager_Initialized', SimVarValueType.Bool)) {
-            SimVar.SetSimVarValue('L:Annunciations_Manager_Initialized', SimVarValueType.Bool, true)
-            this.isAnnunciationsManager = true
         }
     }
 
@@ -2505,7 +2499,7 @@ export class Cabin_Annunciations extends Annunciations {
                 if (message.Type == Annunciation_MessageType.CAUTION && masterCautionAcknowledged) {
                     this.needReload = true
                     message.Acknowledged = true
-                    if (this.firstAcknowledge && this.isAnnunciationsManager) {
+                    if (this.firstAcknowledge) {
                         if (this.gps.playInstrumentSound('aural_warning_ok'))
                             this.firstAcknowledge = false
                     }
@@ -2533,11 +2527,7 @@ export class Cabin_Annunciations extends Annunciations {
                             break
                         case Annunciation_MessageType.CAUTION:
                             this.displayCaution.push(message)
-                            if (
-                                !message.Acknowledged &&
-                                !this.isPlayingWarningTone &&
-                                this.isAnnunciationsManager
-                            ) {
+                            if (!message.Acknowledged && !this.isPlayingWarningTone) {
                                 const res = this.gps.playInstrumentSound('tone_caution')
                                 if (res) this.isPlayingWarningTone = true
                             }
@@ -2584,7 +2574,6 @@ export class Cabin_Annunciations extends Annunciations {
             )
         if (this.needReload) {
             let warningOn = 0
-            let cautionOn = 0
             let messages = ''
             for (let i = this.displayWarning.length - 1; i >= 0; i--) {
                 messages += '<div class="Warning'
@@ -2598,7 +2587,6 @@ export class Cabin_Annunciations extends Annunciations {
                 messages += '<div class="Caution'
                 if (!this.displayCaution[i].Acknowledged) {
                     messages += '_Blink'
-                    cautionOn = 1
                 }
                 messages += '">' + this.displayCaution[i].Text + '</div>'
             }
@@ -2606,62 +2594,12 @@ export class Cabin_Annunciations extends Annunciations {
                 messages += '<div class="Advisory">' + this.displayAdvisory[i].Text + '</div>'
             }
             this.warningTone = warningOn > 0
-            if (this.isAnnunciationsManager) {
-                const masterWarningActive = SimVar.GetSimVarValue(
-                    'MASTER WARNING ACTIVE',
-                    SimVarValueType.Bool
-                )
-                if (this.displayWarning.length > 0 != masterWarningActive || warningOn) {
-                    SimVar.SetSimVarValue(
-                        'K:MASTER_WARNING_SET',
-                        SimVarValueType.Bool,
-                        this.displayWarning.length > 0
-                    )
-                }
-                if (this.displayWarning.length > 0 && !warningOn) {
-                    SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                }
-                const masterCautionActive = SimVar.GetSimVarValue(
-                    'MASTER CAUTION ACTIVE',
-                    SimVarValueType.Bool
-                )
-                if (this.displayCaution.length > 0 != masterCautionActive || cautionOn) {
-                    SimVar.SetSimVarValue(
-                        'K:MASTER_CAUTION_SET',
-                        SimVarValueType.Bool,
-                        this.displayCaution.length > 0
-                    )
-                }
-                if (this.displayCaution.length > 0 && !cautionOn) {
-                    SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                }
-                SimVar.SetSimVarValue(
-                    'L:Generic_Master_Warning_Active',
-                    SimVarValueType.Bool,
-                    warningOn
-                )
-                SimVar.SetSimVarValue(
-                    'L:Generic_Master_Caution_Active',
-                    SimVarValueType.Bool,
-                    cautionOn
-                )
-            }
             if (this.annunciations) this.annunciations.innerHTML = messages
             this.needReload = false
         }
-        if (this.warningTone && !this.isPlayingWarningTone && this.isAnnunciationsManager) {
+        if (this.warningTone && !this.isPlayingWarningTone) {
             const res = this.gps.playInstrumentSound('tone_warning')
             if (res) this.isPlayingWarningTone = true
-        }
-    }
-    onEvent(_event) {
-        switch (_event) {
-            case 'Master_Caution_Push':
-                SimVar.SetSimVarValue('K:MASTER_CAUTION_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                break
-            case 'Master_Warning_Push':
-                SimVar.SetSimVarValue('K:MASTER_WARNING_ACKNOWLEDGE', SimVarValueType.Bool, 1)
-                break
         }
     }
 
@@ -2681,12 +2619,6 @@ export class Cabin_Annunciations extends Annunciations {
         this.displayCaution = []
         this.displayWarning = []
         this.displayAdvisory = []
-        if (this.isAnnunciationsManager) {
-            SimVar.SetSimVarValue('K:MASTER_WARNING_OFF', SimVarValueType.Bool, 1)
-            SimVar.SetSimVarValue('K:MASTER_CAUTION_OFF', SimVarValueType.Bool, 1)
-            SimVar.SetSimVarValue('L:Generic_Master_Warning_Active', SimVarValueType.Bool, 0)
-            SimVar.SetSimVarValue('L:Generic_Master_Caution_Active', SimVarValueType.Bool, 0)
-        }
         this.firstAcknowledge = true
         this.needReload = true
     }
