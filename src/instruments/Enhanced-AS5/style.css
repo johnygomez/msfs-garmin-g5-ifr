@@ -25,6 +25,8 @@
     /* Colors */
     --magenta: #d12bc7;
     --cyan: #36c8d2;
+    --yellow: yellow;
+    --green: lime;
 }
 
 @keyframes TemporaryShow {
@@ -633,16 +635,55 @@ as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
 
 /* ---- Selected altitude box blink animations ---- */
 
-@keyframes alt-alert-flash {
-    0% {
-        opacity: 0;
-    }
-    50% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0;
-    }
+@keyframes alt-alert-within1000-flash {
+  0% {
+    color: var(--cyan);
+    fill: var(--cyan);
+  }
+
+  50% {
+    color: var(--cyan);
+    fill: var(--cyan);
+  }
+
+  100% {
+    color: transparent;
+    fill: transparent;
+  }
+}
+
+@keyframes alt-alert-within200-flash {
+  0% {
+    color: var(--cyan);
+    fill: var(--cyan);
+  }
+
+  50% {
+    color: var(--cyan);
+    fill: var(--cyan);
+  }
+
+  100% {
+    color: transparent;
+    fill: transparent;
+  }
+}
+
+@keyframes alt-alert-deviation-flash {
+  0% {
+    color: var(--yellow);
+    fill: var(--yellow);
+  }
+
+  50% {
+    color: var(--yellow);
+    fill: var(--yellow);
+  }
+
+  100% {
+    color: transparent;
+    fill: transparent;
+  }
 }
 
 .selected-altitude-bg-overlay {
@@ -651,7 +692,7 @@ as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
 }
 
 .selected-altitude-bg-overlay.alt-alert-within1000-flash {
-    animation: alt-alert-flash 1s step-end infinite;
+    animation: alt-alert-within1000-flash 1s infinite;
     opacity: 1;
 }
 
@@ -660,10 +701,10 @@ as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
 }
 
 .selected-altitude-text.alt-alert-within200-flash {
-    animation: alt-alert-flash 1s step-end infinite;
+    animation: alt-alert-within200-flash 1s infinite;
 }
 
 .selected-altitude-text.alt-alert-deviation-flash {
-    animation: alt-alert-flash 1s step-end infinite;
-    fill: yellow;
+    animation: alt-alert-deviation-flash 1s infinite;
+    fill: var(--yellow);
 }
