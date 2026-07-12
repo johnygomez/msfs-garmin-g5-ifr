@@ -1,4 +1,5 @@
 import { DisplayComponent, FSComponent, VNode, ComponentProps } from '@microsoft/msfs-sdk'
+import { Colors } from './Utils'
 
 export interface HighlightElementRefs {
     root: SVGElement
@@ -50,16 +51,16 @@ export class HighlightComponent extends DisplayComponent<HighlightProps> {
                 <path
                     ref={this.backgroundRef}
                     d=""
-                    fill="black"
+                    fill={Colors.BLACK}
                     fill-opacity="0.30"
                     fill-rule="evenodd"
                 />
                 <path
                     ref={this.rectanglesRef}
                     d=""
-                    stroke="#01b0f1"
+                    stroke={Colors.FOCUS_BLUE}
                     stroke-width="6"
-                    fill="none"
+                    fill={Colors.NONE}
                     stroke-linecap="square"
                 />
             </svg>

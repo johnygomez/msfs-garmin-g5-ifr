@@ -6,15 +6,16 @@ import {
     Subject,
     Subscription,
 } from '@microsoft/msfs-sdk'
+import { Colors } from './Utils'
 
 export type APDisplayMode = 'RedFlash' | 'YellowFlash' | 'Red' | 'Yellow' | ''
 
 const DISPLAY_COLORS: Record<string, string> = {
-    '': '#32bd28',
-    Red: 'red',
-    Yellow: 'yellow',
-    RedFlash: 'red',
-    YellowFlash: 'yellow',
+    '': Colors.GREEN,
+    Red: Colors.RED,
+    Yellow: Colors.YELLOW,
+    RedFlash: Colors.RED,
+    YellowFlash: Colors.YELLOW,
 }
 
 export interface APInfoBarSubjects {
@@ -81,9 +82,6 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
     render(): VNode {
         const width = 512
         const height = 18
-        const white = '#F3F3F3'
-        const green = '#32bd28'
-        const black = '#020202'
         const fontFamily = 'OpenSans-Bold'
         const fontSize = 18
         const textBase = 15
@@ -102,7 +100,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                     y="0"
                     width={`${width}`}
                     height={`${height}`}
-                    fill={black}
+                    fill={Colors.BLACK}
                 />
                 <rect
                     class="underline"
@@ -110,7 +108,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                     y={`${height - 1}`}
                     height="1"
                     width={`${width}`}
-                    fill={white}
+                    fill={Colors.WHITE}
                 />
                 <rect
                     class="divider"
@@ -118,7 +116,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                     y="2"
                     height={`${height - 6}`}
                     width="1"
-                    fill={white}
+                    fill={Colors.WHITE}
                 />
                 <rect
                     class="divider"
@@ -126,12 +124,12 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                     y="2"
                     height={`${height - 6}`}
                     width="1"
-                    fill={white}
+                    fill={Colors.WHITE}
                 />
                 <text
                     ref={this.lateralArmedRef}
                     id="AP_LateralArmed"
-                    fill={white}
+                    fill={Colors.WHITE}
                     x="20"
                     y={`${textBase}`}
                     font-size={`${fontSize}`}
@@ -142,7 +140,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                 <text
                     ref={this.lateralActiveRef}
                     id="AP_LateralActive"
-                    fill={green}
+                    fill={Colors.GREEN}
                     x="95"
                     y={`${textBase}`}
                     font-size={`${fontSize}`}
@@ -153,7 +151,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                 <text
                     ref={this.statusRef}
                     id="AP_Status"
-                    fill={green}
+                    fill={Colors.GREEN}
                     x="195"
                     y={`${textBase}`}
                     font-size={`${fontSize}`}
@@ -164,7 +162,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                 <text
                     ref={this.verticalActiveRef}
                     id="AP_VerticalActive"
-                    fill={green}
+                    fill={Colors.GREEN}
                     x="280"
                     y={`${textBase}`}
                     font-size={`${fontSize}`}
@@ -175,7 +173,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                 <text
                     ref={this.modeReferenceRef}
                     id="AP_ModeReference"
-                    fill={green}
+                    fill={Colors.GREEN}
                     x="330"
                     y={`${textBase}`}
                     font-size={`${fontSize}`}
@@ -186,7 +184,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                 <text
                     ref={this.armedRef}
                     id="AP_Armed"
-                    fill={white}
+                    fill={Colors.WHITE}
                     x="410"
                     y={`${textBase}`}
                     font-size={`${fontSize}`}
@@ -197,7 +195,7 @@ export class APInfoBarComponent extends DisplayComponent<APInfoBarProps> {
                 <text
                     ref={this.armedReferenceRef}
                     id="AP_ArmedReference"
-                    fill={white}
+                    fill={Colors.WHITE}
                     x="480"
                     y={`${textBase}`}
                     font-size={`${fontSize}`}

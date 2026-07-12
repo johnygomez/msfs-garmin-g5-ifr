@@ -11,6 +11,7 @@ import {
     Subscribable,
 } from '@microsoft/msfs-sdk'
 import { G5CustomEvents } from './G5CustomPublisher'
+import { Colors } from './Utils'
 
 export interface TurnRateIndicatorProps extends ComponentProps {
     turnRate: Subscribable<number>
@@ -90,8 +91,8 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
                     cx={this.ballCx}
                     cy="0"
                     r="10"
-                    fill="white"
-                    stroke="black"
+                    fill={Colors.WHITE}
+                    stroke={Colors.BLACK}
                 />
                 <rect
                     class="slip-skid-left-marker"
@@ -99,8 +100,8 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
                     y="-15"
                     width="4"
                     height="30"
-                    fill="white"
-                    stroke="black"
+                    fill={Colors.WHITE}
+                    stroke={Colors.BLACK}
                 />
                 <rect
                     class="slip-skid-right-marker"
@@ -108,8 +109,8 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
                     y="-15"
                     width="4"
                     height="30"
-                    fill="white"
-                    stroke="black"
+                    fill={Colors.WHITE}
+                    stroke={Colors.BLACK}
                 />
             </svg>
         )
@@ -162,10 +163,10 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     private readonly lowBankMaskPath: MappedSubject<[number], string>
     private readonly lowBankColorDisplay: MappedSubject<[number], string>
 
-    private readonly horizonTopColor = '#3062C8'
-    private readonly horizonBottomColor = '#864B01'
-    private readonly horizonTopColorLight = '#5F8AE0'
-    private readonly horizonBottomColorLight = '#A66C1D'
+    private readonly horizonTopColor = Colors.SKY_BLUE
+    private readonly horizonBottomColor = Colors.GROUND_BROWN
+    private readonly horizonTopColorLight = Colors.SKY_BLUE_LIGHT
+    private readonly horizonBottomColorLight = Colors.GROUND_BROWN_LIGHT
     private readonly fontFamily = 'OpenSans-Bold'
 
     get verticalCenter(): boolean {
@@ -198,8 +199,8 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         super(props)
         const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
 
-        this.pitch = ConsumerSubject.create(sub.on('pitch_deg').withPrecision(2), 0)
-        this.bank = ConsumerSubject.create(sub.on('roll_deg').withPrecision(2), 0)
+        this.pitch = ConsumerSubject.create(sub.on('actual_pitch_deg').withPrecision(2), 0)
+        this.bank = ConsumerSubject.create(sub.on('actual_roll_deg').withPrecision(2), 0)
         this.fdPitch = ConsumerSubject.create(sub.on('flight_director_pitch').withPrecision(2), 0)
         this.fdBark = ConsumerSubject.create(sub.on('flight_director_bank').withPrecision(2), 0)
         this.fdActive = ConsumerSubject.create(sub.on('flight_director_is_active'), false)
@@ -407,7 +408,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                 gradations.push(
                     <rect
                         class="attitude-pitch-gradation"
-                        fill="white"
+                        fill={Colors.WHITE}
                         x={-width / 2}
                         y={bankSizeRatio * angle - height / 2}
                         width={width}
@@ -427,7 +428,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             text-anchor="end"
                             font-size={`${fontSize}`}
                             font-family={this.fontFamily}
-                            fill="white"
+                            fill={Colors.WHITE}
                         >{`${Math.abs(angle)}`}</text>
                     )
 
@@ -442,7 +443,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             text-anchor="start"
                             font-size={`${fontSize}`}
                             font-family={this.fontFamily}
-                            fill="white"
+                            fill={Colors.WHITE}
                         >{`${Math.abs(angle)}`}</text>
                     )
                 }
@@ -452,7 +453,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                     path += `L${bigWidth / 2} ${bankSizeRatio * angle - bigHeight / 2} l${-smallWidth} 0 `
                     path += `L0 ${bankSizeRatio * nextAngle + 20} `
                     path += `L${-bigWidth / 2 + smallWidth} ${bankSizeRatio * angle - bigHeight / 2} l${-smallWidth} 0 Z`
-                    gradations.push(<path d={path} fill="red" />)
+                    gradations.push(<path d={path} fill={Colors.RED} />)
                 }
 
                 if (angle >= unusualAttitudeUpperLimit && nextAngle <= maxDash) {
@@ -460,7 +461,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                     path += `L${bigWidth / 2} ${bankSizeRatio * nextAngle + bigHeight / 2} l${-smallWidth} 0 `
                     path += `L0 ${bankSizeRatio * angle - 20} `
                     path += `L${-bigWidth / 2 + smallWidth} ${bankSizeRatio * nextAngle + bigHeight / 2} l${-smallWidth} 0 Z`
-                    gradations.push(<path d={path} fill="red" />)
+                    gradations.push(<path d={path} fill={Colors.RED} />)
                 }
             }
             angle = nextAngle
@@ -475,30 +476,30 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                 <path
                     class="flight-director-outer-left"
                     d="M-100 40 -100 20 0 0 -85 40 Z"
-                    fill="#d12bc7"
-                    stroke="black"
+                    fill={Colors.MAGENTA}
+                    stroke={Colors.BLACK}
                     stroke-width="1.5"
                     transform={this.fdPitchTransform}
                 />
                 <path
                     class="flight-director-outer-left-line"
                     d="M-100 20 L-85 40 Z"
-                    stroke="black"
+                    stroke={Colors.BLACK}
                     stroke-width="1.5"
                     transform={this.fdPitchTransform}
                 />
                 <path
                     class="flight-director-outer-right"
                     d="M100 40 100 20 0 0 85 40 Z"
-                    fill="#d12bc7"
-                    stroke="black"
+                    fill={Colors.MAGENTA}
+                    stroke={Colors.BLACK}
                     stroke-width="1.5"
                     transform={this.fdPitchTransform}
                 />
                 <path
                     class="flight-director-outer-right-line"
                     d="M100 20 L85 40 Z"
-                    stroke="black"
+                    stroke={Colors.BLACK}
                     stroke-width="1.5"
                     transform={this.fdPitchTransform}
                 />
@@ -516,7 +517,11 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         const children: VNode[] = []
 
         children.push(
-            <path class="attitude_bank_triangle" d={`M0 ${topY} l -10 -20 l20 0 Z`} fill="white" />
+            <path
+                class="attitude_bank_triangle"
+                d={`M0 ${topY} l -10 -20 l20 0 Z`}
+                fill={Colors.WHITE}
+            />
         )
 
         const bigDashWidth = 3
@@ -529,7 +534,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                     y={-radius - bigDashHeight}
                     height={`${bigDashHeight}`}
                     width={`${bigDashWidth}`}
-                    fill="white"
+                    fill={Colors.WHITE}
                     transform={`rotate(${bigDashes[i]},0,0)`}
                 />
             )
@@ -545,7 +550,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                     y={-radius - smallDashHeight}
                     height={`${smallDashHeight}`}
                     width={`${smallDashWidth}`}
-                    fill="white"
+                    fill={Colors.WHITE}
                     transform={`rotate(${smallDashes[i]},0,0)`}
                 />
             )
@@ -562,7 +567,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                 class="attitude-arc"
                 d={arcD}
                 fill="none"
-                stroke="white"
+                stroke={Colors.WHITE}
                 stroke-width="3"
             />
         )
@@ -587,56 +592,56 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                     ref={this.cursorLeftUpperRef}
                     class="cursor-left-upper"
                     d="M-170 0 l0 -5 l40 0 l10 5 Z"
-                    fill="#ffff00"
-                    stroke="#000000"
+                    fill={Colors.YELLOW}
+                    stroke={Colors.BLACK}
                     stroke-width="1"
                 />
                 <path
                     ref={this.cursorRightLowerRef}
                     class="cursor-right-lower"
                     d="M170 0 l0 5 l-40 0 l-10 -5 Z"
-                    fill="#cccc00"
-                    stroke="#000000"
+                    fill={Colors.CURSOR_YELLOW_DARK}
+                    stroke={Colors.BLACK}
                     stroke-width="1"
                 />
                 <path
                     ref={this.cursorRightUpperRef}
                     class="cursor-right-upper"
                     d="M170 0 l0 -5 l-40 0 l-10 5 Z"
-                    fill="#ffff00"
-                    stroke="#000000"
+                    fill={Colors.YELLOW}
+                    stroke={Colors.BLACK}
                     stroke-width="1"
                 />
                 <path
                     ref={this.cursorTriangleInnerLeftRef}
                     class="cursor-triangle-inner-left"
                     d="M-60 40 -38 40 L0 0 Z"
-                    fill="#cccc00"
-                    stroke="#000000"
+                    fill={Colors.CURSOR_YELLOW_DARK}
+                    stroke={Colors.BLACK}
                     stroke-width="1"
                 />
                 <path
                     ref={this.cursorTriangleOuterLeftRef}
                     class="cursor-triangle-outer-left"
                     d="M-85 40 -60 40 L0 0 Z"
-                    fill="#ffff00"
-                    stroke="#000000"
+                    fill={Colors.YELLOW}
+                    stroke={Colors.BLACK}
                     stroke-width="1"
                 />
                 <path
                     ref={this.cursorTriangleInnerRightRef}
                     class="cursor-triangle-inner-left"
                     d="M60 40 38 40 L0 0 Z"
-                    fill="#cccc00"
-                    stroke="#000000"
+                    fill={Colors.CURSOR_YELLOW_DARK}
+                    stroke={Colors.BLACK}
                     stroke-width="1"
                 />
                 <path
                     ref={this.cursorTriangleOuterRightRef}
                     class="cursor-triangle-outer-right"
                     d="M85 40 60 40 L0 0 Z"
-                    fill="#ffff00"
-                    stroke="#000000"
+                    fill={Colors.YELLOW}
+                    stroke={Colors.BLACK}
                     stroke-width="1"
                 />
             </g>,

@@ -9,6 +9,7 @@ import {
     AhrsEvents,
 } from '@microsoft/msfs-sdk'
 import { G5CustomEvents } from './G5CustomPublisher'
+import { Colors } from './Utils'
 
 export interface HorizontalCompassProps extends ComponentProps {
     bus: EventBus
@@ -47,9 +48,9 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
         super(props)
         const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
 
-        this.heading = ConsumerSubject.create(sub.on('actual_hdg_deg').withPrecision(2), 0)
-        this.track = ConsumerSubject.create(sub.on('track_angle_magnetic').withPrecision(2), 0)
-        this.course = ConsumerSubject.create(sub.on('ap_heading_selected').withPrecision(2), 0)
+        this.heading = ConsumerSubject.create(sub.on('actual_hdg_deg').withPrecision(1), 0)
+        this.track = ConsumerSubject.create(sub.on('track_angle_magnetic').withPrecision(1), 0)
+        this.course = ConsumerSubject.create(sub.on('ap_heading_selected').withPrecision(1), 0)
 
         const pxPerDeg = props.spacing / 10
 
@@ -131,10 +132,10 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
         const center = this.center
         const spacing = this.spacing
         const gradStops = [
-            { offset: '0%', stopColor: 'rgb(9, 39, 61)', stopOpacity: '0.8' },
-            { offset: '5%', stopColor: 'rgb(9, 39, 61)', stopOpacity: '0' },
-            { offset: '95%', stopColor: 'rgb(9, 39, 61)', stopOpacity: '0' },
-            { offset: '100%', stopColor: 'rgb(9, 39, 61)', stopOpacity: '0.8' },
+            { offset: '0%', stopColor: Colors.SHADOW_COMPASS_BLUE, stopOpacity: '0.8' },
+            { offset: '5%', stopColor: Colors.SHADOW_COMPASS_BLUE, stopOpacity: '0' },
+            { offset: '95%', stopColor: Colors.SHADOW_COMPASS_BLUE, stopOpacity: '0' },
+            { offset: '100%', stopColor: Colors.SHADOW_COMPASS_BLUE, stopOpacity: '0.8' },
         ]
 
         return (
@@ -165,7 +166,7 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                     y="0"
                     width={width}
                     height="20"
-                    fill="#1a1d21"
+                    fill={Colors.PFD_BOX_BG}
                     fill-opacity="0.25"
                 />
                 <g
@@ -179,7 +180,7 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                             <text
                                 ref={this.digitRefs[i]}
                                 key={`digit-${i}`}
-                                fill="white"
+                                fill={Colors.WHITE}
                                 text-anchor="middle"
                                 x={center + spacing * idx}
                                 y="13"
@@ -200,7 +201,7 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                                 y={idx % 5 === 0 ? '15' : '18.5'}
                                 width="1"
                                 height={idx % 5 === 0 ? '5' : '1.5'}
-                                fill="white"
+                                fill={Colors.WHITE}
                             />
                         )
                     })}
@@ -208,29 +209,29 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                 <polygon
                     class="course-bug"
                     points={`${center},20 ${center + 6},16 ${center + 10},16 ${center + 10},20 ${center - 10},20 ${center - 10},16 ${center - 6},16`}
-                    fill="aqua"
+                    fill={Colors.CYAN}
                     transform={this.courseBugTransform}
                 />
                 <polygon
                     class="ground-track-bug"
                     points={`${center},15 ${center + 5},20 ${center - 5},20`}
-                    fill="magenta"
-                    stroke="black"
+                    fill={Colors.MAGENTA}
+                    stroke={Colors.BLACK}
                     visibility={this.groundTrackActive ? '' : 'hidden'}
                     transform={this.trackBugTransform}
                 />
                 <polygon
                     class="bearing-background"
                     points={`${center},20 ${center + 4},16 ${center + 14},16 ${center + 14},0 ${center - 14},0 ${center - 14},16 ${center - 4},16`}
-                    fill="black"
-                    stroke="white"
+                    fill={Colors.BLACK}
+                    stroke={Colors.WHITE}
                     stroke-width="0.5"
                 />
                 <g class="bearing-text-wrapper" transform="scale(0.85,1) translate(16,0)">
                     <text
                         ref={this.bearingTextRef}
                         class="bearing-text"
-                        fill="white"
+                        fill={Colors.WHITE}
                         text-anchor="middle"
                         x={center}
                         y="13"

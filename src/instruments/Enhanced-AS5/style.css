@@ -22,11 +22,17 @@
     --altimeter-indicatedalt-box-hundreds-offset-y: 3px;
     --altimeter-indicatedalt-box-tens-offset-y: 3px;
 
-    /* Colors */
-    --magenta: #d12bc7;
-    --cyan: #36c8d2;
-    --yellow: yellow;
+    /* Colors — aligned with G3X Touch reference values (G3XTouch.css) */
+    --black: black;
+    --white: white;
+    --red: red;
+    --magenta: magenta;
+    --cyan: cyan;
     --green: lime;
+    --yellow: yellow;
+    --amber: #ffdc24;
+    --focus-blue: #37c0ef;
+    --pfd-box-background: rgba(22, 22, 22, 0.75);
 }
 
 @keyframes TemporaryShow {
@@ -636,54 +642,54 @@ as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
 /* ---- Selected altitude box blink animations ---- */
 
 @keyframes alt-alert-within1000-flash {
-  0% {
-    color: var(--cyan);
-    fill: var(--cyan);
-  }
+    0% {
+        color: var(--cyan);
+        fill: var(--cyan);
+    }
 
-  50% {
-    color: var(--cyan);
-    fill: var(--cyan);
-  }
+    50% {
+        color: var(--cyan);
+        fill: var(--cyan);
+    }
 
-  100% {
-    color: transparent;
-    fill: transparent;
-  }
+    100% {
+        color: transparent;
+        fill: transparent;
+    }
 }
 
 @keyframes alt-alert-within200-flash {
-  0% {
-    color: var(--cyan);
-    fill: var(--cyan);
-  }
+    0% {
+        color: var(--cyan);
+        fill: var(--cyan);
+    }
 
-  50% {
-    color: var(--cyan);
-    fill: var(--cyan);
-  }
+    50% {
+        color: var(--cyan);
+        fill: var(--cyan);
+    }
 
-  100% {
-    color: transparent;
-    fill: transparent;
-  }
+    100% {
+        color: transparent;
+        fill: transparent;
+    }
 }
 
 @keyframes alt-alert-deviation-flash {
-  0% {
-    color: var(--yellow);
-    fill: var(--yellow);
-  }
+    0% {
+        color: var(--yellow);
+        fill: var(--yellow);
+    }
 
-  50% {
-    color: var(--yellow);
-    fill: var(--yellow);
-  }
+    50% {
+        color: var(--yellow);
+        fill: var(--yellow);
+    }
 
-  100% {
-    color: transparent;
-    fill: transparent;
-  }
+    100% {
+        color: transparent;
+        fill: transparent;
+    }
 }
 
 .selected-altitude-bg-overlay {

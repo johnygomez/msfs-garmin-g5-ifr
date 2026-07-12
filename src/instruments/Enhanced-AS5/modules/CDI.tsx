@@ -1,4 +1,5 @@
 import { DisplayComponent, FSComponent, VNode, ComponentProps, Subject } from '@microsoft/msfs-sdk'
+import { Colors } from './Utils'
 
 export interface CDIProps extends ComponentProps {
     noScale: boolean
@@ -32,7 +33,10 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
         })
 
         this.props.cdiSource.sub(source => {
-            deviationEl.setAttribute('fill', source === 1 || source === 2 ? 'lime' : 'magenta')
+            deviationEl.setAttribute(
+                'fill',
+                source === 1 || source === 2 ? Colors.GREEN : Colors.MAGENTA
+            )
         })
 
         this.props.cdiDeviation.sub(deviation => {
@@ -56,8 +60,8 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
             <polygon
                 ref={this.deviationRef}
                 points={points}
-                fill="magenta"
-                stroke="black"
+                fill={Colors.MAGENTA}
+                stroke={Colors.BLACK}
                 stroke-width="0.25"
                 transform-origin="center"
             />
@@ -83,9 +87,9 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                     y="0"
                     width="100"
                     height={`${svgHeight}`}
-                    fill="#1a1d21"
+                    fill={Colors.PFD_BOX_BG}
                     fill-opacity="0.75"
-                    stroke="white"
+                    stroke={Colors.WHITE}
                     stroke-width="0.75"
                 />
                 {[...Array(9)].map((_, i) => {
@@ -97,17 +101,23 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                             cx={`${cx + 10 * idx}`}
                             cy={`${cy}`}
                             r="2"
-                            fill="none"
-                            stroke="white"
+                            fill={Colors.NONE}
+                            stroke={Colors.WHITE}
                             stroke-width="0.5"
                         />
                     )
                 })}
-                <rect x={`${cx - 0.5}`} y="0" width="0.5" height={`${svgHeight}`} fill="white" />
+                <rect
+                    x={`${cx - 0.5}`}
+                    y="0"
+                    width="0.5"
+                    height={`${svgHeight}`}
+                    fill={Colors.WHITE}
+                />
                 {!this.noScale && (
                     <>
                         <text
-                            fill="white"
+                            fill={Colors.WHITE}
                             text-anchor="middle"
                             x="10"
                             y={`${svgHeight - 1}`}
@@ -117,7 +127,7 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                         </text>
                         <text
                             ref={this.scaleTextRef}
-                            fill="white"
+                            fill={Colors.WHITE}
                             text-anchor="middle"
                             x="90"
                             y={`${svgHeight - 1}`}
