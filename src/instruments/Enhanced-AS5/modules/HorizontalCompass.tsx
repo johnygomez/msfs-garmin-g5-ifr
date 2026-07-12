@@ -6,10 +6,22 @@ import {
     EventBus,
     ConsumerSubject,
     MappedSubject,
+    Subscribable,
     AhrsEvents,
+    NavMath,
 } from '@microsoft/msfs-sdk'
 import { G5CustomEvents } from './G5CustomPublisher'
 import { Colors } from './Utils'
+
+// The ribbon spans ±80° around the current heading, with a labelled mark every
+// 10° and a tick every 1°.
+const RIBBON_HALF_SPAN_DEG = 80
+const DIGIT_HALF_COUNT = RIBBON_HALF_SPAN_DEG / 10
+const DIGIT_COUNT = DIGIT_HALF_COUNT * 2 + 1
+const TICK_COUNT = RIBBON_HALF_SPAN_DEG * 2 + 1
+
+const pad3 = (deg: number): string => deg.toString().padStart(3, '0')
+const roundTo10 = (deg: number): number => Math.round(deg / 10) * 10
 
 export interface HorizontalCompassProps extends ComponentProps {
     bus: EventBus
@@ -20,28 +32,14 @@ export interface HorizontalCompassProps extends ComponentProps {
 }
 
 export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompassProps> {
-    private readonly movingRibbonRef = FSComponent.createRef<SVGGElement>()
-    private readonly courseRef = FSComponent.createRef<SVGPolygonElement>()
-    private readonly groundTrackRef = FSComponent.createRef<SVGPolygonElement>()
-    private readonly bearingTextRef = FSComponent.createRef<SVGTextElement>()
-    private readonly digitRefs = [...Array(17)].map(() => FSComponent.createRef<SVGTextElement>())
-
-    // ConsumerSubjects from the EventBus — reactive values for compass geometry
     private readonly heading: ConsumerSubject<number>
     private readonly track: ConsumerSubject<number>
     private readonly course: ConsumerSubject<number>
 
-    // Derived Subscribables for declarative JSX attribute bindings
     private readonly courseBugTransform: MappedSubject<[number, number], string>
     private readonly trackBugTransform: MappedSubject<[number, number], string>
-
-    // Ribbon scroll transform
     private readonly ribbonTransform: MappedSubject<[number], string>
-
-    // Bearing text (center display showing current heading, e.g. "270")
     private readonly bearingText: MappedSubject<[number], string>
-
-    // Ribbon digit labels (17 marks spanning ±80° in 10° increments)
     private readonly digitTextSubjects: MappedSubject<[number], string>[] = []
 
     constructor(props: HorizontalCompassProps) {
@@ -54,39 +52,33 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
 
         const pxPerDeg = props.spacing / 10
 
-        this.courseBugTransform = MappedSubject.create(
-            ([hdg, crs]) => `translate(${Avionics.Utils.diffAngle(hdg, crs) * pxPerDeg}, 0)`,
-            this.heading,
-            this.course
+        // A bug sits at its angular offset from the current heading, scaled to pixels.
+        const bugTransform = (
+            target: Subscribable<number>
+        ): MappedSubject<[number, number], string> =>
+            MappedSubject.create(
+                ([hdg, deg]) => `translate(${NavMath.diffAngle(hdg, deg) * pxPerDeg}, 0)`,
+                this.heading,
+                target
+            )
+
+        this.courseBugTransform = bugTransform(this.course)
+        this.trackBugTransform = bugTransform(this.track)
+
+        this.ribbonTransform = MappedSubject.create(
+            ([hdg]) => `translate(${(roundTo10(hdg) - hdg) * pxPerDeg}, 0)`,
+            this.heading
         )
 
-        this.trackBugTransform = MappedSubject.create(
-            ([hdg, trk]) => `translate(${Avionics.Utils.diffAngle(hdg, trk) * pxPerDeg}, 0)`,
-            this.heading,
-            this.track
-        )
+        this.bearingText = MappedSubject.create(([hdg]) => pad3(Math.round(hdg)), this.heading)
 
-        // --- Ribbon scroll transform ---
-        this.ribbonTransform = MappedSubject.create(([hdg]) => {
-            const roundedBearing = Math.round(hdg / 10) * 10
-            return `translate(${(roundedBearing - hdg) * pxPerDeg}, 0)`
-        }, this.heading)
-
-        // --- Center bearing text (padded to 3 digits) ---
-        this.bearingText = MappedSubject.create(([hdg]) => {
-            const bearingString = Math.round(hdg) + ''
-            return '000'.slice(0, 3 - bearingString.length) + bearingString
-        }, this.heading)
-
-        // --- Ribbon digit labels (17 marks at 10° intervals) ---
-        for (let i = 0; i < 17; i++) {
-            const idx = i - 8 // -8 … +8 → ±80°
+        for (let i = 0; i < DIGIT_COUNT; i++) {
+            const idx = i - DIGIT_HALF_COUNT
             this.digitTextSubjects.push(
-                MappedSubject.create(([hdg]) => {
-                    const roundedBearing = Math.round(hdg / 10) * 10
-                    const digitString = ((roundedBearing + idx * 10 + 360) % 360) + ''
-                    return '000'.slice(0, 3 - digitString.length) + digitString
-                }, this.heading)
+                MappedSubject.create(
+                    ([hdg]) => pad3((roundTo10(hdg) + idx * 10 + 360) % 360),
+                    this.heading
+                )
             )
         }
     }
@@ -105,23 +97,11 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
         super.destroy()
     }
 
-    get spacing(): number {
-        return this.props.spacing
-    }
-    get truncateLeft(): number {
-        return this.props.truncateLeft
-    }
-    get truncateRight(): number {
-        return this.props.truncateRight
-    }
-    get groundTrackActive(): boolean {
-        return this.props.groundTrackActive
-    }
     get width(): number {
-        return 288 - this.truncateLeft - this.truncateRight
+        return 288 - this.props.truncateLeft - this.props.truncateRight
     }
     get center(): number {
-        return (this.width + (this.truncateRight - this.truncateLeft) / 2) / 2
+        return (this.width + (this.props.truncateRight - this.props.truncateLeft) / 2) / 2
     }
     get fontFamily(): string {
         return 'OpenSans-Bold'
@@ -130,7 +110,7 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
     render(): VNode {
         const width = this.width
         const center = this.center
-        const spacing = this.spacing
+        const spacing = this.props.spacing
         const gradStops = [
             { offset: '0%', stopColor: Colors.SHADOW_COMPASS_BLUE, stopOpacity: '0.8' },
             { offset: '5%', stopColor: Colors.SHADOW_COMPASS_BLUE, stopOpacity: '0' },
@@ -169,16 +149,11 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                     fill={Colors.PFD_BOX_BG}
                     fill-opacity="0.25"
                 />
-                <g
-                    ref={this.movingRibbonRef}
-                    class="moving-ribbon"
-                    transform={this.ribbonTransform}
-                >
-                    {[...Array(17)].map((_, i) => {
-                        const idx = i - 8
+                <g class="moving-ribbon" transform={this.ribbonTransform}>
+                    {[...Array(DIGIT_COUNT)].map((_, i) => {
+                        const idx = i - DIGIT_HALF_COUNT
                         return (
                             <text
-                                ref={this.digitRefs[i]}
                                 key={`digit-${i}`}
                                 fill={Colors.WHITE}
                                 text-anchor="middle"
@@ -192,8 +167,8 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                             </text>
                         )
                     })}
-                    {[...Array(161)].map((_, i) => {
-                        const idx = i - 80
+                    {[...Array(TICK_COUNT)].map((_, i) => {
+                        const idx = i - RIBBON_HALF_SPAN_DEG
                         return (
                             <rect
                                 key={`tick-${i}`}
@@ -208,34 +183,34 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                 </g>
                 <polygon
                     class="course-bug"
-                    points={`${center},20 ${center + 6},16 ${center + 10},16 ${center + 10},20 ${center - 10},20 ${center - 10},16 ${center - 6},16`}
+                    points={`${center},18 ${center + 2},16 ${center + 7},16 ${center + 6},20 ${center - 6},20 ${center - 7},16 ${center - 2},16`}
                     fill={Colors.CYAN}
+                    stroke={Colors.BLACK}
                     transform={this.courseBugTransform}
                 />
                 <polygon
                     class="ground-track-bug"
-                    points={`${center},15 ${center + 5},20 ${center - 5},20`}
+                    points={`${center},17 ${center + 3},20 ${center - 3},20`}
                     fill={Colors.MAGENTA}
                     stroke={Colors.BLACK}
-                    visibility={this.groundTrackActive ? '' : 'hidden'}
+                    visibility={this.props.groundTrackActive ? '' : 'hidden'}
                     transform={this.trackBugTransform}
                 />
                 <polygon
                     class="bearing-background"
-                    points={`${center},20 ${center + 4},16 ${center + 14},16 ${center + 14},0 ${center - 14},0 ${center - 14},16 ${center - 4},16`}
+                    points={`${center},18 ${center + 4},14 ${center + 14},14 ${center + 14},0 ${center - 14},0 ${center - 14},14 ${center - 4},14`}
                     fill={Colors.BLACK}
                     stroke={Colors.WHITE}
                     stroke-width="0.5"
                 />
-                <g class="bearing-text-wrapper" transform="scale(0.85,1) translate(16,0)">
+                <g class="bearing-text-wrapper" transform="translate(-0.5,0)">
                     <text
-                        ref={this.bearingTextRef}
                         class="bearing-text"
                         fill={Colors.WHITE}
                         text-anchor="middle"
                         x={center}
-                        y="13"
-                        font-size="14"
+                        y="11"
+                        font-size="13"
                         font-family={this.fontFamily}
                     >
                         {this.bearingText.map(v => v)}
