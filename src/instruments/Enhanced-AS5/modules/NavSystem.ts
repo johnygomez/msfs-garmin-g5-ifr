@@ -1,4 +1,5 @@
 import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
+
 import { ContextualMenuElementData } from './ContextualMenu'
 export class NavSystem extends BaseInstrument {
     static _iterations: number = 0

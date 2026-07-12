@@ -1,4 +1,5 @@
 import { DisplayComponent, FSComponent, VNode, ComponentProps } from '@microsoft/msfs-sdk'
+
 import { Colors } from './Utils'
 
 export interface HighlightElementRefs {

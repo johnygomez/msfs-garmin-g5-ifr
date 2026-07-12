@@ -1,3 +1,4 @@
+import { AltitudeAlertState, AltitudeAlerter } from '@microsoft/msfs-garminsdk'
 import {
     AltitudeSelectEvents,
     DisplayComponent,
@@ -20,8 +21,8 @@ import {
     SetSubject,
     DebounceTimer,
 } from '@microsoft/msfs-sdk'
+
 import { G5CustomEvents } from './G5CustomPublisher'
-import { AltitudeAlertState, AltitudeAlerter } from '@microsoft/msfs-garminsdk'
 export interface AltimeterComponentProps extends ComponentProps {
     bus: EventBus
     height: number

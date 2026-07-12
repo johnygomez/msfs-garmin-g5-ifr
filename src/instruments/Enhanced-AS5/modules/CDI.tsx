@@ -1,4 +1,5 @@
 import { DisplayComponent, FSComponent, VNode, ComponentProps, Subject } from '@microsoft/msfs-sdk'
+
 import { Colors } from './Utils'
 
 export interface CDIProps extends ComponentProps {

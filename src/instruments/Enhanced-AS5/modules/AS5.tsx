@@ -1,21 +1,4 @@
 import {
-    NavSystem,
-    NavSystemPage,
-    NavSystemPageGroup,
-    NavSystemElement,
-    NavSystemElementGroup,
-    NavSystemElementContainer,
-} from './NavSystem'
-import { ContextualMenuComponent, ContextualMenuElementData } from './ContextualMenu'
-import {
-    PFD_AutopilotDisplay,
-    PFD_Attitude,
-    PFD_Altimeter,
-    PFD_Compass,
-    AltimeterSubjects,
-} from './CommonPFD_MFD'
-import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
-import {
     FSComponent,
     DisplayComponent,
     VNode,
@@ -31,19 +14,37 @@ import {
     ConsumerSubject,
     AhrsEvents,
 } from '@microsoft/msfs-sdk'
-import { G5CustomPublisher } from './G5CustomPublisher'
-import { HorizontalCompassComponent } from './HorizontalCompass'
-import { CDIComponent } from './CDI'
-import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
-import { HighlightComponent, HighlightElementRefs } from './Highlight'
+
+import { AirspeedIndicatorComponent } from './AirspeedIndicator'
+import { AltimeterComponent } from './Altimeter'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
 import {
     AttitudeIndicatorComponent,
     TurnRateIndicatorComponent,
     SlipSkidIndicatorComponent,
 } from './AttitudeIndicator'
-import { AltimeterComponent } from './Altimeter'
-import { AirspeedIndicatorComponent } from './AirspeedIndicator'
+import { CDIComponent } from './CDI'
+import {
+    PFD_AutopilotDisplay,
+    PFD_Attitude,
+    PFD_Altimeter,
+    PFD_Compass,
+    AltimeterSubjects,
+} from './CommonPFD_MFD'
+import { ContextualMenuComponent, ContextualMenuElementData } from './ContextualMenu'
+import { G5CustomPublisher } from './G5CustomPublisher'
+import { HighlightComponent, HighlightElementRefs } from './Highlight'
+import { HorizontalCompassComponent } from './HorizontalCompass'
+import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
+import {
+    NavSystem,
+    NavSystemPage,
+    NavSystemPageGroup,
+    NavSystemElement,
+    NavSystemElementGroup,
+    NavSystemElementContainer,
+} from './NavSystem'
+import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
 
 export interface AirspeedSubjects {
     indicatedAirspeed: Subject<number>

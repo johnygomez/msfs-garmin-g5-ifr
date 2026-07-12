@@ -10,6 +10,7 @@ import {
     AhrsEvents,
     Subscribable,
 } from '@microsoft/msfs-sdk'
+
 import { G5CustomEvents } from './G5CustomPublisher'
 import { Colors } from './Utils'
 

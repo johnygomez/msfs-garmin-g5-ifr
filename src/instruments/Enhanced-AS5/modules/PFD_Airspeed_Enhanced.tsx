@@ -1,5 +1,6 @@
-import { NavSystemElement } from './NavSystem'
 import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
+
+import { NavSystemElement } from './NavSystem'
 
 export class PFD_Airspeed_Enhanced extends NavSystemElement {
     lastIndicatedSpeed: number

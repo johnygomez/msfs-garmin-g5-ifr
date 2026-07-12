@@ -1,3 +1,5 @@
+import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
+
 import {
     NavSystemElement,
     MapInstrumentElement,
@@ -5,7 +7,6 @@ import {
     Cabin_Warnings,
     Annunciation_MessageType,
 } from './NavSystem'
-import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
 
 export class PFD_VSpeed extends NavSystemElement {
     /** Reactive vertical speed value — can be consumed by a VS display component. */

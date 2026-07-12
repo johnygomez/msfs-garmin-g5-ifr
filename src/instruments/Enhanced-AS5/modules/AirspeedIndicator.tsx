@@ -10,6 +10,7 @@ import {
     MappedSubject,
     AdcEvents,
 } from '@microsoft/msfs-sdk'
+
 import { G5CustomEvents } from './G5CustomPublisher'
 
 export class ReferenceBug {
