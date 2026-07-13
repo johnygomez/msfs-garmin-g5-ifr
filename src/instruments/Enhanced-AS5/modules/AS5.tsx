@@ -126,16 +126,12 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                 <div id="Airspeed">
                     <AirspeedIndicatorComponent
                         bus={this.props.bus}
-                        height={850}
+                        height={1020}
                         noColor={false}
                         indicatedAirspeed={spd.indicatedAirspeed}
-                        displayRefSpeed={spd.displayRefSpeed}
-                        refSpeedMach={spd.refSpeedMach}
                         refSpeed={spd.refSpeed}
                         airspeedTrend={spd.airspeedTrend}
                         maxSpeed={spd.maxSpeed}
-                        displayMach={spd.displayMach}
-                        noTrueAirspeed={spd.noTrueAirspeed}
                     />
                 </div>
                 <div id="Compass">

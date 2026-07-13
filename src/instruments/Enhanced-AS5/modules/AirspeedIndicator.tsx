@@ -1,80 +1,231 @@
 import {
-    DisplayComponent,
-    FSComponent,
-    VNode,
     ComponentProps,
+    ConsumerSubject,
+    DigitScroller,
+    DisplayComponent,
+    EventBus,
+    FSComponent,
+    MappedSubject,
     NodeReference,
     Subject,
-    EventBus,
-    ConsumerSubject,
-    MappedSubject,
-    AdcEvents,
+    Subscribable,
+    VNode,
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from './G5CustomPublisher'
 
-export class ReferenceBug {
-    bug: any
-    group: any
-    text: any
-}
+const GF_FONT = 'OpenSans-Bold'
+
+/**
+ * Vertical tape scale, in SVG viewBox units per knot. Together with the tape's
+ * pixel scale this sets how much speed range is visible: larger values spread
+ * the graduations further apart and show a tighter range. At the current column
+ * width (~102px, `slice`-scaled) the visible window is roughly `854 / UNITS_PER_KT`
+ * knots, so 12 ≈ 70 kt.
+ */
+const UNITS_PER_KT = 12
 
 export interface AirspeedIndicatorComponentProps extends ComponentProps {
     bus: EventBus
     height: number
     noColor: boolean
     indicatedAirspeed: Subject<number>
-    displayRefSpeed: Subject<string>
-    refSpeedMach: Subject<number>
     refSpeed: Subject<number>
     airspeedTrend: Subject<number>
     maxSpeed: Subject<number>
-    displayMach: Subject<boolean>
-    noTrueAirspeed: Subject<boolean>
+}
+
+interface IASDisplayBoxProps extends ComponentProps {
+    ias: Subscribable<number>
+    isOffScale: Subscribable<boolean>
+}
+
+/**
+ * The indicated-airspeed cursor readout. Rendered as an HTML overlay with
+ * scrolling digit drums, analogous to the altimeter's IndicatedAltDisplayBox
+ * and the G3X Touch AirspeedIasDisplayBox.
+ */
+class IASDisplayBox extends DisplayComponent<IASDisplayBoxProps> {
+    private readonly scrollerRefs: NodeReference<DigitScroller>[] = []
+
+    public render(): VNode {
+        const hundredsScrollerRef = FSComponent.createRef<DigitScroller>()
+        const tensScrollerRef = FSComponent.createRef<DigitScroller>()
+        const onesScrollerRef = FSComponent.createRef<DigitScroller>()
+
+        this.scrollerRefs.push(hundredsScrollerRef, tensScrollerRef, onesScrollerRef)
+
+        return (
+            <div
+                class={{
+                    'airspeed-ias-box': true,
+                    'airspeed-ias-box-offscale': this.props.isOffScale,
+                }}
+            >
+                <svg viewBox="0 0 82 72" class="airspeed-ias-box-bg" preserveAspectRatio="none">
+                    <path
+                        vector-effect="non-scaling-stroke"
+                        d="M 75 0 L 75 29 L 82 36 L 75 43 L 75 72 L 50 72 L 50 54 L 0 54 L 0 18 L 50 18 L 50 0 Z"
+                    />
+                </svg>
+                <div class="airspeed-ias-box-scrollers">
+                    <div class="airspeed-ias-box-digit-container airspeed-ias-box-hundreds">
+                        <DigitScroller
+                            ref={hundredsScrollerRef}
+                            value={this.props.ias}
+                            base={10}
+                            factor={100}
+                            scrollThreshold={99}
+                            renderDigit={(digit): string =>
+                                digit === 0 ? ' ' : (Math.abs(digit) % 10).toString()
+                            }
+                        />
+                        <div class="airspeed-ias-box-scroller-mask"></div>
+                    </div>
+                    <div class="airspeed-ias-box-digit-container airspeed-ias-box-tens">
+                        <DigitScroller
+                            ref={tensScrollerRef}
+                            value={this.props.ias}
+                            base={10}
+                            factor={10}
+                            scrollThreshold={9}
+                            nanString="-"
+                        />
+                        <div class="airspeed-ias-box-scroller-mask"></div>
+                    </div>
+                    <div class="airspeed-ias-box-digit-container airspeed-ias-box-ones">
+                        <DigitScroller
+                            ref={onesScrollerRef}
+                            value={this.props.ias}
+                            base={10}
+                            factor={1}
+                            nanString="-"
+                        />
+                        <div class="airspeed-ias-box-scroller-mask"></div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    public destroy(): void {
+        for (const ref of this.scrollerRefs) {
+            ref.getOrDefault()?.destroy()
+        }
+
+        super.destroy()
+    }
+}
+
+interface AirspeedTrendVectorProps extends ComponentProps {
+    /** Trend in knots per second. */
+    trend: Subscribable<number>
+    /** Vertical centre of the tape, in tape pixels. */
+    center: number
+}
+
+/** The magenta acceleration-trend bar drawn alongside the tape cursor. */
+class AirspeedTrendVector extends DisplayComponent<AirspeedTrendVectorProps> {
+    private static readonly MAX_LENGTH_PX = 120
+
+    private readonly barY: MappedSubject<[number], number>
+    private readonly barHeight: MappedSubject<[number], number>
+
+    constructor(props: AirspeedTrendVectorProps) {
+        super(props)
+
+        const clampedLength = props.trend.map(t =>
+            Math.min(
+                Math.max(t * UNITS_PER_KT, -AirspeedTrendVector.MAX_LENGTH_PX),
+                AirspeedTrendVector.MAX_LENGTH_PX
+            )
+        )
+        this.barY = MappedSubject.create(([len]) => props.center - len / 2, clampedLength)
+        this.barHeight = MappedSubject.create(([len]) => Math.abs(len), clampedLength)
+    }
+
+    public destroy(): void {
+        this.barY.destroy()
+        this.barHeight.destroy()
+        super.destroy()
+    }
+
+    public render(): VNode {
+        return <rect x="200" y={this.barY} width="8" height={this.barHeight} fill="#d12bc7" />
+    }
+}
+
+interface SelectedSpeedBugProps extends ComponentProps {
+    ias: Subscribable<number>
+    refSpeed: Subscribable<number>
+    /** Vertical centre of the tape, in tape pixels. */
+    center: number
+}
+
+/** The cyan reference-speed bug that rides the airspeed tape. */
+class SelectedSpeedBug extends DisplayComponent<SelectedSpeedBugProps> {
+    private readonly transform: MappedSubject<[number, number], string>
+
+    constructor(props: SelectedSpeedBugProps) {
+        super(props)
+
+        this.transform = MappedSubject.create(
+            ([ias, ref]) => `translate(0, ${(ias - ref) * UNITS_PER_KT})`,
+            props.ias,
+            props.refSpeed
+        )
+    }
+
+    public destroy(): void {
+        this.transform.destroy()
+        super.destroy()
+    }
+
+    public render(): VNode {
+        const c = this.props.center
+        return (
+            <polygon
+                points={`200,${c - 20} 180,${c - 20} 180,${c - 15} 190,${c} 180,${c + 15} 180,${c + 20} 200,${c + 20}`}
+                fill="#36c8d2"
+                transform={this.transform}
+            />
+        )
+    }
+}
+
+interface GroundSpeedDisplayProps extends ComponentProps {
+    bus: EventBus
+}
+
+/** The fixed ground-speed readout overlaid at the bottom of the airspeed column. */
+class GroundSpeedDisplay extends DisplayComponent<GroundSpeedDisplayProps> {
+    private readonly gs: ConsumerSubject<number>
+
+    constructor(props: GroundSpeedDisplayProps) {
+        super(props)
+
+        const sub = props.bus.getSubscriber<G5CustomEvents>()
+        this.gs = ConsumerSubject.create(sub.on('ground_speed').withPrecision(0), 0)
+    }
+
+    public destroy(): void {
+        this.gs.destroy()
+        super.destroy()
+    }
+
+    public render(): VNode {
+        return (
+            <div class="airspeed-gs-box">
+                <span class="airspeed-gs-box-label">GS</span>
+                <span class="airspeed-gs-box-value">
+                    {this.gs.map(g => fastToFixed(g, 0) + 'KT')}
+                </span>
+            </div>
+        )
+    }
 }
 
 export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicatorComponentProps> {
-    private readonly rootRef = FSComponent.createRef<SVGElement>()
-    private readonly bottomBackgroundRef = FSComponent.createRef<SVGElement>()
-    private readonly centerGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly centerSvgRef = FSComponent.createRef<SVGElement>()
-    private readonly airspeedReferenceGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedSpeedFixedBugRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedSpeedTextRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedSpeedTextMachRef = FSComponent.createRef<SVGElement>()
-    private readonly cursorRef = FSComponent.createRef<SVGElement>()
-    private readonly trendElementRef = FSComponent.createRef<SVGElement>()
-    private readonly digit1TopRef = FSComponent.createRef<SVGElement>()
-    private readonly digit1BotRef = FSComponent.createRef<SVGElement>()
-    private readonly digit2TopRef = FSComponent.createRef<SVGElement>()
-    private readonly digit2BotRef = FSComponent.createRef<SVGElement>()
-    private readonly endDigitsGroupRef = FSComponent.createRef<SVGElement>()
-    private readonly redElementRef = FSComponent.createRef<SVGElement>()
-    private readonly yellowElementRef = FSComponent.createRef<SVGElement>()
-    private readonly greenElementRef = FSComponent.createRef<SVGElement>()
-    private readonly flapsElementRef = FSComponent.createRef<SVGElement>()
-    private readonly startElementRef = FSComponent.createRef<SVGElement>()
-    private readonly endElementRef = FSComponent.createRef<SVGElement>()
-    private readonly vyseElementRef = FSComponent.createRef<SVGElement>()
-    private readonly vmcElementRef = FSComponent.createRef<SVGElement>()
-    private readonly selectedSpeedBugRef = FSComponent.createRef<SVGElement>()
-    private readonly tasBackgroundRef = FSComponent.createRef<SVGElement>()
-    private readonly tasTasTextRef = FSComponent.createRef<SVGElement>()
-    private readonly tasTextRef = FSComponent.createRef<SVGElement>()
-    private readonly machTextRef = FSComponent.createRef<SVGElement>()
-    private readonly tasGsTextRef = FSComponent.createRef<SVGElement>()
-    private readonly GSTextRef = FSComponent.createRef<SVGElement>()
-
-    // Legacy ref arrays — kept for compatibility
-    private readonly endDigitRefs: NodeReference<SVGElement>[] = []
-    private readonly gradTextRefs: NodeReference<SVGElement>[] = []
-
-    // ConsumerSubjects from the EventBus — reactive values for TAS/mach/GS display
-    private readonly tas: ConsumerSubject<number>
-    private readonly machNumber: ConsumerSubject<number>
-    private readonly gs: ConsumerSubject<number>
-
-    // Design speeds for colored bands (read once from Simplane)
     private greenBegin = 0
     private greenEnd = 0
     private flapsBegin = 0
@@ -84,43 +235,21 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private redBegin = 0
     private redEnd = 0
     private maxValue = 0
-    private minValue = 0
     private vyseValue = 0
     private vmcValue = 0
-    private height = 0
-    private centerPx = 0
-    private centerY = 0
 
-    // --- Declarative MappedSubjects for JSX bindings ---
+    private readonly height: number
+    private readonly centerY: number
 
-    /** Tape scroll transform. */
-    private readonly tapeTransform: MappedSubject<[number], string>
-
-    /** Graduation text labels (17 marks at 10-kt intervals, higher speeds at top).
-     *  Generous count so the tape appears continuous — marks extend well beyond
-     *  the visible viewport. */
-    private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
-
-    /** Number of graduation marks above / below centre. */
+    /** Number of graduation marks per side of centre. */
     private readonly GRAD_COUNT = 8
 
-    /** Cursor digit texts (hundreds + tens). */
-    private readonly cursorHundredsText: MappedSubject<[number], string>
-    private readonly cursorTensText: MappedSubject<[number], string>
+    private readonly centerKt: MappedSubject<[number], number>
+    private readonly iasBoxValue: MappedSubject<[number], number>
+    private readonly isOffScale: MappedSubject<[number], boolean>
+    private readonly tapeTransform: MappedSubject<[number, number], string>
+    private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
 
-    /** End-digit drum group transform. */
-    private readonly endDigitTransform: MappedSubject<[number], string>
-
-    /** End-digit drum text values (5 digits). */
-    private readonly endDigitTextSubjects: MappedSubject<[number], string>[] = []
-
-    /** Cursor fill color (red when off-scale, dark otherwise). */
-    private readonly cursorFill: MappedSubject<[number], string>
-
-    /** Selected-speed bug transform. */
-    private readonly selectedBugTransform: MappedSubject<[number, number], string>
-
-    /** Colored speed-range bars. */
     private readonly greenBarY: MappedSubject<[number], number>
     private readonly greenBarHeight: MappedSubject<[number], number>
     private readonly yellowBarY: MappedSubject<[number], number>
@@ -132,53 +261,38 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private readonly vyseY: MappedSubject<[number], number>
     private readonly vmcY: MappedSubject<[number], number>
 
-    /** Start/end element transforms (white arc below min, red arc above max). */
-    private readonly startElementTransform: MappedSubject<[number], string>
-    private readonly endElementTransform: MappedSubject<[number, number], string>
+    /** Red barber-pole arc above the maximum speed. */
+    private readonly endElementTransform: MappedSubject<[number, number, number], string>
 
-    /** Trend vector. */
-    private readonly trendY: MappedSubject<[number], number>
-    private readonly trendHeight: MappedSubject<[number], number>
-
-    /** Derived helpers — shared across multiple MappedSubjects. */
-
-    /** Rounded center value in knots: `max(round(ias/10)*10, 60)`. */
-    private readonly centerKt: MappedSubject<[number], number>
-
-    /** Clamp helper: maps a speed to a bar y-position on the tape. */
     private barY(speed: number, ck: number): number {
-        return Math.min(Math.max(-100, this.centerY + -10 * (speed - ck)), this.height)
+        return Math.min(Math.max(-100, this.centerY + -UNITS_PER_KT * (speed - ck)), this.height)
     }
 
     constructor(props: AirspeedIndicatorComponentProps) {
         super(props)
-        const sub = props.bus.getSubscriber<AdcEvents & G5CustomEvents>()
-
-        this.tas = ConsumerSubject.create(sub.on('tas').withPrecision(0), 0)
-        this.machNumber = ConsumerSubject.create(sub.on('mach_number').withPrecision(3), 0)
-        this.gs = ConsumerSubject.create(sub.on('ground_speed').withPrecision(0), 0)
 
         this.height = props.height
-        this.centerPx = (props.height - 100) / 2
-        this.centerY = props.height / 2 - 100
+        this.centerY = props.height / 2 - 50
 
         this.readDesignSpeeds()
 
         const ias = props.indicatedAirspeed
-        const center = this.centerPx
 
-        // --- Derived center value (shared) ---
         this.centerKt = MappedSubject.create(([v]) => Math.max(Math.round(v / 10) * 10, 60), ias)
 
-        // --- Tape scroll transform (clamp IAS >= 20, per Thiago's original) ---
+        this.iasBoxValue = MappedSubject.create(([v]) => Math.max(v, 20), ias)
+
+        this.isOffScale = MappedSubject.create(
+            ([v]) => this.maxValue > 0 && Math.max(v, 20) > this.maxValue,
+            ias
+        )
+
         this.tapeTransform = MappedSubject.create(
-            ([v, ck]) => `translate(0, ${(Math.max(v, 20) - ck) * 10})`,
+            ([v, ck]) => `translate(0, ${(Math.max(v, 20) - ck) * UNITS_PER_KT})`,
             ias,
             this.centerKt
         )
 
-        // --- Graduation text labels (GRAD_COUNT * 2 + 1 marks, idx -GRAD_COUNT .. +GRAD_COUNT, 10-kt intervals) ---
-        // Higher speeds at the TOP (G3X convention): idx=-GRAD_COUNT (top) = ck + GRAD_COUNT*10, idx=GRAD_COUNT (bottom) = ck - GRAD_COUNT*10
         const gradN = this.GRAD_COUNT
         for (let i = 0; i < gradN * 2 + 1; i++) {
             const idx = i - gradN
@@ -187,51 +301,6 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
             )
         }
 
-        // --- Cursor digits ---
-        this.cursorHundredsText = MappedSubject.create(([v]) => {
-            const r = Math.round(Math.max(v, 20))
-            return `${Math.floor(r / 100) % 10}`
-        }, ias)
-        this.cursorTensText = MappedSubject.create(([v]) => {
-            const r = Math.round(Math.max(v, 20))
-            return `${Math.floor(r / 10) % 10}`
-        }, ias)
-
-        // --- End-digit drum ---
-        this.endDigitTransform = MappedSubject.create(([v]) => {
-            const value = Math.max(v, 20)
-            const endValue = value % 10
-            const endCenter = Math.round(endValue)
-            return `translate(0, ${(endValue - endCenter) * 70})`
-        }, ias)
-        for (let i = -2; i <= 2; i++) {
-            const idx = i
-            this.endDigitTextSubjects.push(
-                MappedSubject.create(([v]) => {
-                    const value = Math.max(v, 20)
-                    const endCenter = Math.round(value % 10)
-                    return `${(endCenter + (2 - idx) + 10) % 10}`
-                }, ias)
-            )
-        }
-
-        // --- Cursor fill (red when off-scale) ---
-        this.cursorFill = MappedSubject.create(([v]) => {
-            const value = Math.max(v, 20)
-            const offScale =
-                (!props.noColor && this.minValue > 0 && value < this.minValue) ||
-                (this.maxValue > 0 && value > this.maxValue)
-            return offScale ? 'red' : '#1a1d21'
-        }, ias)
-
-        // --- Selected speed bug ---
-        this.selectedBugTransform = MappedSubject.create(
-            ([v, ref]) => `translate(0, ${(v - ref) * 10})`,
-            ias,
-            props.refSpeed
-        )
-
-        // --- Colored bars ---
         this.greenBarY = MappedSubject.create(([ck]) => this.barY(this.greenEnd, ck), this.centerKt)
         this.greenBarHeight = MappedSubject.create(
             ([ck]) => Math.max(0, this.barY(this.greenBegin, ck) - this.barY(this.greenEnd, ck)),
@@ -261,20 +330,6 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         )
         this.vmcY = MappedSubject.create(([ck]) => this.barY(this.vmcValue, ck) - 4, this.centerKt)
 
-        // --- Start/end element transforms ---
-        this.startElementTransform = MappedSubject.create(
-            ([v, ck]) => {
-                if (this.minValue <= 0) return 'translate(0, 0)'
-                const y =
-                    this.height +
-                    200 +
-                    (ck - this.minValue + (this.height - 100) / 20) * 10 +
-                    (v - ck) * 10
-                return `translate(0, ${y})`
-            },
-            ias,
-            this.centerKt
-        )
         this.endElementTransform = MappedSubject.create(
             ([v, ck, maxV]) => {
                 const effectiveMax = maxV > 0 ? maxV : this.maxValue
@@ -282,40 +337,27 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                 const y =
                     100 +
                     Math.min(
-                        Math.max((ck - effectiveMax + (this.height - 100) / 20) * 10, -100),
+                        Math.max(
+                            (ck - effectiveMax + (this.height - 100) / (2 * UNITS_PER_KT)) *
+                                UNITS_PER_KT,
+                            -100
+                        ),
                         this.height + 100
                     ) +
-                    (v - ck) * 10
+                    (v - ck) * UNITS_PER_KT
                 return `translate(0, ${y})`
             },
             ias,
             this.centerKt,
             props.maxSpeed
         )
-
-        // --- Trend vector ---
-        this.trendY = MappedSubject.create(([t]) => {
-            const h = Math.min(Math.max(t * 10, -120), 120)
-            return center - h / 2
-        }, props.airspeedTrend)
-        this.trendHeight = MappedSubject.create(
-            ([t]) => Math.abs(Math.min(Math.max(t * 10, -120), 120)),
-            props.airspeedTrend
-        )
     }
 
-    destroy(): void {
-        this.tas.destroy()
-        this.machNumber.destroy()
-        this.gs.destroy()
-
-        this.tapeTransform.destroy()
+    public destroy(): void {
         this.centerKt.destroy()
-        this.cursorHundredsText.destroy()
-        this.cursorTensText.destroy()
-        this.endDigitTransform.destroy()
-        this.cursorFill.destroy()
-        this.selectedBugTransform.destroy()
+        this.iasBoxValue.destroy()
+        this.isOffScale.destroy()
+        this.tapeTransform.destroy()
         this.greenBarY.destroy()
         this.greenBarHeight.destroy()
         this.yellowBarY.destroy()
@@ -326,13 +368,9 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         this.flapsBarHeight.destroy()
         this.vyseY.destroy()
         this.vmcY.destroy()
-        this.startElementTransform.destroy()
         this.endElementTransform.destroy()
-        this.trendY.destroy()
-        this.trendHeight.destroy()
 
         this.gradTextSubjects.forEach(s => s.destroy())
-        this.endDigitTextSubjects.forEach(s => s.destroy())
 
         super.destroy()
     }
@@ -341,7 +379,6 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         try {
             const designSpeeds = Simplane.getDesignSpeeds()
             if (designSpeeds) {
-                this.minValue = 0
                 this.greenBegin = designSpeeds.VS1 ?? 0
                 this.greenEnd = designSpeeds.VNo ?? 0
                 this.flapsBegin = designSpeeds.VS0 ?? 0
@@ -360,401 +397,162 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     }
 
     public render(): VNode {
-        this.gradTextRefs.length = 0
         const height = this.props.height
         const noColor = this.props.noColor
-        const GF_font = 'OpenSans-Bold'
         const refBarWidth = 25
-        const endDigitSpace = 70
-        const center = (height - 100) / 2
-
-        const dashLineCount = Math.round((height + 100) / 25) - 1
-        const startRedLines: VNode[] = []
-        const endRedLines: VNode[] = []
-        for (let i = 0; i < dashLineCount; i++) {
-            startRedLines.push(
-                <rect
-                    x="0"
-                    y={-125 - 25 * i}
-                    width={refBarWidth}
-                    height={refBarWidth / 2}
-                    transform="skewY(-30)"
-                    fill="red"
-                />
-            )
-            endRedLines.push(
-                <rect
-                    x="0"
-                    y={-125 - 25 * i}
-                    width={refBarWidth}
-                    height="12.5"
-                    transform="skewY(-30)"
-                    fill="red"
-                />
-            )
-        }
-
-        // Build end-digit VNodes with reactive text
-        this.endDigitRefs.length = 0
-        const endDigitVNodes: VNode[] = []
-        for (let i = 0; i < 5; i++) {
-            const digitRef = FSComponent.createRef<SVGElement>()
-            this.endDigitRefs.push(digitRef)
-            const subject = this.endDigitTextSubjects[i]
-            endDigitVNodes.push(
-                <text
-                    ref={digitRef}
-                    x="0"
-                    y={15 + endDigitSpace * (i - 2)}
-                    fill="white"
-                    font-size="62"
-                    font-family={GF_font}
-                >
-                    {subject.map(v => v)}
-                </text>
-            )
-        }
+        const center = height / 2
 
         return (
-            <svg
-                ref={this.rootRef}
-                class="airspeed-indicator"
-                width="100%"
-                height="100%"
-                viewBox={`0 -50 250 ${height}`}
-            >
-                <g ref={this.airspeedReferenceGroupRef}>
-                    <rect x="0" y="-50" width="200" height="50" fill="#1a1d21" fill-opacity="1" />
-                    <polygon
-                        ref={this.selectedSpeedFixedBugRef}
-                        points="190,-40 180,-40 180,-30 185,-25 180,-20 180,-10 190,-10"
-                        fill="#36c8d2"
+            <>
+                <svg
+                    class="airspeed-indicator"
+                    width="100%"
+                    height="100%"
+                    viewBox={`0 0 250 ${height}`}
+                    preserveAspectRatio="xMinYMid slice"
+                >
+                    <rect
+                        x="0"
+                        y="-62"
+                        width="200"
+                        height={height}
+                        fill="#1a1d21"
+                        fill-opacity="0.25"
                     />
+                    <svg x="0" y="0" width="250" height={height} viewBox={`0 0 250 ${height}`}>
+                        <g transform={this.tapeTransform}>
+                            {!noColor && (
+                                <>
+                                    <rect
+                                        x="175"
+                                        y={this.redBarY}
+                                        width={refBarWidth}
+                                        height={this.redBarHeight}
+                                        fill="red"
+                                    />
+                                    <rect
+                                        x="175"
+                                        y={this.yellowBarY}
+                                        width={refBarWidth}
+                                        height={this.yellowBarHeight}
+                                        fill="yellow"
+                                    />
+                                    <rect
+                                        x="175"
+                                        y={this.greenBarY}
+                                        width={refBarWidth}
+                                        height={this.greenBarHeight}
+                                        fill="green"
+                                    />
+                                    <rect
+                                        x="190"
+                                        y={this.flapsBarY}
+                                        width={10}
+                                        height={this.flapsBarHeight}
+                                        fill="white"
+                                    />
+                                    <svg
+                                        id="DASH"
+                                        x="175"
+                                        y="0"
+                                        width={refBarWidth}
+                                        height={height - 100}
+                                        viewBox={`0 0 25 ${height - 100}`}
+                                    >
+                                        <g transform={this.endElementTransform}>
+                                            <rect
+                                                x="0"
+                                                y={-(height + 200)}
+                                                width={refBarWidth}
+                                                height={height + 100}
+                                                fill="white"
+                                            />
+                                            {this.buildDashLines(refBarWidth, 12.5)}
+                                        </g>
+                                    </svg>
+                                    <rect
+                                        id="vyse-pointer"
+                                        x="170"
+                                        y={this.vyseY}
+                                        width="40"
+                                        height="8"
+                                        fill="cyan"
+                                    />
+                                    <rect
+                                        id="vmc-pointer"
+                                        x="170"
+                                        y={this.vmcY}
+                                        width="40"
+                                        height="8"
+                                        fill="red"
+                                    />
+                                </>
+                            )}
+                            {this.buildGraduations(center)}
+                            <SelectedSpeedBug
+                                ias={this.props.indicatedAirspeed}
+                                refSpeed={this.props.refSpeed}
+                                center={center}
+                            />
+                        </g>
+                    </svg>
+                    <AirspeedTrendVector trend={this.props.airspeedTrend} center={center} />
+                </svg>
+                <IASDisplayBox ias={this.iasBoxValue} isOffScale={this.isOffScale} />
+                <GroundSpeedDisplay bus={this.props.bus} />
+            </>
+        )
+    }
+
+    private buildDashLines(width: number, dashHeight: number): VNode[] {
+        const count = Math.round((this.height + 100) / 25) - 1
+        return Array.from({ length: count }, (_, i) => (
+            <rect
+                x="0"
+                y={-125 - 25 * i}
+                width={width}
+                height={dashHeight}
+                transform="skewY(-30)"
+                fill="red"
+            />
+        ))
+    }
+
+    private buildGraduations(center: number): VNode[] {
+        const spacing = 10 * UNITS_PER_KT
+        return Array.from({ length: this.GRAD_COUNT * 2 + 1 }, (_, i) => {
+            const idx = i - this.GRAD_COUNT
+            return (
+                <g key={i}>
+                    <rect
+                        x="150"
+                        y={center - 2 + spacing * idx}
+                        height="4"
+                        width="50"
+                        fill="white"
+                    />
+                    {idx !== 0 && (
+                        <rect
+                            x="175"
+                            y={center - 2 + spacing * idx + (idx < 0 ? spacing / 2 : -spacing / 2)}
+                            height="4"
+                            width="25"
+                            fill="white"
+                        />
+                    )}
                     <text
-                        ref={this.selectedSpeedTextRef}
-                        x="20"
-                        y="-10"
-                        fill="#36c8d2"
-                        font-size="45"
-                        font-family={GF_font}
-                        text-anchor="start"
-                        display="none"
+                        x="140"
+                        y={center + 20 + spacing * idx}
+                        fill="white"
+                        font-size="56"
+                        text-anchor="end"
+                        font-family={GF_FONT}
+                        letter-spacing="8"
                     >
-                        ---
-                    </text>
-                    <text
-                        ref={this.selectedSpeedTextMachRef}
-                        x="20"
-                        y="-10"
-                        fill="#36c8d2"
-                        font-size="45"
-                        font-family={GF_font}
-                        text-anchor="start"
-                        display="none"
-                    >
-                        ---
+                        {this.gradTextSubjects[i].map(v => v)}
                     </text>
                 </g>
-                <rect
-                    ref={this.bottomBackgroundRef}
-                    x="0"
-                    y="-62"
-                    width="200"
-                    height={height + 50}
-                    fill="#1a1d21"
-                    fill-opacity="0.25"
-                />
-                <defs>
-                    <linearGradient id="shadowGradient" gradientTransform="rotate(90)">
-                        <stop offset="0%" stop-color="#000000" stop-opacity="0.8" />
-                        <stop offset="10%" stop-color="#000000" stop-opacity="0" />
-                        <stop offset="90%" stop-color="#000000" stop-opacity="0" />
-                        <stop offset="100%" stop-color="#000000" stop-opacity="0.8" />
-                    </linearGradient>
-                    <linearGradient id="underShadowGradient" gradientTransform="rotate(90)">
-                        <stop offset="0%" stop-color="rgb(0,0,0)" stop-opacity="0.8" />
-                        <stop offset="100%" stop-color="rgb(0,0,0)" stop-opacity="0" />
-                    </linearGradient>
-                </defs>
-                <svg
-                    ref={this.centerSvgRef}
-                    x="0"
-                    y="0"
-                    width="250"
-                    height={height - 100}
-                    viewBox={`0 0 250 ${height - 100}`}
-                >
-                    <g ref={this.centerGroupRef} transform={this.tapeTransform}>
-                        {!noColor && (
-                            <>
-                                <rect
-                                    ref={this.redElementRef}
-                                    x="175"
-                                    y={this.redBarY}
-                                    width={refBarWidth}
-                                    height={this.redBarHeight}
-                                    fill="red"
-                                />
-                                <rect
-                                    ref={this.yellowElementRef}
-                                    x="175"
-                                    y={this.yellowBarY}
-                                    width={refBarWidth}
-                                    height={this.yellowBarHeight}
-                                    fill="yellow"
-                                />
-                                <rect
-                                    ref={this.greenElementRef}
-                                    x="175"
-                                    y={this.greenBarY}
-                                    width={refBarWidth}
-                                    height={this.greenBarHeight}
-                                    fill="green"
-                                />
-                                <rect
-                                    ref={this.flapsElementRef}
-                                    x="187.5"
-                                    y={this.flapsBarY}
-                                    width={refBarWidth / 2}
-                                    height={this.flapsBarHeight}
-                                    fill="white"
-                                />
-                            </>
-                        )}
-                        {!noColor && (
-                            <svg
-                                id="DASH"
-                                x="175"
-                                y="0"
-                                width={refBarWidth}
-                                height={height - 100}
-                                viewBox={`0 0 25 ${height - 100}`}
-                            >
-                                <g
-                                    ref={this.startElementRef}
-                                    transform={this.startElementTransform}
-                                >
-                                    <rect
-                                        x="0"
-                                        y={-(height + 200)}
-                                        width={refBarWidth}
-                                        height={height + 100}
-                                        fill="white"
-                                    />
-                                    {...startRedLines}
-                                </g>
-                                <g ref={this.endElementRef} transform={this.endElementTransform}>
-                                    <rect
-                                        x="0"
-                                        y={-(height + 200)}
-                                        width={refBarWidth}
-                                        height={height + 100}
-                                        fill="white"
-                                    />
-                                    {...endRedLines}
-                                </g>
-                            </svg>
-                        )}
-                        {!noColor && (
-                            <>
-                                <rect
-                                    ref={this.vyseElementRef}
-                                    id="vyse-pointer"
-                                    x="170"
-                                    y={this.vyseY}
-                                    width="40"
-                                    height="8"
-                                    fill="cyan"
-                                />
-                                <rect
-                                    ref={this.vmcElementRef}
-                                    id="vmc-pointer"
-                                    x="170"
-                                    y={this.vmcY}
-                                    width="40"
-                                    height="8"
-                                    fill="red"
-                                />
-                            </>
-                        )}
-                        {[...Array(this.GRAD_COUNT * 2 + 1)].map((_, i) => {
-                            const idx = i - this.GRAD_COUNT
-                            const gradTextRef = FSComponent.createRef<SVGElement>()
-                            this.gradTextRefs.push(gradTextRef)
-                            const gradSubject = this.gradTextSubjects[i]
-                            return (
-                                <g key={i}>
-                                    <rect
-                                        x="150"
-                                        y={center - 2 + 100 * idx}
-                                        height="4"
-                                        width="50"
-                                        fill="white"
-                                    />
-                                    {idx !== 0 && (
-                                        <rect
-                                            x="175"
-                                            y={center - 2 + 100 * idx + (idx < 0 ? 50 : -50)}
-                                            height="4"
-                                            width="25"
-                                            fill="white"
-                                        />
-                                    )}
-                                    <text
-                                        ref={gradTextRef}
-                                        x="140"
-                                        y={center + 20 + 100 * idx}
-                                        fill="white"
-                                        font-size="56"
-                                        text-anchor="end"
-                                        font-family={GF_font}
-                                        letter-spacing="8"
-                                    >
-                                        {gradSubject.map(v => v)}
-                                    </text>
-                                </g>
-                            )
-                        })}
-                        <polygon
-                            ref={this.selectedSpeedBugRef}
-                            points={`200,${center - 20} 180,${center - 20} 180,${center - 15} 190,${center} 180,${center + 15} 180,${center + 20} 200,${center + 20}`}
-                            fill="#36c8d2"
-                            transform={this.selectedBugTransform}
-                        />
-                    </g>
-                </svg>
-                <polygon
-                    ref={this.cursorRef}
-                    points={`205,${center} 180,${center - 20} 180,${center - 100} 120,${center - 100} 120,${center - 40} 10,${center - 40} 10,${center + 40} 120,${center + 40} 120,${center + 100} 180,${center + 100} 180,${center + 40} 180,${center + 20}`}
-                    fill={this.cursorFill}
-                    stroke="white"
-                    stroke-width="3"
-                />
-                <rect
-                    ref={this.trendElementRef}
-                    x="200"
-                    y={this.trendY}
-                    width="8"
-                    height={this.trendHeight}
-                    fill="#d12bc7"
-                />
-                <svg x="0" y={center - 39} width="120" height="75" viewBox="0 0 75 75">
-                    <text
-                        ref={this.digit1TopRef}
-                        x="10"
-                        y="-1"
-                        fill="white"
-                        font-size="68"
-                        font-family={GF_font}
-                    >
-                        {this.cursorHundredsText.map(v => v)}
-                    </text>
-                    <text
-                        ref={this.digit1BotRef}
-                        x="10"
-                        y="62"
-                        fill="white"
-                        font-size="68"
-                        font-family={GF_font}
-                    >
-                        -
-                    </text>
-                    <text
-                        ref={this.digit2TopRef}
-                        x="54"
-                        y="-1"
-                        fill="white"
-                        font-size="68"
-                        font-family={GF_font}
-                    >
-                        {this.cursorTensText.map(v => v)}
-                    </text>
-                    <text
-                        ref={this.digit2BotRef}
-                        x="54"
-                        y="62"
-                        fill="white"
-                        font-size="68"
-                        font-family={GF_font}
-                    >
-                        -
-                    </text>
-                </svg>
-                <svg x="122" y={center - 100} width="70" height="200" viewBox="0 -100 50 200">
-                    <g ref={this.endDigitsGroupRef} transform={this.endDigitTransform}>
-                        {...endDigitVNodes}
-                    </g>
-                </svg>
-                <rect fill="url(#shadowGradient)" x="120" y={center - 98} width="60" height="198" />
-                <rect fill="url(#underShadowGradient)" x="0" y="-50" width="200" height="30" />
-                <rect
-                    ref={this.tasBackgroundRef}
-                    x="0"
-                    y={height - 105}
-                    width="200"
-                    height="60"
-                    fill="#1a1d21"
-                    stroke="white"
-                    stroke-width="2"
-                />
-                <text
-                    ref={this.tasTasTextRef}
-                    x="5"
-                    y={height - 100 + 38}
-                    fill="white"
-                    font-size="35"
-                    font-family={GF_font}
-                    text-anchor="start"
-                    display="none"
-                >
-                    TAS
-                </text>
-                <text
-                    x="195"
-                    y={height - 100 + 38}
-                    fill="white"
-                    font-size="35"
-                    font-family={GF_font}
-                    text-anchor="end"
-                    display="none"
-                >
-                    {this.tas.map(t => fastToFixed(t, 0) + 'KT')}
-                </text>
-                <text
-                    x="195"
-                    y={height - 100 + 38}
-                    fill="white"
-                    font-size="35"
-                    font-family={GF_font}
-                    text-anchor="end"
-                    display="none"
-                >
-                    {this.machNumber.map(
-                        m => 'M ' + (m < 1 ? fastToFixed(m, 3).slice(1) : fastToFixed(m, 3))
-                    )}
-                </text>
-                <text
-                    ref={this.tasGsTextRef}
-                    x="5"
-                    y={height - 100 + 38}
-                    fill="white"
-                    font-size="32"
-                    font-family={GF_font}
-                    text-anchor="start"
-                >
-                    GS
-                </text>
-                <text
-                    x="195"
-                    y={height - 100 + 38}
-                    fill="magenta"
-                    font-size="38"
-                    font-family={GF_font}
-                    text-anchor="end"
-                >
-                    {this.gs.map(g => fastToFixed(g, 0) + 'KT')}
-                </text>
-            </svg>
-        )
+            )
+        })
     }
 }

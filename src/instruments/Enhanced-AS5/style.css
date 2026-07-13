@@ -22,6 +22,26 @@
     --altimeter-indicatedalt-box-hundreds-offset-y: 3px;
     --altimeter-indicatedalt-box-tens-offset-y: 3px;
 
+    /* IAS display box vars (sized against the ~102px airspeed column so the
+       box fits the tape with its pointer reaching the graduation marks) */
+    --airspeed-ias-box-margin-left: 4px;
+    --airspeed-ias-box-width: 65px;
+    --airspeed-ias-box-height: 60px;
+
+    --airspeed-ias-box-digit-container-width: 18px;
+    --airspeed-ias-box-hundreds-tens-height: 26px;
+    --airspeed-ias-box-ones-height: 56px;
+
+    --airspeed-ias-box-font-size: 26px;
+    --airspeed-ias-box-line-height: 24px;
+    --airspeed-ias-box-line-offset-y: 3px;
+
+    /* Ground-speed readout box (overlaid at the bottom of the airspeed column) */
+    --airspeed-gs-box-height: 24px;
+    --airspeed-gs-box-width: 82px;
+    --airspeed-gs-box-label-font-size: 13px;
+    --airspeed-gs-box-value-font-size: 15px;
+
     /* Colors — aligned with G3X Touch reference values (G3XTouch.css) */
     --black: black;
     --white: white;
@@ -502,16 +522,6 @@ as5-element #SelectionValueWindow #SelectionValueWindowValue {
     font-size: 1.8em;
 }
 
-as5-element #PFD .airspeed-indicator .tas-tas-text {
-    display: none !important;
-}
-as5-element #PFD .airspeed-indicator .tas-text {
-    display: none !important;
-}
-as5-element #PFD .airspeed-indicator .mach-text {
-    display: none !important;
-}
-
 /* PFD Altimeter styles */
 
 .altimeter-indicatedalt-box {
@@ -532,7 +542,7 @@ as5-element #PFD .airspeed-indicator .mach-text {
     height: 100%;
     fill: black;
     stroke: white;
-    stroke-width: 1px;
+    stroke-width: 0.5px;
     overflow: visible;
 }
 
@@ -603,6 +613,115 @@ as5-element #PFD .airspeed-indicator .mach-text {
         rgba(0, 0, 0, 0) 80%,
         rgba(0, 0, 0, 1) 95%
     );
+}
+
+/* PFD Airspeed IAS box styles */
+
+.airspeed-ias-box {
+    position: absolute;
+    left: var(--airspeed-ias-box-margin-left);
+    top: 50%;
+    width: var(--airspeed-ias-box-width);
+    height: var(--airspeed-ias-box-height);
+    transform: translateY(-50%);
+    font-family: 'OpenSans-Bold';
+    font-size: var(--airspeed-ias-box-font-size);
+    color: white;
+
+    --digit-scroller-line-height: var(--airspeed-ias-box-line-height);
+    --digit-scroller-line-offset-y: var(--airspeed-ias-box-line-offset-y);
+}
+
+.airspeed-ias-box-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    fill: #1a1d21;
+    stroke: white;
+    stroke-width: 0.5px;
+    overflow: visible;
+}
+
+.airspeed-ias-box-offscale .airspeed-ias-box-bg {
+    fill: red;
+}
+
+.airspeed-ias-box-scrollers {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    padding-right: 7px;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.airspeed-ias-box-digit-container {
+    position: relative;
+    width: var(--airspeed-ias-box-digit-container-width);
+    height: var(--airspeed-ias-box-hundreds-tens-height);
+    overflow: hidden;
+}
+
+.airspeed-ias-box-digit-container.airspeed-ias-box-ones {
+    height: var(--airspeed-ias-box-ones-height);
+}
+
+.airspeed-ias-box-digit-container .digit-scroller {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.airspeed-ias-box-scroller-mask {
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 1) 5%,
+        rgba(0, 0, 0, 0) 20%,
+        rgba(0, 0, 0, 0) 80%,
+        rgba(0, 0, 0, 1) 95%
+    );
+}
+
+.airspeed-gs-box {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: var(--airspeed-gs-box-width);
+    height: var(--airspeed-gs-box-height);
+    box-sizing: border-box;
+    padding: 0 5px;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a1d21;
+    border: 1px solid white;
+    color: white;
+}
+
+.airspeed-gs-box-label {
+    font-size: var(--airspeed-gs-box-label-font-size);
+    font-family: 'OpenSans';
+}
+
+.airspeed-gs-box-value {
+    font-size: var(--airspeed-gs-box-value-font-size);
+    color: magenta;
+    font-family: 'OpenSans-Bold';
 }
 
 /* AP info bar */

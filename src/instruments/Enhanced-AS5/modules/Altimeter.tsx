@@ -99,7 +99,7 @@ class IndicatedAltDisplayBox extends DisplayComponent<IndicatedAltDisplayBoxProp
                 >
                     <path
                         vector-effect="non-scaling-stroke"
-                        d="M 0 30 l 7 -7 v -6 c 0 -2.21 1.79 -4 4 -4 h 47 v -9 c 0 -2.21 1.79 -4 4 -4 h 22 c 2.21 0 4 1.79 4 4 v 52 c 0 2.21 -1.79 4 -4 4 h -22 c -2.21 0 -4 -1.79 -4 -4 v -8 h -47 c -2.21 0 -4 -1.79 -4 -4 v -7 l -7 -7 Z"
+                        d="M 0 30 L 7 23 L 7 13 L 58 13 L 58 0 L 88 0 L 88 60 L 58 60 L 58 48 L 7 48 L 7 37 Z"
                     />
                 </svg>
                 <div class="altimeter-indicatedalt-box-scrollers">
