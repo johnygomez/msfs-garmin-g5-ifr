@@ -151,7 +151,7 @@ class AirspeedTrendVector extends DisplayComponent<AirspeedTrendVectorProps> {
     }
 
     public render(): VNode {
-        return <rect x="200" y={this.barY} width="8" height={this.barHeight} fill="#d12bc7" />
+        return <rect x="200" y={this.barY} width="10" height={this.barHeight} fill="#d12bc7" />
     }
 }
 

@@ -323,7 +323,6 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                         {/* Pitch ladder and flight director */}
                         <svg
                             class="attitude_pitch_container"
-                            transform={this.pitchTransform}
                             width="230"
                             height={`${this.pitchContainerHeight}`}
                             x="-115"
@@ -331,7 +330,11 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             viewBox={`-115 ${this.pitchContainerY} 230 ${this.pitchContainerHeight}`}
                             overflow="hidden"
                         >
-                            <g ref={this.pitchGradationsRef} class="attitude_pitch">
+                            <g
+                                ref={this.pitchGradationsRef}
+                                class="attitude_pitch"
+                                transform={this.pitchTransform}
+                            >
                                 {this.buildPitchGraduations()}
                             </g>
                             {this.buildFlightDirector()}
