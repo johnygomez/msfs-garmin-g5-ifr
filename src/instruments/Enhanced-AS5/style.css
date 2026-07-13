@@ -32,9 +32,9 @@
     --airspeed-ias-box-hundreds-tens-height: 26px;
     --airspeed-ias-box-ones-height: 56px;
 
-    --airspeed-ias-box-font-size: 26px;
-    --airspeed-ias-box-line-height: 24px;
-    --airspeed-ias-box-line-offset-y: 3px;
+    --airspeed-ias-box-font-size: 25px;
+    --airspeed-ias-box-line-height: 25px;
+    --airspeed-ias-box-line-offset-y: -1px;
 
     /* Ground-speed readout box (overlaid at the bottom of the airspeed column) */
     --airspeed-gs-box-height: 24px;
