@@ -18,11 +18,7 @@ import {
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 import { AltimeterComponent } from './Altimeter'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
-import {
-    AttitudeIndicatorComponent,
-    TurnRateIndicatorComponent,
-    SlipSkidIndicatorComponent,
-} from './AttitudeIndicator'
+import { AttitudeIndicatorComponent } from './AttitudeIndicator'
 import { CDIComponent } from './CDI'
 import {
     PFD_AutopilotDisplay,
@@ -45,6 +41,7 @@ import {
     NavSystemElementContainer,
 } from './NavSystem'
 import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
+import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSlipIndicator'
 
 export interface AirspeedSubjects {
     indicatedAirspeed: Subject<number>
