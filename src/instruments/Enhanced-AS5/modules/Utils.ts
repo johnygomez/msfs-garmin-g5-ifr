@@ -26,6 +26,8 @@ export enum Colors {
     CYAN = 'cyan',
     /** @css `--green` */
     GREEN = 'lime',
+    /** @css `--dark-green` */
+    DARK_GREEN = 'green',
     /** @css `--yellow` */
     YELLOW = 'yellow',
     /** @css `--amber` */

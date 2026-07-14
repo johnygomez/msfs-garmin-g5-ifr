@@ -280,8 +280,14 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private readonly redBarHeight: MappedSubject<[number], number>
     private readonly flapsBarY: MappedSubject<[number], number>
     private readonly flapsBarHeight: MappedSubject<[number], number>
+    private readonly flapsBarFullY: MappedSubject<[number], number>
+    private readonly flapsBarFullHeight: MappedSubject<[number], number>
     private readonly vyseY: MappedSubject<[number], number>
     private readonly vmcY: MappedSubject<[number], number>
+    private readonly vmcHeight: MappedSubject<[number], number>
+
+    private readonly numEngines: ConsumerSubject<number>
+    private readonly vyseVisibility: MappedSubject<[number], string>
 
     /** Red barber-pole arc above the maximum speed. */
     private readonly endElementTransform: MappedSubject<[number, number, number], string>
@@ -346,11 +352,23 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
             ([ck]) => Math.max(0, this.barY(this.flapsBegin, ck) - this.barY(this.flapsEnd, ck)),
             this.centerKt
         )
+        this.flapsBarFullY = MappedSubject.create(
+            ([ck]) => this.barY(this.greenBegin, ck),
+            this.centerKt
+        )
+        this.flapsBarFullHeight = MappedSubject.create(
+            ([ck]) => Math.max(0, this.barY(this.vmcValue, ck) - this.barY(this.greenBegin, ck)),
+            this.centerKt
+        )
         this.vyseY = MappedSubject.create(
             ([ck]) => this.barY(this.vyseValue, ck) - 4,
             this.centerKt
         )
         this.vmcY = MappedSubject.create(([ck]) => this.barY(this.vmcValue, ck) - 4, this.centerKt)
+        this.vmcHeight = MappedSubject.create(
+            ([ck]) => Math.max(0, this.barY(0, ck) - this.barY(this.vmcValue, ck)),
+            this.centerKt
+        )
 
         this.endElementTransform = MappedSubject.create(
             ([v, ck, maxV]) => {
@@ -373,6 +391,18 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
             this.centerKt,
             props.maxSpeed
         )
+
+        const sub = props.bus.getSubscriber<G5CustomEvents>()
+        this.numEngines = ConsumerSubject.create(sub.on('number_of_engines'), 1).pause()
+        this.vyseVisibility = MappedSubject.create(
+            ([n]) => (n > 1 ? 'visible' : 'hidden'),
+            this.numEngines
+        ).pause()
+    }
+
+    public onAfterRender(): void {
+        this.numEngines.resume()
+        this.vyseVisibility.resume()
     }
 
     public destroy(): void {
@@ -388,9 +418,14 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         this.redBarHeight.destroy()
         this.flapsBarY.destroy()
         this.flapsBarHeight.destroy()
+        this.flapsBarFullY.destroy()
+        this.flapsBarFullHeight.destroy()
         this.vyseY.destroy()
         this.vmcY.destroy()
+        this.vmcHeight.destroy()
         this.endElementTransform.destroy()
+        this.numEngines.destroy()
+        this.vyseVisibility.destroy()
 
         this.gradTextSubjects.forEach(s => s.destroy())
 
@@ -450,28 +485,35 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                                         y={this.redBarY}
                                         width={refBarWidth}
                                         height={this.redBarHeight}
-                                        fill="red"
+                                        fill={Colors.RED}
                                     />
                                     <rect
                                         x="175"
                                         y={this.yellowBarY}
                                         width={refBarWidth}
                                         height={this.yellowBarHeight}
-                                        fill="yellow"
+                                        fill={Colors.YELLOW}
                                     />
                                     <rect
                                         x="175"
                                         y={this.greenBarY}
                                         width={refBarWidth}
                                         height={this.greenBarHeight}
-                                        fill="green"
+                                        fill={Colors.DARK_GREEN}
                                     />
                                     <rect
                                         x="190"
                                         y={this.flapsBarY}
                                         width={10}
                                         height={this.flapsBarHeight}
-                                        fill="white"
+                                        fill={Colors.WHITE}
+                                    />
+                                    <rect
+                                        x="175"
+                                        y={this.flapsBarFullY}
+                                        width={refBarWidth}
+                                        height={this.flapsBarFullHeight}
+                                        fill={Colors.WHITE}
                                     />
                                     <svg
                                         id="DASH"
@@ -498,15 +540,16 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                                         y={this.vyseY}
                                         width="40"
                                         height="8"
-                                        fill="cyan"
+                                        fill={Colors.CYAN}
+                                        visibility={this.vyseVisibility}
                                     />
                                     <rect
                                         id="vmc-pointer"
-                                        x="170"
+                                        x="175"
                                         y={this.vmcY}
-                                        width="40"
-                                        height="8"
-                                        fill="red"
+                                        width={refBarWidth}
+                                        height={this.vmcHeight}
+                                        fill={Colors.RED}
                                     />
                                 </>
                             )}
