@@ -430,8 +430,8 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             0
         ).pause()
         this.baroSetting = ConsumerSubject.create(
-            sub.on('altimeter_baro_setting_inhg').withPrecision(2),
-            29.92
+            sub.on('altimeter_baro_setting_mb').withPrecision(0),
+            1013
         ).pause()
         this.verticalSpd = ConsumerSubject.create(
             sub.on('vertical_speed').withPrecision(1),
@@ -692,27 +692,33 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         selectedAlt={this.refAltitude}
                         onDeviationAlert={this.props.onDeviationAlert}
                     />
-                    <rect
-                        class="pressure-background"
-                        x="0"
-                        y={this.TAPE_WINDOW_PX - 75}
+                    <g
                         width="310"
                         height="70"
-                        fill="#1a1d21"
-                        stroke="#36c8d2"
-                        stroke-width="5"
-                    />
-                    <text
-                        class="pressure-text"
-                        x="20"
-                        y={this.TAPE_WINDOW_PX - 18}
-                        fill="#36c8d2"
-                        font-size="56"
-                        font-family={GF_font}
-                        letter-spacing="0.05em"
+                        transform={`translate(0, ${this.TAPE_WINDOW_PX - 75})`}
                     >
-                        {this.baroSetting.map(p => p.toFixed(2))}
-                    </text>
+                        <rect
+                            class="pressure-background"
+                            width="310"
+                            height="70"
+                            fill="#1a1d21"
+                            stroke="#36c8d2"
+                            stroke-width="5"
+                        />
+                        <text
+                            x="155"
+                            y="35"
+                            class="pressure-text"
+                            fill="#36c8d2"
+                            font-size="56"
+                            font-family={GF_font}
+                            letter-spacing="0.05em"
+                            text-anchor="middle"
+                            dominant-baseline="central"
+                        >
+                            {this.baroSetting.map(p => p.toFixed(0))}
+                        </text>
+                    </g>
                 </svg>
                 <IndicatedAltDisplayBox indicatedAlt={this.indicatedAlt} />
             </>

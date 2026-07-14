@@ -19,8 +19,8 @@
     --altimeter-indicatedalt-box-small-font-size: 22px;
 
     --altimeter-indicatedalt-box-tens-line-height: 25px;
-    --altimeter-indicatedalt-box-hundreds-offset-y: 3px;
-    --altimeter-indicatedalt-box-tens-offset-y: 3px;
+    --altimeter-indicatedalt-box-hundreds-offset-y: 0px;
+    --altimeter-indicatedalt-box-tens-offset-y: 0px;
 
     /* IAS display box vars (sized against the ~102px airspeed column so the
        box fits the tape with its pointer reaching the graduation marks) */
@@ -589,6 +589,7 @@ as5-element #SelectionValueWindow #SelectionValueWindowValue {
     width: var(--altimeter-indicatedalt-box-hundreds-width);
     font-size: var(--altimeter-indicatedalt-box-small-font-size);
 
+    --digit-scroller-line-height: var(--altimeter-indicatedalt-box-tens-line-height);
     --digit-scroller-line-offset-y: var(--altimeter-indicatedalt-box-hundreds-offset-y);
 }
 

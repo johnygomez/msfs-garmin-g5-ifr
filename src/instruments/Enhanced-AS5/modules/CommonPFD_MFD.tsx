@@ -324,11 +324,30 @@ export class PFD_Altimeter extends NavSystemElement {
     onEvent(_event) {
         switch (_event) {
             case 'BARO_INC':
-                SimVar.SetSimVarValue('K:KOHLSMAN_INC', SimVarValueType.Number, this.altimeterIndex)
+                this.increaseBaro()
                 break
             case 'BARO_DEC':
-                SimVar.SetSimVarValue('K:KOHLSMAN_DEC', SimVarValueType.Number, this.altimeterIndex)
+                this.decreaseBaro()
                 break
+        }
+    }
+
+    private increaseBaro() {
+        const currentHpa = SimVar.GetSimVarValue('A:KOHLSMAN SETTING MB:1', 'Millibars')
+        const nextIntegerHpa = Math.round(currentHpa) + 1
+
+        if (nextIntegerHpa <= 1084) {
+            const targetHpa = nextIntegerHpa * 16
+            SimVar.SetSimVarValue('K:KOHLSMAN_SET', 'number', targetHpa)
+        }
+    }
+
+    private decreaseBaro() {
+        const currentHpa = SimVar.GetSimVarValue('A:KOHLSMAN SETTING MB:1', 'Millibars')
+        const nextIntegerHpa = Math.round(currentHpa) - 1
+        if (nextIntegerHpa >= 948) {
+            const targetHpa = nextIntegerHpa * 16
+            SimVar.SetSimVarValue('K:KOHLSMAN_SET', 'number', targetHpa)
         }
     }
 }
