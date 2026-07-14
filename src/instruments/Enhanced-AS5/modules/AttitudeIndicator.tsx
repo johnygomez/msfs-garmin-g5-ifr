@@ -65,7 +65,7 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
         super(props)
 
         this.ballCx = MappedSubject.create(
-            ([s]) => Math.min(Math.max(s, -1), 1) * 35,
+            ([s]) => Math.min(Math.max(s, -1), 1) * 50,
             props.slipSkid
         ).pause()
     }
@@ -84,7 +84,7 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
             <svg
                 class="slip-skid-indicator-root"
                 width="100%"
-                viewBox="-35 -15 70 30"
+                viewBox="-50 -12 100 24"
                 overflow="visible"
             >
                 <circle
@@ -97,19 +97,19 @@ export class SlipSkidIndicatorComponent extends DisplayComponent<SlipSkidIndicat
                 />
                 <rect
                     class="slip-skid-left-marker"
-                    x="-13"
-                    y="-15"
+                    x="-12"
+                    y="-12"
                     width="4"
-                    height="30"
+                    height="24"
                     fill={Colors.WHITE}
                     stroke={Colors.BLACK}
                 />
                 <rect
                     class="slip-skid-right-marker"
-                    x="13"
-                    y="-15"
+                    x="12"
+                    y="-12"
                     width="4"
-                    height="30"
+                    height="24"
                     fill={Colors.WHITE}
                     stroke={Colors.BLACK}
                 />
