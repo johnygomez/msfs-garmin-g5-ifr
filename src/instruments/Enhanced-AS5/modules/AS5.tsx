@@ -45,6 +45,7 @@ import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSl
 
 export interface AirspeedSubjects {
     indicatedAirspeed: Subject<number>
+    trueAirspeed: Subject<number>
     displayRefSpeed: Subject<string>
     refSpeedMach: Subject<number>
     refSpeed: Subject<number>
@@ -106,10 +107,9 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                 </div>
                 <div id="Horizon">
                     <AttitudeIndicatorComponent
+                        tas={spd.trueAirspeed}
                         bus={this.props.bus}
-                        verticalCenter={true}
                         bankSizeRatio={-12}
-                        isBackup={false}
                     />
                 </div>
                 <div id="Altimeter">
@@ -374,6 +374,7 @@ export class AS5 extends NavSystem {
 
         const spdSubjects: AirspeedSubjects = {
             indicatedAirspeed: airspeed.indicatedAirspeedSub,
+            trueAirspeed: airspeed.trueAirspeedSub,
             displayRefSpeed: airspeed.displayRefSpeedSub,
             refSpeedMach: airspeed.refSpeedMachSub,
             refSpeed: airspeed.refSpeedSub,

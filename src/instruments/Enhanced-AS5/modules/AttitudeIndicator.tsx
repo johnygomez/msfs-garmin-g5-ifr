@@ -8,6 +8,7 @@ import {
     MappedSubscribable,
     Subscribable,
     AhrsEvents,
+    MappedSubject,
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from './G5CustomPublisher'
@@ -242,79 +243,143 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
 }
 
 interface BankScaleProps extends ComponentProps {
-    /** Y of the top-of-arc pointer, in SVG units (negative = up). */
-    topY: number
-    /** Bank-arc radius, in SVG units. */
+    /** Value of TAS is used to compute the rate 1 turn tick marks */
+    tas: Subscribable<number>
+    /** Bank-arc radius, in SVG units. The arc sits here and the dashes rise outward from it. */
     radius: number
+    x?: number
+    y?: number
 }
 
-/** The static bank scale — top triangle, graduation dashes, and the roll arc. */
+/** The static bank scale — the roll arc, its graduation dashes, and the top pointer. */
 class BankScale extends DisplayComponent<BankScaleProps> {
+    private static readonly BIG_DASHES = [-60, -30, 30, 60]
+    private static readonly SMALL_DASHES = [-45, -20, -10, 10, 20, 45]
+    private static readonly BIG_DASH_WIDTH = 3
+    private static readonly BIG_DASH_HEIGHT = 20
+    private static readonly SMALL_DASH_WIDTH = 4
+    private static readonly SMALL_DASH_HEIGHT = 12
+    private static readonly STD_RATE_TICK_HEIGHT = 14
+
+    /** Half-angle of the visible roll arc, in degrees (matches the outermost dashes). */
+    private static readonly ARC_HALF_ANGLE = 60
+    private static readonly POINTER_HALF_WIDTH = 10
+    private static readonly POINTER_HEIGHT = 20
+
+    /** Standard-rate (rate-1) turn: 3°/s, in rad/s. */
+    private static readonly RATE_ONE_TURN_RATE = (3 * Math.PI) / 180
+    private static readonly KNOTS_TO_MPS = 0.514444
+    private static readonly GRAVITY = 9.80665
+
+    private readonly rateOneTurnAngle: MappedSubject<[number], number>
+    private readonly rateOneTurnLeftTransform: MappedSubscribable<string>
+    private readonly rateOneTurnRightTransform: MappedSubscribable<string>
+
+    constructor(props: BankScaleProps) {
+        super(props)
+        this.rateOneTurnAngle = MappedSubject.create(
+            ([tas]) => this.computeRateOneTurnAngle(tas),
+            props.tas
+        ).pause()
+        this.rateOneTurnLeftTransform = this.rateOneTurnAngle
+            .map(angle => `rotate(${-angle})`)
+            .pause()
+        this.rateOneTurnRightTransform = this.rateOneTurnAngle
+            .map(angle => `rotate(${angle})`)
+            .pause()
+    }
+
+    onAfterRender(): void {
+        this.rateOneTurnAngle.resume()
+        this.rateOneTurnLeftTransform.resume()
+        this.rateOneTurnRightTransform.resume()
+    }
+
+    destroy(): void {
+        this.rateOneTurnAngle.destroy()
+        this.rateOneTurnLeftTransform.destroy()
+        this.rateOneTurnRightTransform.destroy()
+
+        super.destroy()
+    }
+
+    private computeRateOneTurnAngle(tasKnots: number): number {
+        const v = tasKnots * BankScale.KNOTS_TO_MPS
+        const bankRad = Math.atan((v * BankScale.RATE_ONE_TURN_RATE) / BankScale.GRAVITY)
+        return (bankRad * 180) / Math.PI
+    }
+
     public render(): VNode {
-        const topY = this.props.topY
         const radius = this.props.radius
-        const bigDashes = [-60, -30, 30, 60]
-        const smallDashes = [-45, -20, -10, 10, 20, 45]
-        const arcRadius = 126
+        const arcAngle = (BankScale.ARC_HALF_ANGLE * Math.PI) / 180
+        const arcX = radius * Math.sin(arcAngle)
+        const arcY = -radius * Math.cos(arcAngle)
+        // Concentric arc centred on the origin: bulges up to (0, -radius), passing
+        // through the inner base of every dash so the scale reads as one piece.
+        const arcD = `M${-arcX} ${arcY} A${radius} ${radius} 0 0 1 ${arcX} ${arcY}`
+        const rateOneTurnPath = `M${-BankScale.STD_RATE_TICK_HEIGHT} ${-radius - BankScale.STD_RATE_TICK_HEIGHT} L${BankScale.STD_RATE_TICK_HEIGHT} ${-radius - BankScale.STD_RATE_TICK_HEIGHT} L0 ${-radius} Z`
 
-        const children: VNode[] = []
-
-        children.push(
-            <path
-                class="attitude_bank_triangle"
-                d={`M0 ${topY} l -10 -20 l20 0 Z`}
-                fill={Colors.WHITE}
-            />
-        )
-
-        const bigDashWidth = 3
-        const bigDashHeight = 20
-        for (let i = 0; i < bigDashes.length; i++) {
-            children.push(
-                <rect
-                    class="attitude-arc-big-dash"
-                    x={-bigDashWidth / 2}
-                    y={-radius - bigDashHeight}
-                    height={`${bigDashHeight}`}
-                    width={`${bigDashWidth}`}
-                    fill={Colors.WHITE}
-                    transform={`rotate(${bigDashes[i]},0,0)`}
+        return (
+            <g
+                class="attitude_bank"
+                transform={`translate(${this.props.x ?? 0}, ${this.props.y ?? 0})`}
+            >
+                <path
+                    class="attitude-arc"
+                    d={arcD}
+                    fill="none"
+                    stroke={Colors.WHITE}
+                    stroke-width="3"
                 />
-            )
-        }
 
-        const smallDashWidth = 4
-        const smallDashHeight = 12
-        for (let i = 0; i < smallDashes.length; i++) {
-            children.push(
-                <rect
-                    class="attitude-arc-small-dash"
-                    x={-smallDashWidth / 2}
-                    y={-radius - smallDashHeight}
-                    height={`${smallDashHeight}`}
-                    width={`${smallDashWidth}`}
-                    fill={Colors.WHITE}
-                    transform={`rotate(${smallDashes[i]},0,0)`}
+                {BankScale.BIG_DASHES.map(angle => (
+                    <rect
+                        class="attitude-arc-big-dash"
+                        x={-BankScale.BIG_DASH_WIDTH / 2}
+                        y={-radius - BankScale.BIG_DASH_HEIGHT}
+                        width={BankScale.BIG_DASH_WIDTH}
+                        height={BankScale.BIG_DASH_HEIGHT}
+                        fill={Colors.WHITE}
+                        transform={`rotate(${angle},0,0)`}
+                    />
+                ))}
+
+                {BankScale.SMALL_DASHES.map(angle => (
+                    <rect
+                        class="attitude-arc-small-dash"
+                        x={-BankScale.SMALL_DASH_WIDTH / 2}
+                        y={-radius - BankScale.SMALL_DASH_HEIGHT}
+                        width={BankScale.SMALL_DASH_WIDTH}
+                        height={BankScale.SMALL_DASH_HEIGHT}
+                        fill={Colors.WHITE}
+                        transform={`rotate(${angle},0,0)`}
+                    />
+                ))}
+
+                <path
+                    class="attitude-arc-rate-one-turn-left"
+                    d={rateOneTurnPath}
+                    fill={Colors.GREEN}
+                    stroke={Colors.BLACK}
+                    transform={this.rateOneTurnLeftTransform}
                 />
-            )
-        }
 
-        const startX = -106
-        const startY = -radius + 60
-        const endX = 106
-        const endY = -radius + 60
-        const arcD = `M${startX} ${startY} A${arcRadius} ${arcRadius} 0 0 1 ${endX} ${endY}`
-        children.push(
-            <path
-                class="attitude-arc"
-                d={arcD}
-                fill="none"
-                stroke={Colors.WHITE}
-                stroke-width="3"
-            />
+                <path
+                    class="attitude-arc-rate-one-turn-right"
+                    d={rateOneTurnPath}
+                    fill={Colors.GREEN}
+                    stroke={Colors.BLACK}
+                    transform={this.rateOneTurnRightTransform}
+                />
+
+                <path
+                    class="attitude_bank_triangle"
+                    d={`M${-BankScale.POINTER_HALF_WIDTH} ${-radius} L${BankScale.POINTER_HALF_WIDTH} ${-radius} L0 ${-radius + BankScale.POINTER_HEIGHT} Z`}
+                    fill={Colors.WHITE}
+                    transform={`translate(0, ${-BankScale.POINTER_HEIGHT})`}
+                />
+            </g>
         )
-
-        return <g class="attitude_bank">{children}</g>
     }
 }
 
@@ -464,9 +529,8 @@ class LowBankMode extends DisplayComponent<LowBankModeProps> {
 
 export interface AttitudeIndicatorComponentProps extends ComponentProps {
     bus: EventBus
-    verticalCenter: boolean
     bankSizeRatio: number
-    isBackup: boolean
+    tas: Subscribable<number>
 }
 
 export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicatorComponentProps> {
@@ -481,31 +545,14 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     private readonly horizonTopColorLight = Colors.SKY_BLUE_LIGHT
     private readonly horizonBottomColorLight = Colors.GROUND_BROWN_LIGHT
 
-    get verticalCenter(): boolean {
-        return this.props.verticalCenter
-    }
-    get bankSizeRatio(): number {
-        return this.props.bankSizeRatio
-    }
-    get isBackup(): boolean {
-        return this.props.isBackup
-    }
-
-    private get topY(): number {
-        return this.verticalCenter ? -120 : -170
-    }
-    private get bankRadius(): number {
-        return -this.topY
-    }
-    private get viewBox(): string {
-        return this.verticalCenter ? '-200 -150 400 300' : '-200 -200 400 300'
-    }
-    private get pitchContainerY(): number {
-        return this.verticalCenter ? -80 : -130
-    }
-    private get pitchContainerHeight(): number {
-        return this.isBackup ? 330 : 230
-    }
+    private readonly TOP_Y = -145
+    // Concentric with the roll pivot (the SVG origin): radius = |TOP_Y| puts the arc's
+    // top at the pointer, so rotating about the origin reads true. This makes the mount
+    // offset y = BANK_RADIUS + TOP_Y = 0.
+    private readonly BANK_RADIUS = 145
+    private readonly VIEWBOX = '-200 -150 400 300'
+    private readonly PITCH_CONTAINER_Y = -80
+    private readonly PITCH_CONTAINER_HEIGHT = 230
 
     constructor(props: AttitudeIndicatorComponentProps) {
         super(props)
@@ -543,7 +590,7 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                     class="attitude-root"
                     width="100%"
                     height="100%"
-                    viewBox={this.viewBox}
+                    viewBox={this.VIEWBOX}
                     overflow="visible"
                     style="position:absolute"
                 >
@@ -590,24 +637,31 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                         <svg
                             class="attitude_pitch_container"
                             width="230"
-                            height={`${this.pitchContainerHeight}`}
+                            height={`${this.PITCH_CONTAINER_HEIGHT}`}
                             x="-115"
-                            y={`${this.pitchContainerY}`}
-                            viewBox={`-115 ${this.pitchContainerY} 230 ${this.pitchContainerHeight}`}
+                            y={`${this.PITCH_CONTAINER_Y}`}
+                            viewBox={`-115 ${this.PITCH_CONTAINER_Y} 230 ${this.PITCH_CONTAINER_HEIGHT}`}
                             overflow="hidden"
                         >
                             <PitchLadder
-                                bankSizeRatio={this.bankSizeRatio}
+                                bankSizeRatio={this.props.bankSizeRatio}
                                 transform={this.pitchTransform}
                             />
-                            <FlightDirector bus={this.props.bus} pitchScale={this.bankSizeRatio} />
+                            <FlightDirector
+                                bus={this.props.bus}
+                                pitchScale={this.props.bankSizeRatio}
+                            />
                         </svg>
 
-                        <BankScale topY={this.topY} radius={this.bankRadius} />
+                        <BankScale
+                            tas={this.props.tas}
+                            radius={this.BANK_RADIUS}
+                            y={this.BANK_RADIUS + this.TOP_Y}
+                        />
 
-                        <LowBankMode bus={this.props.bus} radius={this.bankRadius} />
+                        <LowBankMode bus={this.props.bus} radius={this.BANK_RADIUS} />
                     </g>
-                    <AircraftCursors topY={this.topY} />
+                    <AircraftCursors topY={this.TOP_Y} />
                 </svg>
             </div>
         )
