@@ -250,6 +250,23 @@ as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator {
     top: 23px;
     right: 0;
 }
+as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: 0;
+    height: 100%;
+    width: 1px;
+    background: linear-gradient(
+        to bottom,
+        transparent 0%,
+        rgba(0, 0, 0, 0.5) 30%,
+        rgba(0, 0, 0, 0.5) 70%,
+        transparent 100%
+    );
+    filter: blur(1px);
+    pointer-events: none;
+}
 
 as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator .vertical-speed-indicator-bar {
     position: absolute;
