@@ -118,6 +118,35 @@ class IASDisplayBox extends DisplayComponent<IASDisplayBoxProps> {
     }
 }
 
+interface VSpeedReferenceProps extends ComponentProps {
+    speed: string
+    x: string
+    y: Subscribable<number>
+}
+
+class VSpeedReference extends DisplayComponent<VSpeedReferenceProps> {
+    public render(): VNode {
+        return (
+            <svg x={this.props.x} y={this.props.y} width="50" height="30" viewBox="0 0 15 10">
+                <g>
+                    <polygon points="0,5 5,0 15,0 15,10 5,10" fill={Colors.BLACK} opacity="0.9" />
+                    <text
+                        x="10"
+                        y="5"
+                        fill="cyan"
+                        font-size="8"
+                        text-anchor="middle"
+                        dominant-baseline="central"
+                        font-family={GF_FONT}
+                    >
+                        {this.props.speed}
+                    </text>
+                </g>
+            </svg>
+        )
+    }
+}
+
 interface AirspeedTrendVectorProps extends ComponentProps {
     /** Trend in knots per second. */
     trend: Subscribable<number>
@@ -259,6 +288,11 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private maxValue = 0
     private vyseValue = 0
     private vmcValue = 0
+    private Vr = 0
+    private Vx = 0
+    private Vy = 0
+    private Va = 0
+    private Vg = 0
 
     private readonly height: number
     private readonly centerY: number
@@ -285,6 +319,11 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private readonly vyseY: MappedSubject<[number], number>
     private readonly vmcY: MappedSubject<[number], number>
     private readonly vmcHeight: MappedSubject<[number], number>
+    private readonly VaOffset: MappedSubject<[number], number>
+    private readonly VrOffset: MappedSubject<[number], number>
+    private readonly VxOffset: MappedSubject<[number], number>
+    private readonly VyOffset: MappedSubject<[number], number>
+    private readonly VgOffset: MappedSubject<[number], number>
 
     private readonly numEngines: ConsumerSubject<number>
     private readonly vyseVisibility: MappedSubject<[number], string>
@@ -306,69 +345,104 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
 
         const ias = props.indicatedAirspeed
 
-        this.centerKt = MappedSubject.create(([v]) => Math.max(Math.round(v / 10) * 10, 60), ias)
+        this.centerKt = MappedSubject.create(
+            ([v]) => Math.max(Math.round(v / 10) * 10, 60),
+            ias
+        ).pause()
 
-        this.iasBoxValue = MappedSubject.create(([v]) => Math.max(v, 20), ias)
+        this.iasBoxValue = MappedSubject.create(([v]) => Math.max(v, 20), ias).pause()
 
         this.isOffScale = MappedSubject.create(
             ([v]) => this.maxValue > 0 && Math.max(v, 20) > this.maxValue,
             ias
-        )
+        ).pause()
 
         this.tapeTransform = MappedSubject.create(
             ([v, ck]) => `translate(0, ${(Math.max(v, 20) - ck) * UNITS_PER_KT})`,
             ias,
             this.centerKt
-        )
+        ).pause()
 
         const gradN = this.GRAD_COUNT
         for (let i = 0; i < gradN * 2 + 1; i++) {
             const idx = i - gradN
             this.gradTextSubjects.push(
-                MappedSubject.create(([ck]) => fastToFixed(ck - idx * 10, 0), this.centerKt)
+                MappedSubject.create(([ck]) => fastToFixed(ck - idx * 10, 0), this.centerKt).pause()
             )
         }
 
-        this.greenBarY = MappedSubject.create(([ck]) => this.barY(this.greenEnd, ck), this.centerKt)
+        this.greenBarY = MappedSubject.create(
+            ([ck]) => this.barY(this.greenEnd, ck),
+            this.centerKt
+        ).pause()
         this.greenBarHeight = MappedSubject.create(
             ([ck]) => Math.max(0, this.barY(this.greenBegin, ck) - this.barY(this.greenEnd, ck)),
             this.centerKt
-        )
+        ).pause()
         this.yellowBarY = MappedSubject.create(
             ([ck]) => this.barY(this.yellowEnd, ck),
             this.centerKt
-        )
+        ).pause()
         this.yellowBarHeight = MappedSubject.create(
             ([ck]) => Math.max(0, this.barY(this.yellowBegin, ck) - this.barY(this.yellowEnd, ck)),
             this.centerKt
-        )
-        this.redBarY = MappedSubject.create(([ck]) => this.barY(this.redEnd, ck), this.centerKt)
+        ).pause()
+        this.redBarY = MappedSubject.create(
+            ([ck]) => this.barY(this.redEnd, ck),
+            this.centerKt
+        ).pause()
         this.redBarHeight = MappedSubject.create(
             ([ck]) => Math.max(0, this.barY(this.redBegin, ck) - this.barY(this.redEnd, ck)),
             this.centerKt
-        )
-        this.flapsBarY = MappedSubject.create(([ck]) => this.barY(this.flapsEnd, ck), this.centerKt)
+        ).pause()
+        this.flapsBarY = MappedSubject.create(
+            ([ck]) => this.barY(this.flapsEnd, ck),
+            this.centerKt
+        ).pause()
         this.flapsBarHeight = MappedSubject.create(
             ([ck]) => Math.max(0, this.barY(this.flapsBegin, ck) - this.barY(this.flapsEnd, ck)),
             this.centerKt
-        )
+        ).pause()
         this.flapsBarFullY = MappedSubject.create(
             ([ck]) => this.barY(this.greenBegin, ck),
             this.centerKt
-        )
+        ).pause()
         this.flapsBarFullHeight = MappedSubject.create(
             ([ck]) => Math.max(0, this.barY(this.vmcValue, ck) - this.barY(this.greenBegin, ck)),
             this.centerKt
-        )
+        ).pause()
         this.vyseY = MappedSubject.create(
             ([ck]) => this.barY(this.vyseValue, ck) - 4,
             this.centerKt
-        )
-        this.vmcY = MappedSubject.create(([ck]) => this.barY(this.vmcValue, ck) - 4, this.centerKt)
+        ).pause()
+        this.vmcY = MappedSubject.create(
+            ([ck]) => this.barY(this.vmcValue, ck) - 4,
+            this.centerKt
+        ).pause()
         this.vmcHeight = MappedSubject.create(
             ([ck]) => Math.max(0, this.barY(0, ck) - this.barY(this.vmcValue, ck)),
             this.centerKt
-        )
+        ).pause()
+        this.VaOffset = MappedSubject.create(
+            ([ck]) => this.barY(this.Va, ck),
+            this.centerKt
+        ).pause()
+        this.VrOffset = MappedSubject.create(
+            ([ck]) => this.barY(this.Vr, ck),
+            this.centerKt
+        ).pause()
+        this.VxOffset = MappedSubject.create(
+            ([ck]) => this.barY(this.Vx, ck),
+            this.centerKt
+        ).pause()
+        this.VyOffset = MappedSubject.create(
+            ([ck]) => this.barY(this.Vy, ck),
+            this.centerKt
+        ).pause()
+        this.VgOffset = MappedSubject.create(
+            ([ck]) => this.barY(this.Vg, ck),
+            this.centerKt
+        ).pause()
 
         this.endElementTransform = MappedSubject.create(
             ([v, ck, maxV]) => {
@@ -390,7 +464,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
             ias,
             this.centerKt,
             props.maxSpeed
-        )
+        ).pause()
 
         const sub = props.bus.getSubscriber<G5CustomEvents>()
         this.numEngines = ConsumerSubject.create(sub.on('number_of_engines'), 1).pause()
@@ -401,8 +475,33 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     }
 
     public onAfterRender(): void {
+        this.centerKt.resume()
+        this.iasBoxValue.resume()
+        this.isOffScale.resume()
+        this.tapeTransform.resume()
+        this.greenBarY.resume()
+        this.greenBarHeight.resume()
+        this.yellowBarY.resume()
+        this.yellowBarHeight.resume()
+        this.redBarY.resume()
+        this.redBarHeight.resume()
+        this.flapsBarY.resume()
+        this.flapsBarHeight.resume()
+        this.flapsBarFullY.resume()
+        this.flapsBarFullHeight.resume()
+        this.vyseY.resume()
+        this.vmcY.resume()
+        this.vmcHeight.resume()
+        this.VaOffset.resume()
+        this.VrOffset.resume()
+        this.VxOffset.resume()
+        this.VyOffset.resume()
+        this.VgOffset.resume()
+        this.endElementTransform.resume()
         this.numEngines.resume()
         this.vyseVisibility.resume()
+
+        this.gradTextSubjects.forEach(s => s.resume())
     }
 
     public destroy(): void {
@@ -445,6 +544,11 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                 this.redBegin = designSpeeds.VNe ?? 0
                 this.redEnd = designSpeeds.VMax ?? 0
                 this.maxValue = designSpeeds.VNe ?? 0
+                this.Vr = Math.floor(designSpeeds.Vr ?? 0)
+                this.Vx = Math.floor(designSpeeds.Vx ?? 0)
+                this.Vy = Math.floor(designSpeeds.Vy ?? 0)
+                this.Va = this.getManeuveringSpeed()
+                this.Vg = Math.floor(designSpeeds.BestGlide ?? 0)
                 if (isFinite(designSpeeds.Vyse)) this.vyseValue = designSpeeds.Vyse
                 if (isFinite(designSpeeds.Vmc)) this.vmcValue = designSpeeds.Vmc
             }
@@ -559,6 +663,11 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                                 refSpeed={this.props.refSpeed}
                                 center={center}
                             />
+                            <VSpeedReference speed="A" x="200" y={this.VaOffset} />
+                            <VSpeedReference speed="G" x="200" y={this.VgOffset} />
+                            <VSpeedReference speed="R" x="200" y={this.VrOffset} />
+                            <VSpeedReference speed="X" x="200" y={this.VxOffset} />
+                            <VSpeedReference speed="Y" x="200" y={this.VyOffset} />
                         </g>
                     </svg>
                     <AirspeedTrendVector trend={this.props.airspeedTrend} center={center} />
@@ -619,5 +728,27 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                 </g>
             )
         })
+    }
+
+    private getManeuveringSpeed() {
+        let vS1 = SimVar.GetSimVarValue('DESIGN STALL SPEED CHOSEN', 'knots')
+
+        if (!vS1 || vS1 <= 0) {
+            vS1 = SimVar.GetSimVarValue('MIN AIRSPEED', 'knots') || 60
+        }
+
+        const gLimit = 3.8
+
+        const calculatedVaMaxGross = vS1 * Math.sqrt(gLimit)
+        const currentWeight = SimVar.GetSimVarValue('TOTAL WEIGHT', 'pounds')
+        const maxGrossWeight = SimVar.GetSimVarValue('MAX GROSS WEIGHT', 'pounds')
+
+        if (!maxGrossWeight || maxGrossWeight <= 0 || !currentWeight || currentWeight <= 0) {
+            return Math.round(calculatedVaMaxGross)
+        }
+
+        const weightRatio = currentWeight / maxGrossWeight
+        const currentVA = calculatedVaMaxGross * Math.sqrt(weightRatio)
+        return Math.round(currentVA)
     }
 }
