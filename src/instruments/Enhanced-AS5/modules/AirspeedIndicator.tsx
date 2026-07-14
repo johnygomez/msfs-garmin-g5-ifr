@@ -13,6 +13,7 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from './G5CustomPublisher'
+import { Colors } from './Utils'
 
 const GF_FONT = 'OpenSans-Bold'
 
@@ -126,32 +127,53 @@ interface AirspeedTrendVectorProps extends ComponentProps {
 
 /** The magenta acceleration-trend bar drawn alongside the tape cursor. */
 class AirspeedTrendVector extends DisplayComponent<AirspeedTrendVectorProps> {
+    /** Seconds of look-ahead the trend bar projects the airspeed over. */
+    private static readonly LOOKAHEAD_SEC = 6
     private static readonly MAX_LENGTH_PX = 120
 
     private readonly barY: MappedSubject<[number], number>
     private readonly barHeight: MappedSubject<[number], number>
+    private readonly visibility: MappedSubject<[number], string>
 
     constructor(props: AirspeedTrendVectorProps) {
         super(props)
 
         const clampedLength = props.trend.map(t =>
             Math.min(
-                Math.max(t * UNITS_PER_KT, -AirspeedTrendVector.MAX_LENGTH_PX),
+                Math.max(
+                    t * AirspeedTrendVector.LOOKAHEAD_SEC * UNITS_PER_KT,
+                    -AirspeedTrendVector.MAX_LENGTH_PX
+                ),
                 AirspeedTrendVector.MAX_LENGTH_PX
             )
         )
-        this.barY = MappedSubject.create(([len]) => props.center - len / 2, clampedLength)
+        this.barY = MappedSubject.create(([len]) => props.center - Math.max(len, 0), clampedLength)
         this.barHeight = MappedSubject.create(([len]) => Math.abs(len), clampedLength)
+        this.visibility = MappedSubject.create(
+            ([len]) => (Math.abs(len) > 25 ? 'visible' : 'hidden'),
+            clampedLength
+        )
     }
 
     public destroy(): void {
         this.barY.destroy()
         this.barHeight.destroy()
+        this.visibility.destroy()
         super.destroy()
     }
 
     public render(): VNode {
-        return <rect x="200" y={this.barY} width="10" height={this.barHeight} fill="#d12bc7" />
+        return (
+            <rect
+                x="200"
+                y={this.barY}
+                width="10"
+                height={this.barHeight}
+                fill={Colors.MAGENTA}
+                stroke={Colors.WHITE}
+                visibility={this.visibility}
+            />
+        )
     }
 }
 
