@@ -16,136 +16,202 @@ import { Colors } from './Utils'
 
 const GF_FONT = 'OpenSans-Bold'
 
+/** Angles from `start` to `end` inclusive, in `step` increments. */
+function angleRange(start: number, end: number, step: number): number[] {
+    const count = Math.round((end - start) / step) + 1
+    return Array.from({ length: count }, (_, i) => start + i * step)
+}
+
+interface PitchTickLabelsProps extends ComponentProps {
+    /** Pitch angle, in degrees, being labelled. */
+    angle: number
+    tickWidth: number
+    /** Top edge of the tick, in SVG units. */
+    tickY: number
+}
+
+/** The numbers flanking a labelled graduation tick, one on each side. */
+class PitchTickLabels extends DisplayComponent<PitchTickLabelsProps> {
+    private static readonly FONT_SIZE = 20
+    private static readonly GAP = 5
+
+    public render(): VNode {
+        const { angle, tickWidth, tickY } = this.props
+        const label = `${Math.abs(angle)}`
+        const baseline = tickY + PitchTickLabels.FONT_SIZE / 2
+
+        return (
+            <>
+                <text
+                    class="attitude-pitch-left-text"
+                    x={-tickWidth / 2 - PitchTickLabels.GAP}
+                    y={baseline}
+                    text-anchor="end"
+                    font-size={`${PitchTickLabels.FONT_SIZE}`}
+                    font-family={GF_FONT}
+                    fill={Colors.WHITE}
+                >
+                    {label}
+                </text>
+                <text
+                    class="attitude-pitch-right-text"
+                    x={tickWidth / 2 + PitchTickLabels.GAP}
+                    y={baseline}
+                    text-anchor="start"
+                    font-size={`${PitchTickLabels.FONT_SIZE}`}
+                    font-family={GF_FONT}
+                    fill={Colors.WHITE}
+                >
+                    {label}
+                </text>
+            </>
+        )
+    }
+}
+
+interface PitchTickProps extends ComponentProps {
+    /** Pitch angle, in degrees, marked by this tick. */
+    angle: number
+    /** SVG units per degree of pitch. */
+    pitchScale: number
+}
+
+/** A single graduation tick, sized and labelled according to the angle it marks. */
+class PitchTick extends DisplayComponent<PitchTickProps> {
+    private static readonly LABEL_INTERVAL = 10
+    private static readonly MINOR_INTERVAL = 5
+
+    private static readonly BIG = { width: 120, height: 3 }
+    private static readonly MEDIUM = { width: 60, height: 3 }
+    private static readonly SMALL = { width: 40, height: 2 }
+
+    private static sizeFor(angle: number): { width: number; height: number } {
+        if (angle % PitchTick.LABEL_INTERVAL === 0) {
+            return PitchTick.BIG
+        }
+
+        return angle % PitchTick.MINOR_INTERVAL === 0 ? PitchTick.MEDIUM : PitchTick.SMALL
+    }
+
+    public render(): VNode {
+        const { angle, pitchScale } = this.props
+        const { width, height } = PitchTick.sizeFor(angle)
+        const y = pitchScale * angle - height / 2
+
+        return (
+            <>
+                <rect
+                    class="attitude-pitch-gradation"
+                    fill={Colors.WHITE}
+                    x={-width / 2}
+                    y={y}
+                    width={width}
+                    height={height}
+                />
+                {angle % PitchTick.LABEL_INTERVAL === 0 ? (
+                    <PitchTickLabels angle={angle} tickWidth={width} tickY={y} />
+                ) : null}
+            </>
+        )
+    }
+}
+
+interface UnusualAttitudeChevronProps extends ComponentProps {
+    /** Pitch angle, in degrees, at the chevron's wide end. */
+    angle: number
+    /** SVG units per degree of pitch. */
+    pitchScale: number
+    direction: 'up' | 'down'
+}
+
+/** One red chevron of the unusual-attitude recovery guidance, pointing back towards the horizon. */
+class UnusualAttitudeChevron extends DisplayComponent<UnusualAttitudeChevronProps> {
+    /** Pitch angles, in degrees, spanned by one chevron. */
+    public static readonly SPAN = 10
+
+    private static readonly WIDTH = 120
+    private static readonly THICKNESS = 3
+    /** Width of the flat notch at the wide end, and of the barbs at the narrow end. */
+    private static readonly NOTCH = 40
+    private static readonly APEX_OVERSHOOT = 20
+
+    public render(): VNode {
+        const { angle, pitchScale, direction } = this.props
+        const { WIDTH, THICKNESS, NOTCH, APEX_OVERSHOOT, SPAN } = UnusualAttitudeChevron
+
+        const base = pitchScale * angle
+        const tip = pitchScale * (angle + SPAN)
+        const [wide, narrow, apex] =
+            direction === 'down'
+                ? [tip - THICKNESS / 2, base - THICKNESS / 2, tip + APEX_OVERSHOOT]
+                : [base - THICKNESS / 2, tip + THICKNESS / 2, base - APEX_OVERSHOOT]
+
+        const d =
+            `M${-NOTCH / 2} ${wide} l${NOTCH} 0 ` +
+            `L${WIDTH / 2} ${narrow} l${-NOTCH} 0 ` +
+            `L0 ${apex} ` +
+            `L${-WIDTH / 2 + NOTCH} ${narrow} l${-NOTCH} 0 Z`
+
+        return <path class={`attitude-pitch-chevron-${direction}`} d={d} fill={Colors.RED} />
+    }
+}
+
 interface PitchLadderProps extends ComponentProps {
     /** SVG units per degree of pitch. */
-    bankSizeRatio: number
+    pitchScale: number
     /** Pitch-driven translation shared with the horizon. */
     transform: Subscribable<string>
 }
 
 /** The pitch ladder — graduation marks, numeric labels, and unusual-attitude chevrons. */
 class PitchLadder extends DisplayComponent<PitchLadderProps> {
+    /** Outermost pitch angle, in degrees, drawn in either direction. */
+    private static readonly LIMIT = 80
+    /** Degrees, not SVG units — the on-screen spacing follows from `pitchScale`. */
+    private static readonly TICK_STEP = 2.5
+
+    /** Past these pitch angles the ladder gives way to chevrons. */
+    private static readonly UNUSUAL_ATTITUDE_LOWER_LIMIT = -30
+    private static readonly UNUSUAL_ATTITUDE_UPPER_LIMIT = 50
+
+    private static readonly TICK_ANGLES = angleRange(
+        -PitchLadder.LIMIT,
+        PitchLadder.LIMIT,
+        PitchLadder.TICK_STEP
+    ).filter(angle => angle !== 0)
+
+    private static readonly DOWN_CHEVRON_ANGLES = angleRange(
+        -PitchLadder.LIMIT,
+        PitchLadder.UNUSUAL_ATTITUDE_LOWER_LIMIT - UnusualAttitudeChevron.SPAN,
+        UnusualAttitudeChevron.SPAN
+    )
+
+    private static readonly UP_CHEVRON_ANGLES = angleRange(
+        PitchLadder.UNUSUAL_ATTITUDE_UPPER_LIMIT,
+        PitchLadder.LIMIT - UnusualAttitudeChevron.SPAN,
+        UnusualAttitudeChevron.SPAN
+    )
+
     public render(): VNode {
+        const pitchScale = this.props.pitchScale
+
         return (
             <g class="attitude_pitch" transform={this.props.transform}>
-                {this.buildGraduations()}
+                {PitchLadder.TICK_ANGLES.map(angle => (
+                    <PitchTick angle={angle} pitchScale={pitchScale} />
+                ))}
+                {PitchLadder.DOWN_CHEVRON_ANGLES.map(angle => (
+                    <UnusualAttitudeChevron
+                        angle={angle}
+                        pitchScale={pitchScale}
+                        direction="down"
+                    />
+                ))}
+                {PitchLadder.UP_CHEVRON_ANGLES.map(angle => (
+                    <UnusualAttitudeChevron angle={angle} pitchScale={pitchScale} direction="up" />
+                ))}
             </g>
         )
-    }
-
-    private buildGraduations(): VNode[] {
-        const gradations: VNode[] = []
-        const maxDash = 80
-        const fullPrecisionLowerLimit = -20
-        const fullPrecisionUpperLimit = 20
-        const halfPrecisionLowerLimit = -30
-        const halfPrecisionUpperLimit = 45
-        const unusualAttitudeLowerLimit = -30
-        const unusualAttitudeUpperLimit = 50
-        const bigWidth = 120
-        const bigHeight = 3
-        const mediumWidth = 60
-        const mediumHeight = 3
-        const smallWidth = 40
-        const smallHeight = 2
-        const fontSize = 20
-        const bankSizeRatio = this.props.bankSizeRatio
-
-        let angle = -maxDash
-        let nextAngle: number
-
-        while (angle <= maxDash) {
-            let width: number
-            let height: number
-            let hasText: boolean
-
-            if (angle % 10 == 0) {
-                width = bigWidth
-                height = bigHeight
-                hasText = true
-                if (angle >= fullPrecisionLowerLimit && angle < fullPrecisionUpperLimit) {
-                    nextAngle = angle + 2.5
-                } else if (angle >= halfPrecisionLowerLimit && angle < halfPrecisionUpperLimit) {
-                    nextAngle = angle + 5
-                } else {
-                    nextAngle = angle + 10
-                }
-            } else {
-                if (angle % 5 == 0) {
-                    width = mediumWidth
-                    height = mediumHeight
-                    hasText = true
-                    if (angle >= fullPrecisionLowerLimit && angle < fullPrecisionUpperLimit) {
-                        nextAngle = angle + 2.5
-                    } else {
-                        nextAngle = angle + 5
-                    }
-                } else {
-                    width = smallWidth
-                    height = smallHeight
-                    nextAngle = angle + 2.5
-                    hasText = false
-                }
-            }
-
-            if (angle != 0) {
-                gradations.push(
-                    <rect
-                        class="attitude-pitch-gradation"
-                        fill={Colors.WHITE}
-                        x={-width / 2}
-                        y={bankSizeRatio * angle - height / 2}
-                        width={width}
-                        height={height}
-                    />
-                )
-
-                if (hasText) {
-                    gradations.push(
-                        <text
-                            class="attitude-pitch-left-text"
-                            x={-width / 2 - 5}
-                            y={bankSizeRatio * angle - height / 2 + fontSize / 2}
-                            text-anchor="end"
-                            font-size={`${fontSize}`}
-                            font-family={GF_FONT}
-                            fill={Colors.WHITE}
-                        >{`${Math.abs(angle)}`}</text>
-                    )
-
-                    gradations.push(
-                        <text
-                            class="attitude-pitch-right-text"
-                            x={width / 2 + 5}
-                            y={bankSizeRatio * angle - height / 2 + fontSize / 2}
-                            text-anchor="start"
-                            font-size={`${fontSize}`}
-                            font-family={GF_FONT}
-                            fill={Colors.WHITE}
-                        >{`${Math.abs(angle)}`}</text>
-                    )
-                }
-
-                if (angle < unusualAttitudeLowerLimit) {
-                    let path = `M${-smallWidth / 2} ${bankSizeRatio * nextAngle - bigHeight / 2} l${smallWidth} 0 `
-                    path += `L${bigWidth / 2} ${bankSizeRatio * angle - bigHeight / 2} l${-smallWidth} 0 `
-                    path += `L0 ${bankSizeRatio * nextAngle + 20} `
-                    path += `L${-bigWidth / 2 + smallWidth} ${bankSizeRatio * angle - bigHeight / 2} l${-smallWidth} 0 Z`
-                    gradations.push(<path d={path} fill={Colors.RED} />)
-                }
-
-                if (angle >= unusualAttitudeUpperLimit && nextAngle <= maxDash) {
-                    let path = `M${-smallWidth / 2} ${bankSizeRatio * angle - bigHeight / 2} l${smallWidth} 0 `
-                    path += `L${bigWidth / 2} ${bankSizeRatio * nextAngle + bigHeight / 2} l${-smallWidth} 0 `
-                    path += `L0 ${bankSizeRatio * angle - 20} `
-                    path += `L${-bigWidth / 2 + smallWidth} ${bankSizeRatio * nextAngle + bigHeight / 2} l${-smallWidth} 0 Z`
-                    gradations.push(<path d={path} fill={Colors.RED} />)
-                }
-            }
-            angle = nextAngle
-        }
-
-        return gradations
     }
 }
 
@@ -529,7 +595,6 @@ class LowBankMode extends DisplayComponent<LowBankModeProps> {
 
 export interface AttitudeIndicatorComponentProps extends ComponentProps {
     bus: EventBus
-    bankSizeRatio: number
     tas: Subscribable<number>
 }
 
@@ -549,10 +614,13 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
     // Concentric with the roll pivot (the SVG origin): radius = |TOP_Y| puts the arc's
     // top at the pointer, so rotating about the origin reads true. This makes the mount
     // offset y = BANK_RADIUS + TOP_Y = 0.
-    private readonly BANK_RADIUS = 145
+    private readonly BANK_RADIUS = -this.TOP_Y
     private readonly VIEWBOX = '-200 -150 400 300'
-    private readonly PITCH_CONTAINER_Y = -80
-    private readonly PITCH_CONTAINER_HEIGHT = 230
+    /** Kept clear of the bank arc at |TOP_Y|, which the ladder must not reach. */
+    private readonly PITCH_CONTAINER_HALF_HEIGHT = 115
+    private readonly PITCH_CONTAINER_Y = -this.PITCH_CONTAINER_HALF_HEIGHT
+    private readonly PITCH_CONTAINER_HEIGHT = 2 * this.PITCH_CONTAINER_HALF_HEIGHT
+    private readonly PITCH_SCALE = -8
 
     constructor(props: AttitudeIndicatorComponentProps) {
         super(props)
@@ -561,10 +629,8 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
         this.pitch = ConsumerSubject.create(sub.on('actual_pitch_deg').withPrecision(2), 0).pause()
         this.bank = ConsumerSubject.create(sub.on('actual_roll_deg').withPrecision(2), 0).pause()
 
-        const pitchScale = props.bankSizeRatio
-
         this.rootTransform = this.bank.map(b => `rotate(${b})`).pause()
-        this.pitchTransform = this.pitch.map(p => `translate(0, ${p * pitchScale})`).pause()
+        this.pitchTransform = this.pitch.map(p => `translate(0, ${p * this.PITCH_SCALE})`).pause()
     }
 
     onAfterRender(): void {
@@ -644,13 +710,10 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                             overflow="hidden"
                         >
                             <PitchLadder
-                                bankSizeRatio={this.props.bankSizeRatio}
+                                pitchScale={this.PITCH_SCALE}
                                 transform={this.pitchTransform}
                             />
-                            <FlightDirector
-                                bus={this.props.bus}
-                                pitchScale={this.props.bankSizeRatio}
-                            />
+                            <FlightDirector bus={this.props.bus} pitchScale={this.PITCH_SCALE} />
                         </svg>
 
                         <BankScale

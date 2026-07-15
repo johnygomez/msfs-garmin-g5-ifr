@@ -106,11 +106,7 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                     <APInfoBarComponent {...this.props.apSubjects} />
                 </div>
                 <div id="Horizon">
-                    <AttitudeIndicatorComponent
-                        tas={spd.trueAirspeed}
-                        bus={this.props.bus}
-                        bankSizeRatio={-12}
-                    />
+                    <AttitudeIndicatorComponent tas={spd.trueAirspeed} bus={this.props.bus} />
                 </div>
                 <div id="Altimeter">
                     <AltimeterComponent
