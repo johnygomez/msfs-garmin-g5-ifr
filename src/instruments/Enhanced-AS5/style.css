@@ -169,7 +169,8 @@ as5-element #PageContainer #PFD #BottomIndicators > * {
     width: 100%;
 }
 as5-element #PageContainer #PFD #BottomIndicators > .slip-skid-indicator-root {
-    height: 30px;
+    height: 28px;
+    margin-bottom: 2px;
 }
 as5-element #PageContainer #PFD #BottomIndicators > .turn-rate-indicator-root {
     position: relative;

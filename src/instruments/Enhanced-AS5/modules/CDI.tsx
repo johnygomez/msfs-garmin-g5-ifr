@@ -10,9 +10,9 @@ import {
 
 import { Colors } from './Utils'
 
+type IndicatorShape = 'diamond' | 'triangle'
+
 export interface CDIProps extends ComponentProps {
-    noScale: boolean
-    indicatorShape: string
     cdiSource: Subject<number>
     cdiDeviation: Subject<number>
     isVisible: Subject<boolean>
@@ -24,8 +24,8 @@ interface CDIScaleDotsProps extends ComponentProps {
 }
 
 class CDIScaleDots extends DisplayComponent<CDIScaleDotsProps> {
-    private static readonly DOTS_PER_SIDE = 4
-    private static readonly DOT_SPACING = 10
+    private static readonly DOTS_PER_SIDE = 2
+    private static readonly DOT_SPACING = 20
 
     public render(): VNode {
         const offsets = Array.from(
@@ -39,7 +39,7 @@ class CDIScaleDots extends DisplayComponent<CDIScaleDotsProps> {
                     <circle
                         cx={this.props.cx + CDIScaleDots.DOT_SPACING * idx}
                         cy={this.props.cy}
-                        r="2"
+                        r="2.5"
                         fill={Colors.NONE}
                         stroke={Colors.WHITE}
                         stroke-width="0.5"
@@ -50,39 +50,8 @@ class CDIScaleDots extends DisplayComponent<CDIScaleDotsProps> {
     }
 }
 
-interface CDIScaleLabelsProps extends ComponentProps {
-    y: number
-}
-
-class CDIScaleLabels extends DisplayComponent<CDIScaleLabelsProps> {
-    public render(): VNode {
-        return (
-            <>
-                <text
-                    fill={Colors.WHITE}
-                    text-anchor="middle"
-                    x="10"
-                    y={this.props.y}
-                    font-size="5"
-                >
-                    AUTO
-                </text>
-                <text
-                    fill={Colors.WHITE}
-                    text-anchor="middle"
-                    x="90"
-                    y={this.props.y}
-                    font-size="5"
-                >
-                    5NM
-                </text>
-            </>
-        )
-    }
-}
-
 interface CDIDeviationIndicatorProps extends ComponentProps {
-    shape: string
+    shape: Subscribable<IndicatorShape>
     cx: number
     cy: number
     size: number
@@ -95,6 +64,7 @@ class CDIDeviationIndicator extends DisplayComponent<CDIDeviationIndicatorProps>
 
     private readonly fill: MappedSubject<[number], string>
     private readonly transform: MappedSubject<[number], string>
+    private readonly indicatorShape: MappedSubject<[IndicatorShape], string>
 
     constructor(props: CDIDeviationIndicatorProps) {
         super(props)
@@ -108,22 +78,29 @@ class CDIDeviationIndicator extends DisplayComponent<CDIDeviationIndicatorProps>
             const clamped = Math.min(1, Math.max(-1, deviation))
             return `translate(${clamped * CDIDeviationIndicator.MAX_DEFLECTION_PX}, 0)`
         }, props.deviation).pause()
+
+        this.indicatorShape = MappedSubject.create(
+            ([shape]) => this.buildPath(shape),
+            props.shape
+        ).pause()
     }
 
     public onAfterRender(): void {
         this.fill.resume()
         this.transform.resume()
+        this.indicatorShape.resume()
     }
 
     public destroy(): void {
         this.fill.destroy()
         this.transform.destroy()
+        this.indicatorShape.destroy()
         super.destroy()
     }
 
-    private buildPoints(): string {
+    private buildPath(shape: IndicatorShape): string {
         const { cx, cy, size: w } = this.props
-        switch (this.props.shape.toLowerCase()) {
+        switch (shape) {
             case 'diamond':
                 return `${cx - w},${cy} ${cx},${cy + w} ${cx + w},${cy} ${cx},${cy - w}`
             case 'triangle':
@@ -135,7 +112,7 @@ class CDIDeviationIndicator extends DisplayComponent<CDIDeviationIndicatorProps>
     public render(): VNode {
         return (
             <polygon
-                points={this.buildPoints()}
+                points={this.indicatorShape}
                 fill={this.fill}
                 stroke={Colors.BLACK}
                 stroke-width="0.25"
@@ -150,6 +127,7 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
     private static readonly CENTER_X = 50
 
     private readonly display: MappedSubject<[boolean], string>
+    private readonly indicatorShape: MappedSubject<[string], IndicatorShape>
 
     constructor(props: CDIProps) {
         super(props)
@@ -158,23 +136,27 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
             ([visible]) => (visible ? 'inherit' : 'none'),
             props.isVisible
         ).pause()
+        this.indicatorShape = MappedSubject.create(
+            ([src]) => (src === 1 || src === 2 ? 'diamond' : 'triangle'),
+            props.cdiSource
+        ).pause()
     }
 
     public onAfterRender(): void {
         this.display.resume()
+        this.indicatorShape.resume()
     }
 
     public destroy(): void {
         this.display.destroy()
+        this.indicatorShape.destroy()
         super.destroy()
     }
 
     public render(): VNode {
-        const { noScale, indicatorShape } = this.props
-        const height = noScale ? 10 : 15
+        const height = 10
         const cx = CDIComponent.CENTER_X
         const cy = height / 2
-        const indicatorSize = noScale ? 4 : 5
 
         return (
             <svg
@@ -196,12 +178,11 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                 />
                 <CDIScaleDots cx={cx} cy={cy} />
                 <rect x={cx - 0.5} y="0" width="0.5" height={height} fill={Colors.WHITE} />
-                {!noScale && <CDIScaleLabels y={height - 1} />}
                 <CDIDeviationIndicator
-                    shape={indicatorShape}
+                    shape={this.indicatorShape}
                     cx={cx}
                     cy={cy}
-                    size={indicatorSize}
+                    size={4}
                     source={this.props.cdiSource}
                     deviation={this.props.cdiDeviation}
                 />

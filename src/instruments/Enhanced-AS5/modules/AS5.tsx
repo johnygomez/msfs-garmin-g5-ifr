@@ -138,8 +138,6 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                 </div>
                 <div id="CDI">
                     <CDIComponent
-                        noScale={true}
-                        indicatorShape="Diamond"
                         cdiSource={this.props.cdiSource}
                         cdiDeviation={this.props.cdiDeviation}
                         isVisible={this.props.cdiVisible}
