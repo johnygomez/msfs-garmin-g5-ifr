@@ -7,6 +7,7 @@ import {
     Cabin_Warnings,
     Annunciation_MessageType,
 } from './NavSystem'
+import { VerticalDeviationMode } from './VerticalDeviationIndicator'
 
 export class PFD_VSpeed extends NavSystemElement {
     /** Reactive vertical speed value — can be consumed by a VS display component. */
@@ -210,7 +211,7 @@ export interface AltimeterSubjects {
     baroPressure: Subject<number>
     verticalSpeed: Subject<number>
     referenceAltitude: Subject<number>
-    verticalDeviationMode: Subject<string>
+    verticalDeviationMode: Subject<VerticalDeviationMode>
     verticalDeviationValue: Subject<number>
 }
 export class PFD_Altimeter extends NavSystemElement {

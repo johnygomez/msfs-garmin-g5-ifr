@@ -235,13 +235,27 @@ as5-element #PageContainer #PFD #Altimeter {
     right: 0;
 }
 
-as5-element #PageContainer #PFD #Altimeter .vertical-deviation-diamond-bug {
-    stroke: black;
-    stroke-width: 3;
+as5-element #PageContainer #PFD #VerticalDeviation {
+    position: absolute;
+    height: 180px;
+    width: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 107px;
 }
-as5-element #PageContainer #PFD #Altimeter .vertical-deviation-chevron-bug {
-    stroke: black;
-    stroke-width: 3;
+
+as5-element #PageContainer #PFD #VerticalDeviation > .vertical-deviation-mode-indicator {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: -20px;
+    background: rgba(0, 0, 0, 0.5);
+    line-height: 20px;
+    text-align: center;
+}
+
+as5-element #PageContainer #PFD #VerticalDeviation > .vertical-deviation-mode-indicator {
+    color: var(--magenta);
 }
 
 as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator {
@@ -346,8 +360,9 @@ as5-element #PageContainer #PFD #Compass {
 }
 as5-element #PageContainer #PFD #CDI {
     position: absolute;
-    left: 32.5%;
-    width: 35%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 180px;
     bottom: 45px;
 }
 as5-element #PageContainer #PFD .cdi polygon {

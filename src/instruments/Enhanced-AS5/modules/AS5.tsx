@@ -42,6 +42,10 @@ import {
 } from './NavSystem'
 import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
 import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSlipIndicator'
+import {
+    VerticalDeviationIndicatorComponent,
+    VerticalDeviationMode,
+} from './VerticalDeviationIndicator'
 
 export interface AirspeedSubjects {
     indicatedAirspeed: Subject<number>
@@ -109,11 +113,12 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
                     <AttitudeIndicatorComponent tas={spd.trueAirspeed} bus={this.props.bus} />
                 </div>
                 <div id="Altimeter">
-                    <AltimeterComponent
-                        bus={this.props.bus}
-                        height={1020}
-                        verticalDeviationMode={alt.verticalDeviationMode}
-                        verticalDeviationValue={alt.verticalDeviationValue}
+                    <AltimeterComponent bus={this.props.bus} height={1020} />
+                </div>
+                <div id="VerticalDeviation">
+                    <VerticalDeviationIndicatorComponent
+                        mode={alt.verticalDeviationMode}
+                        deviation={alt.verticalDeviationValue}
                     />
                 </div>
                 <div id="Airspeed">
@@ -349,7 +354,7 @@ export class AS5 extends NavSystem {
             baroPressure: Subject.create(0),
             verticalSpeed: Subject.create(0),
             referenceAltitude: Subject.create(0),
-            verticalDeviationMode: Subject.create('None'),
+            verticalDeviationMode: Subject.create<VerticalDeviationMode>('None'),
             verticalDeviationValue: Subject.create(0),
         }
         altimeter.subjects = altimeterSubjects

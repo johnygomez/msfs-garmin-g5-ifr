@@ -172,7 +172,7 @@ export class CDIComponent extends DisplayComponent<CDIProps> {
                     width="100"
                     height={height}
                     fill={Colors.PFD_BOX_BG}
-                    fill-opacity="0.75"
+                    fill-opacity="0.5"
                     stroke={Colors.WHITE}
                     stroke-width="0.75"
                 />

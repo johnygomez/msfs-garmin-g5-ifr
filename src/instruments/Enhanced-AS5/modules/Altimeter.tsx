@@ -22,11 +22,10 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from './G5CustomPublisher'
+
 export interface AltimeterComponentProps extends ComponentProps {
     bus: EventBus
     height: number
-    verticalDeviationMode: Subject<string>
-    verticalDeviationValue: Subject<number>
     onDeviationAlert?: () => void
 }
 
@@ -405,11 +404,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
     private readonly tapeTransform: MappedSubject<[number, number], string>
     private readonly bugTransform: MappedSubject<[number, number], string>
-    private readonly deviationVisibility: MappedSubject<[string], string>
-    private readonly chevronDisplay: MappedSubject<[string], string>
-    private readonly diamondDisplay: MappedSubject<[string], string>
-    private readonly hollowDiamondDisplay: MappedSubject<[string], string>
-    private readonly deviationTransform: MappedSubject<[number], string>
 
     private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
 
@@ -505,31 +499,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             this.refAltitude,
             this.indicatedAlt
         ).pause()
-
-        this.deviationVisibility = MappedSubject.create(
-            ([mode]) => (mode !== 'None' ? 'visible' : 'hidden'),
-            props.verticalDeviationMode
-        ).pause()
-
-        this.chevronDisplay = MappedSubject.create(
-            ([mode]) => (mode === 'GS' ? '' : 'none'),
-            props.verticalDeviationMode
-        ).pause()
-
-        this.diamondDisplay = MappedSubject.create(
-            ([mode]) => (mode === 'GP' ? '' : 'none'),
-            props.verticalDeviationMode
-        ).pause()
-
-        this.hollowDiamondDisplay = MappedSubject.create(
-            ([mode]) => (mode === 'GSPreview' ? '' : 'none'),
-            props.verticalDeviationMode
-        ).pause()
-
-        this.deviationTransform = MappedSubject.create(([val]) => {
-            const offsetY = Math.max(-1, Math.min(1, val)) * 132
-            return `translate(0, ${offsetY})`
-        }, props.verticalDeviationValue).pause()
     }
 
     public onAfterRender(): void {
@@ -543,11 +512,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
         this.tapeTransform.resume()
         this.bugTransform.resume()
-        this.deviationVisibility.resume()
-        this.chevronDisplay.resume()
-        this.diamondDisplay.resume()
-        this.hollowDiamondDisplay.resume()
-        this.deviationTransform.resume()
 
         this.indicatedAltPubSub.resume(true)
         this.altSelectInitializedSub.resume(true)
@@ -565,11 +529,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
         this.tapeTransform.destroy()
         this.bugTransform.destroy()
-        this.deviationVisibility.destroy()
-        this.chevronDisplay.destroy()
-        this.diamondDisplay.destroy()
-        this.hollowDiamondDisplay.destroy()
-        this.deviationTransform.destroy()
 
         this.gradTextSubjects.forEach(s => s.destroy())
         this.currentMinimumSub.destroy()
@@ -580,7 +539,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     }
 
     public render(): VNode {
-        const deviationCenterY = this.props.height / 2 - 100
         const tapeCenterY = this.TAPE_WINDOW_PX / 2
         const GF_font = 'OpenSans-Bold'
         const viewBoxWidth = 300
@@ -595,67 +553,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                     id="AltimeterRoot"
                     viewBox={`-55 -100 ${viewBoxWidth} ${this.props.height}`}
                 >
-                    <g class="vertical-deviation-group" visibility={this.deviationVisibility}>
-                        <rect
-                            class="vertical-deviation-background"
-                            x="-50"
-                            y={deviationCenterY - 200}
-                            width="50"
-                            height="400"
-                            fill="#1a1d21"
-                            fill-opacity="0.25"
-                        />
-                        <rect
-                            class="vertical-deviation-top-background"
-                            x="-50"
-                            y={deviationCenterY - 250}
-                            width="50"
-                            height="50"
-                            fill="#1a1d21"
-                        />
-                        <text
-                            x="-25"
-                            y={deviationCenterY - 210}
-                            fill="#d12bc7"
-                            font-size="45"
-                            font-family={GF_font}
-                            text-anchor="middle"
-                        >
-                            V
-                        </text>
-                        {[-2, -1, 1, 2].map(i => (
-                            <circle
-                                class="vertical-deviation-grad"
-                                cx="-25"
-                                cy={deviationCenterY + 66 * i}
-                                r="6"
-                                stroke="white"
-                                stroke-width="3"
-                                fill-opacity="0"
-                            />
-                        ))}
-                        <polygon
-                            class="vertical-deviation-chevron-bug"
-                            points={`-45,${deviationCenterY} -10,${deviationCenterY - 20} -10,${deviationCenterY - 10} -25,${deviationCenterY} -10,${deviationCenterY + 10} -10,${deviationCenterY + 20}`}
-                            fill="#d12bc7"
-                            display={this.chevronDisplay}
-                            transform={this.deviationTransform}
-                        />
-                        <polygon
-                            class="vertical-deviation-diamond-bug"
-                            points={`-40,${deviationCenterY} -25,${deviationCenterY - 15} -10,${deviationCenterY} -25,${deviationCenterY + 15}`}
-                            fill="#10c210"
-                            display={this.diamondDisplay}
-                            transform={this.deviationTransform}
-                        />
-                        <polygon
-                            class="vertical-deviation-hollow-diamond-bug"
-                            points={`-40,${deviationCenterY} -25,${deviationCenterY - 15} -10,${deviationCenterY} -25,${deviationCenterY + 15} -25,${deviationCenterY + 5} -20,${deviationCenterY} -25,${deviationCenterY - 5} -30,${deviationCenterY} -25,${deviationCenterY + 5} -25,${deviationCenterY + 15}`}
-                            fill="#DFDFDF"
-                            display={this.hollowDiamondDisplay}
-                            transform={this.deviationTransform}
-                        />
-                    </g>
                     <rect
                         class="background"
                         x="0"
