@@ -497,6 +497,15 @@ export class AS5 extends NavSystem {
                 if (this.currentInteractionState == 2) this.computeEvent('ENT_Push')
                 else if (!popUpWasOpen) this.computeEvent('MENU_Push')
                 break
+            case 'Knob_Long_Push':
+                if (
+                    this.currentInteractionState == 0 &&
+                    this.pageGroups?.[0]?.pageIndex == 1 &&
+                    !popUpWasOpen
+                ) {
+                    this.syncHeading()
+                }
+                break
         }
     }
     onPowerOn() {
