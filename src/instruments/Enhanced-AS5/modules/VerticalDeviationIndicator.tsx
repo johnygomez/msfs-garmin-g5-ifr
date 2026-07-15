@@ -11,15 +11,7 @@ import { Colors } from './Utils'
 
 export type VerticalDeviationMode = 'None' | 'GS' | 'GP' | 'GSPreview'
 
-type GuidanceMode = Exclude<VerticalDeviationMode, 'None'>
-
 type BugShape = 'chevron' | 'diamond' | 'hollow-diamond'
-
-const BUG_SHAPES: Readonly<Record<GuidanceMode, BugShape>> = {
-    GS: 'chevron',
-    GP: 'diamond',
-    GSPreview: 'hollow-diamond',
-}
 
 const DOTS_PER_SIDE = 2
 const DOT_SPACING = 20
@@ -75,11 +67,13 @@ interface VerticalModeIndicatorProps extends ComponentProps {
 class VerticalModeIndicator extends DisplayComponent<VerticalModeIndicatorProps> {
     private readonly style: MappedSubject<[VerticalDeviationMode], string>
 
+    private readonly modeStyles
+
     constructor(props: VerticalModeIndicatorProps) {
         super(props)
 
         this.style = MappedSubject.create(
-            ([mode]) => (mode === 'None' ? 'display: none;' : 'display: block;'),
+            ([mode]) => this.computeVisbility(mode),
             props.mode
         ).pause()
     }
@@ -100,16 +94,30 @@ class VerticalModeIndicator extends DisplayComponent<VerticalModeIndicatorProps>
             </div>
         )
     }
+
+    private computeVisbility(mode: VerticalDeviationMode): string {
+        switch (mode) {
+            case 'None':
+                return 'display: none;'
+            case 'GS':
+                return 'display: none;'
+            case 'GP':
+                return 'display: block;'
+            case 'GSPreview':
+                return 'display: block;'
+        }
+    }
 }
 
 interface VerticalDeviationBugProps extends ComponentProps {
-    shape: Subscribable<BugShape | undefined>
+    mode: Subscribable<VerticalDeviationMode>
     cx: number
     cy: number
     deviation: Subscribable<number>
 }
 
 class VerticalDeviationBug extends DisplayComponent<VerticalDeviationBugProps> {
+    private readonly shape: MappedSubject<[VerticalDeviationMode], BugShape | undefined>
     private readonly points: MappedSubject<[BugShape | undefined], string>
     private readonly fill: MappedSubject<[BugShape | undefined], string>
     private readonly stroke: MappedSubject<[BugShape | undefined], string>
@@ -118,26 +126,13 @@ class VerticalDeviationBug extends DisplayComponent<VerticalDeviationBugProps> {
     constructor(props: VerticalDeviationBugProps) {
         super(props)
 
-        this.points = MappedSubject.create(
-            ([shape]) => (shape === undefined ? '' : this.buildPoints(shape)),
-            props.shape
-        ).pause()
+        this.points = MappedSubject.create(([mode]) => this.buildShape(mode), props.mode).pause()
 
-        this.fill = MappedSubject.create(([shape]) => {
-            switch (shape) {
-                case 'diamond':
-                    return Colors.GREEN
-                case 'hollow-diamond':
-                    return Colors.HOLLOW_DIAMOND
-                case 'chevron':
-                default:
-                    return Colors.MAGENTA
-            }
-        }, props.shape).pause()
+        this.fill = MappedSubject.create(([mode]) => this.computeColor(mode), props.mode).pause()
 
         this.stroke = MappedSubject.create(
-            ([shape]) => (shape === 'hollow-diamond' ? Colors.NONE : Colors.BLACK),
-            props.shape
+            ([mode]) => (mode === 'None' ? Colors.NONE : Colors.BLACK),
+            props.mode
         ).pause()
 
         this.transform = MappedSubject.create(([deviation]) => {
@@ -161,16 +156,30 @@ class VerticalDeviationBug extends DisplayComponent<VerticalDeviationBugProps> {
         super.destroy()
     }
 
-    private buildPoints(shape: BugShape): string {
+    private buildShape(mode: VerticalDeviationMode): string {
         const { cx, cy } = this.props
         const w = BUG_SIZE
-        switch (shape) {
-            case 'chevron':
+        switch (mode) {
+            case 'GSPreview':
                 return `${cx - w},${cy} ${cx + w * 0.75},${cy - w} ${cx + w * 0.75},${cy - w / 2} ${cx},${cy} ${cx + w * 0.75},${cy + w / 2} ${cx + w * 0.75},${cy + w}`
-            case 'diamond':
+            case 'GS':
+            case 'GP':
                 return `${cx - w},${cy} ${cx},${cy - w} ${cx + w},${cy} ${cx},${cy + w}`
-            case 'hollow-diamond':
+            case 'None':
                 return `${cx - w},${cy} ${cx},${cy - w} ${cx + w},${cy} ${cx},${cy + w} ${cx},${cy + w / 3} ${cx + w / 3},${cy} ${cx},${cy - w / 3} ${cx - w / 3},${cy} ${cx},${cy + w / 3} ${cx},${cy + w}`
+        }
+    }
+
+    private computeColor(mode: VerticalDeviationMode): string {
+        switch (mode) {
+            case 'GSPreview':
+                return Colors.MAGENTA
+            case 'GS':
+                return Colors.GREEN
+            case 'GP':
+                return Colors.MAGENTA
+            case 'None':
+                return Colors.HOLLOW_DIAMOND
         }
     }
 
@@ -190,7 +199,6 @@ class VerticalDeviationBug extends DisplayComponent<VerticalDeviationBugProps> {
 
 export class VerticalDeviationIndicatorComponent extends DisplayComponent<VerticalDeviationIndicatorProps> {
     private readonly display: MappedSubject<[VerticalDeviationMode], string>
-    private readonly bugShape: MappedSubject<[VerticalDeviationMode], BugShape | undefined>
 
     constructor(props: VerticalDeviationIndicatorProps) {
         super(props)
@@ -199,21 +207,14 @@ export class VerticalDeviationIndicatorComponent extends DisplayComponent<Vertic
             ([mode]) => (mode === 'None' ? 'none' : 'inherit'),
             props.mode
         ).pause()
-
-        this.bugShape = MappedSubject.create(
-            ([mode]) => (mode === 'None' ? undefined : BUG_SHAPES[mode]),
-            props.mode
-        ).pause()
     }
 
     public onAfterRender(): void {
         this.display.resume()
-        this.bugShape.resume()
     }
 
     public destroy(): void {
         this.display.destroy()
-        this.bugShape.destroy()
         super.destroy()
     }
 
@@ -249,7 +250,7 @@ export class VerticalDeviationIndicatorComponent extends DisplayComponent<Vertic
                     />
                     <VerticalDeviationScaleDots cx={CENTER_X} cy={CENTER_Y} />
                     <VerticalDeviationBug
-                        shape={this.bugShape}
+                        mode={this.props.mode}
                         cx={CENTER_X}
                         cy={CENTER_Y}
                         deviation={this.props.deviation}
