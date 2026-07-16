@@ -1,4 +1,4 @@
-import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
+import { SimVarValueType, Subject, Subscribable } from '@microsoft/msfs-sdk'
 
 import {
     NavSystemElement,
@@ -211,8 +211,8 @@ export interface AltimeterSubjects {
     baroPressure: Subject<number>
     verticalSpeed: Subject<number>
     referenceAltitude: Subject<number>
-    verticalDeviationMode: Subject<VerticalDeviationMode>
-    verticalDeviationValue: Subject<number>
+    verticalDeviationMode: Subscribable<VerticalDeviationMode>
+    verticalDeviationValue: Subscribable<number>
 }
 export class PFD_Altimeter extends NavSystemElement {
     lastAltitude: number
@@ -256,61 +256,9 @@ export class PFD_Altimeter extends NavSystemElement {
             this.lastAltitude = altitude
         }
         this.subjects.verticalSpeed.set(Simplane.getVerticalSpeed())
-        // Keep the reference-altitude subject in sync (consumed by the MFD side if at all)
         if (selectedAltitude != this.lastSelectedAltitude) {
             this.subjects.referenceAltitude.set(selectedAltitude)
             this.lastSelectedAltitude = selectedAltitude
-        }
-        const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
-            ? 3
-            : Simplane.getAutoPilotSelectedNav()
-        switch (cdiSource) {
-            case 1:
-                if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:1', SimVarValueType.Bool)) {
-                    this.subjects.verticalDeviationMode.set('GS')
-                    this.subjects.verticalDeviationValue.set(
-                        SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) / 127.0
-                    )
-                } else {
-                    this.subjects.verticalDeviationMode.set('None')
-                }
-                break
-            case 2:
-                if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:2', SimVarValueType.Bool)) {
-                    this.subjects.verticalDeviationMode.set('GS')
-                    this.subjects.verticalDeviationValue.set(
-                        SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) / 127.0
-                    )
-                } else {
-                    this.subjects.verticalDeviationMode.set('None')
-                }
-                break
-            case 3:
-                if (
-                    this.gps.currFlightPlanManager &&
-                    this.gps.currFlightPlanManager.isActiveApproach() &&
-                    Simplane.getAutoPilotApproachType() == ApproachType.APPROACH_TYPE_RNAV
-                ) {
-                    this.subjects.verticalDeviationMode.set('GP')
-                    this.subjects.verticalDeviationValue.set(
-                        SimVar.GetSimVarValue('GPS VERTICAL ERROR', SimVarValueType.Meters) / 150
-                    )
-                } else if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:1', SimVarValueType.Bool)) {
-                    this.subjects.verticalDeviationMode.set('GSPreview')
-                    this.subjects.verticalDeviationValue.set(
-                        SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) / 127.0
-                    )
-                } else {
-                    if (SimVar.GetSimVarValue('NAV HAS GLIDE SLOPE:2', SimVarValueType.Bool)) {
-                        this.subjects.verticalDeviationMode.set('GSPreview')
-                        this.subjects.verticalDeviationValue.set(
-                            SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) / 127.0
-                        )
-                    } else {
-                        this.subjects.verticalDeviationMode.set('None')
-                    }
-                }
-                break
         }
         const rawPressure = SimVar.GetSimVarValue(
             'KOHLSMAN SETTING HG:' + this.altimeterIndex,

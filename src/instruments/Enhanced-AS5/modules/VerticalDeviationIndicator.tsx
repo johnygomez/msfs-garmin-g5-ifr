@@ -66,8 +66,7 @@ interface VerticalModeIndicatorProps extends ComponentProps {
 
 class VerticalModeIndicator extends DisplayComponent<VerticalModeIndicatorProps> {
     private readonly style: MappedSubject<[VerticalDeviationMode], string>
-
-    private readonly modeStyles
+    private readonly modeLetter: MappedSubject<[VerticalDeviationMode], string>
 
     constructor(props: VerticalModeIndicatorProps) {
         super(props)
@@ -76,14 +75,27 @@ class VerticalModeIndicator extends DisplayComponent<VerticalModeIndicatorProps>
             ([mode]) => this.computeVisbility(mode),
             props.mode
         ).pause()
+
+        this.modeLetter = MappedSubject.create(([mode]) => {
+            switch (mode) {
+                case 'GP':
+                    return 'G'
+                case 'VNAV':
+                    return 'V'
+                default:
+                    return ''
+            }
+        }, props.mode).pause()
     }
 
     public onAfterRender(): void {
         this.style.resume()
+        this.modeLetter.resume()
     }
 
     public destroy(): void {
         this.style.destroy()
+        this.modeLetter.destroy()
         super.destroy()
     }
 

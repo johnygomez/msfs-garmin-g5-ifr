@@ -32,6 +32,7 @@ import { G5CustomPublisher } from './G5CustomPublisher'
 import { HighlightComponent, HighlightElementRefs } from './Highlight'
 import { HorizontalCompassComponent } from './HorizontalCompass'
 import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
+import { NavSourceDataProvider } from './NavSourceDataProvider'
 import {
     NavSystem,
     NavSystemPage,
@@ -42,10 +43,7 @@ import {
 } from './NavSystem'
 import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
 import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSlipIndicator'
-import {
-    VerticalDeviationIndicatorComponent,
-    VerticalDeviationMode,
-} from './VerticalDeviationIndicator'
+import { VerticalDeviationIndicatorComponent } from './VerticalDeviationIndicator'
 
 export interface AirspeedSubjects {
     indicatedAirspeed: Subject<number>
@@ -320,6 +318,7 @@ export class AS5 extends NavSystem {
     private ahrsPublisher?: AhrsPublisher
     private navComPublisher?: NavComSimVarPublisher
     private customPublisher?: G5CustomPublisher
+    private navSourceProvider?: NavSourceDataProvider
 
     // Reactive Subjects for contextual menu dynamic values
     readonly menuHeadingTextSub = Subject.create('---°')
@@ -358,13 +357,16 @@ export class AS5 extends NavSystem {
         const cdi = pfdEls[5] as AS5_PFD_CDI
         const hsi = mfd.element.elements[0] as AS5_MFD_HSI
 
+        this.navSourceProvider = new NavSourceDataProvider(this.bus)
+        this.navSourceProvider.resume()
+
         const altimeterSubjects: AltimeterSubjects = {
             indicatedAltitude: Subject.create(0),
             baroPressure: Subject.create(0),
             verticalSpeed: Subject.create(0),
             referenceAltitude: Subject.create(0),
-            verticalDeviationMode: Subject.create<VerticalDeviationMode>('None'),
-            verticalDeviationValue: Subject.create(0),
+            verticalDeviationMode: this.navSourceProvider.verticalDeviationMode,
+            verticalDeviationValue: this.navSourceProvider.verticalDeviationValue,
         }
         altimeter.subjects = altimeterSubjects
 
@@ -462,6 +464,7 @@ export class AS5 extends NavSystem {
         this.ahrsPublisher?.onUpdate()
         this.navComPublisher?.onUpdate()
         this.customPublisher?.onUpdate()
+        this.navSourceProvider?.onUpdate()
         this.updateKnobTooltipValue()
 
         // Update menu value Subjects (only when value changes)

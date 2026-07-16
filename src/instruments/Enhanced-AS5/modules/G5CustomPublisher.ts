@@ -34,6 +34,8 @@ export interface G5CustomEvents {
     ap_heading_selected: number
     /** Number of engines installed on the aircraft (static per airframe). */
     number_of_engines: number
+    /** Autopilot selected navigation source (1=NAV1, 2=NAV2, 0=GPS). */
+    nav_selected: number
 }
 
 /**
@@ -61,6 +63,7 @@ const G5_CUSTOM_SIMVARS = new Map<keyof G5CustomEvents, SimVarPublisherEntry<any
     ['ap_max_bank_value', { name: 'AUTOPILOT MAX BANK', type: SimVarValueType.Degree }],
     ['ap_heading_selected', { name: 'AUTOPILOT HEADING LOCK DIR:1', type: SimVarValueType.Degree }],
     ['number_of_engines', { name: 'NUMBER OF ENGINES', type: SimVarValueType.Number }],
+    ['nav_selected', { name: 'AUTOPILOT NAV SELECTED', type: SimVarValueType.Number }],
 ])
 
 /**
