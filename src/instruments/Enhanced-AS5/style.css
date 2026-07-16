@@ -244,18 +244,27 @@ as5-element #PageContainer #PFD #VerticalDeviation {
     right: 107px;
 }
 
-as5-element #PageContainer #PFD #VerticalDeviation > .vertical-deviation-mode-indicator {
+as5-element #PageContainer #MFD #VerticalDeviation {
+    position: absolute;
+    height: 180px;
+    width: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 50px;
+}
+
+as5-element #PageContainer #PFD #VerticalDeviation > .vertical-deviation-mode-indicator,
+as5-element #PageContainer #MFD #VerticalDeviation > .vertical-deviation-mode-indicator {
     position: absolute;
     width: 20px;
     height: 20px;
     top: -20px;
     background: rgba(0, 0, 0, 0.5);
-    line-height: 20px;
+    font-size: 18px;
+    line-height: 18px;
     text-align: center;
-}
-
-as5-element #PageContainer #PFD #VerticalDeviation > .vertical-deviation-mode-indicator {
     color: var(--magenta);
+    border: 1px solid var(--white);
 }
 
 as5-element #PageContainer #PFD #Altimeter #VerticalSpeedIndicator {

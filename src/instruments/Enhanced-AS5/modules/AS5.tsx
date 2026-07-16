@@ -160,6 +160,7 @@ class PfdContent extends DisplayComponent<PfdContentProps> {
 interface MfdContentProps extends ComponentProps {
     bus: EventBus
     hsi: HSISubjects
+    altimeter: AltimeterSubjects
     groundSpeedEl: Subject<HTMLElement | null>
     waypointDistanceEl: Subject<HTMLElement | null>
     headingValueEl: Subject<HTMLElement | null>
@@ -204,6 +205,7 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
 
     render(): VNode {
         const hsi = this.props.hsi
+        const alt = this.props.altimeter
         return (
             <>
                 <div id="HSICompass">
@@ -238,6 +240,12 @@ class MfdContent extends DisplayComponent<MfdContentProps> {
                             0.0
                         </div>
                     </div>
+                </div>
+                <div id="VerticalDeviation">
+                    <VerticalDeviationIndicatorComponent
+                        mode={alt.verticalDeviationMode}
+                        deviation={alt.verticalDeviationValue}
+                    />
                 </div>
             </>
         )
@@ -282,6 +290,7 @@ class AS5Instrument extends DisplayComponent<InstrumentProps> {
                         <MfdContent
                             bus={this.props.bus}
                             hsi={this.props.hsi}
+                            altimeter={this.props.altimeter}
                             groundSpeedEl={this.props.groundSpeedEl}
                             waypointDistanceEl={this.props.waypointDistanceEl}
                             headingValueEl={this.props.headingValueEl}

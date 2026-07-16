@@ -9,7 +9,7 @@ import {
 
 import { Colors } from './Utils'
 
-export type VerticalDeviationMode = 'None' | 'GS' | 'GP' | 'GSPreview'
+export type VerticalDeviationMode = 'None' | 'GS' | 'GP' | 'VNAV'
 
 type BugShape = 'chevron' | 'diamond' | 'hollow-diamond'
 
@@ -97,13 +97,11 @@ class VerticalModeIndicator extends DisplayComponent<VerticalModeIndicatorProps>
 
     private computeVisbility(mode: VerticalDeviationMode): string {
         switch (mode) {
+            case 'GS':
             case 'None':
                 return 'display: none;'
-            case 'GS':
-                return 'display: none;'
             case 'GP':
-                return 'display: block;'
-            case 'GSPreview':
+            case 'VNAV':
                 return 'display: block;'
         }
     }
@@ -160,26 +158,25 @@ class VerticalDeviationBug extends DisplayComponent<VerticalDeviationBugProps> {
         const { cx, cy } = this.props
         const w = BUG_SIZE
         switch (mode) {
-            case 'GSPreview':
-                return `${cx - w},${cy} ${cx + w * 0.75},${cy - w} ${cx + w * 0.75},${cy - w / 2} ${cx},${cy} ${cx + w * 0.75},${cy + w / 2} ${cx + w * 0.75},${cy + w}`
             case 'GS':
             case 'GP':
                 return `${cx - w},${cy} ${cx},${cy - w} ${cx + w},${cy} ${cx},${cy + w}`
-            case 'None':
-                return `${cx - w},${cy} ${cx},${cy - w} ${cx + w},${cy} ${cx},${cy + w} ${cx},${cy + w / 3} ${cx + w / 3},${cy} ${cx},${cy - w / 3} ${cx - w / 3},${cy} ${cx},${cy + w / 3} ${cx},${cy + w}`
+            case 'VNAV':
+                return `${cx - w},${cy} ${cx},${cy - w} ${cx + w},${cy} ${cx},${cy + w}`
+            default:
+                return ''
         }
     }
 
     private computeColor(mode: VerticalDeviationMode): string {
         switch (mode) {
-            case 'GSPreview':
-                return Colors.MAGENTA
             case 'GS':
                 return Colors.GREEN
             case 'GP':
+            case 'VNAV':
                 return Colors.MAGENTA
-            case 'None':
-                return Colors.HOLLOW_DIAMOND
+            default:
+                return Colors.NONE
         }
     }
 
