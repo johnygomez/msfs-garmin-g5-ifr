@@ -29,9 +29,11 @@ import {
 } from './CommonPFD_MFD'
 import { ContextualMenuComponent, ContextualMenuElementData } from './ContextualMenu'
 import { G5CustomPublisher } from './G5CustomPublisher'
+import { G5NavPublisher } from './G5NavPublisher'
 import { HighlightComponent, HighlightElementRefs } from './Highlight'
 import { HorizontalCompassComponent } from './HorizontalCompass'
 import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
+import { NavdataStack } from './NavdataStack'
 import { NavSourceDataProvider } from './NavSourceDataProvider'
 import {
     NavSystem,
@@ -318,7 +320,9 @@ export class AS5 extends NavSystem {
     private ahrsPublisher?: AhrsPublisher
     private navComPublisher?: NavComSimVarPublisher
     private customPublisher?: G5CustomPublisher
+    private navPublisher?: G5NavPublisher
     private navSourceProvider?: NavSourceDataProvider
+    private navdataStack?: NavdataStack
 
     // Reactive Subjects for contextual menu dynamic values
     readonly menuHeadingTextSub = Subject.create('---°')
@@ -359,6 +363,8 @@ export class AS5 extends NavSystem {
 
         this.navSourceProvider = new NavSourceDataProvider(this.bus)
         this.navSourceProvider.resume()
+        this.navdataStack = new NavdataStack(this.bus)
+        this.navdataStack.init().catch(e => console.error('NavdataStack init failed', e))
 
         const altimeterSubjects: AltimeterSubjects = {
             indicatedAltitude: Subject.create(0),
@@ -421,11 +427,13 @@ export class AS5 extends NavSystem {
         this.ahrsPublisher = new AhrsPublisher(this.bus)
         this.navComPublisher = new NavComSimVarPublisher(this.bus)
         this.customPublisher = new G5CustomPublisher(this.bus)
+        this.navPublisher = new G5NavPublisher(this.bus)
 
         this.adcPublisher.startPublish()
         this.ahrsPublisher.startPublish()
         this.navComPublisher.startPublish()
         this.customPublisher.startPublish()
+        this.navPublisher.startPublish()
 
         FSComponent.render(
             <AS5Instrument
@@ -464,6 +472,8 @@ export class AS5 extends NavSystem {
         this.ahrsPublisher?.onUpdate()
         this.navComPublisher?.onUpdate()
         this.customPublisher?.onUpdate()
+        this.navPublisher?.onUpdate()
+        this.navdataStack?.onUpdate()
         this.navSourceProvider?.onUpdate()
         this.updateKnobTooltipValue()
 

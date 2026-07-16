@@ -1,3 +1,4 @@
+import { CDIScaleLabel } from '@microsoft/msfs-garminsdk'
 import {
     ConsumerSubject,
     EventBus,
@@ -7,6 +8,7 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from './G5CustomPublisher'
+import { G5NavdataEvents } from './GpsPhaseSource'
 import { VerticalDeviationMode } from './VerticalDeviationIndicator'
 
 export type NavSource = 'GPS' | 'NAV1' | 'NAV2'
@@ -14,23 +16,6 @@ export type NavSource = 'GPS' | 'NAV1' | 'NAV2'
 interface VerticalGuidance {
     readonly mode: VerticalDeviationMode
     readonly deviation: number
-}
-
-export enum GpsCurrentPhase {
-    Oceanic = 0,
-    Enroute = 1,
-    Terminal1NM = 2,
-    Terminal = 3,
-    Approach03NM = 4,
-    Departure = 5,
-    MissedApproach = 6,
-    LNav = 7,
-    LNavPlusV = 8,
-    LNavVNav = 9,
-    LP = 10,
-    LPV = 11,
-    RNP = 12,
-    Visual = 13,
 }
 
 const GSI_FULL_SCALE_DEFLECTION = 127
@@ -42,6 +27,8 @@ const NO_GUIDANCE: VerticalGuidance = { mode: 'None', deviation: 0 }
 export class NavSourceDataProvider {
     private readonly gpsDrivesNav1: ConsumerSubject<boolean>
     private readonly navSelected: ConsumerSubject<number>
+    /** The resolved Garmin GPS CDI-scaling phase label, published by NavdataStack. */
+    readonly cdiScaleLabel: ConsumerSubject<CDIScaleLabel>
 
     readonly activeSource: MappedSubject<[boolean, number], NavSource>
     readonly verticalDeviationMode = Subject.create<VerticalDeviationMode>('None')
@@ -51,6 +38,12 @@ export class NavSourceDataProvider {
         const g5Sub = bus.getSubscriber<G5CustomEvents>()
         this.gpsDrivesNav1 = ConsumerSubject.create(g5Sub.on('gps_drives_nav1'), false)
         this.navSelected = ConsumerSubject.create(g5Sub.on('nav_selected'), 0)
+
+        const navSub = bus.getSubscriber<G5NavdataEvents>()
+        this.cdiScaleLabel = ConsumerSubject.create(
+            navSub.on('g5_cdi_scale_label'),
+            CDIScaleLabel.Enroute
+        )
 
         this.activeSource = MappedSubject.create(
             ([gpsDrives, navSel]) => {
@@ -77,6 +70,7 @@ export class NavSourceDataProvider {
     destroy(): void {
         this.gpsDrivesNav1.destroy()
         this.navSelected.destroy()
+        this.cdiScaleLabel.destroy()
         this.activeSource.destroy()
     }
 
@@ -91,17 +85,12 @@ export class NavSourceDataProvider {
         const errorMeters = SimVar.GetSimVarValue('GPS VERTICAL ERROR', SimVarValueType.Meters)
         if (!hasGlidepath && errorMeters === 0) return null
 
-        // GPS GSI SCALING is nonzero only for an approach glidepath; enroute VNAV leaves
-        // it at 0. That is the GP-vs-VNAV discriminator here — L:GPS_Current_Phase reads 0
-        // on this hardware, so it only refines the advisory LNAV+V case where available.
+        // GPS GSI SCALING is nonzero only on an approach glidepath; advisory LNAV+V is VNAV.
         const gsiScaling = SimVar.GetSimVarValue('GPS GSI SCALING', SimVarValueType.Meters)
         const isApproachGlidepath = gsiScaling > 0
 
-        const phase = SimVar.GetSimVarValue(
-            'L:GPS_Current_Phase',
-            SimVarValueType.Number
-        ) as GpsCurrentPhase
-        const mode = isApproachGlidepath && phase !== GpsCurrentPhase.LNavPlusV ? 'GP' : 'VNAV'
+        const label = this.cdiScaleLabel.get()
+        const mode = isApproachGlidepath && label !== CDIScaleLabel.LNavPlusV ? 'GP' : 'VNAV'
 
         const fullScale = isApproachGlidepath ? gsiScaling : VNAV_FULL_SCALE_DEVIATION_METERS
         return { mode, deviation: errorMeters / fullScale }

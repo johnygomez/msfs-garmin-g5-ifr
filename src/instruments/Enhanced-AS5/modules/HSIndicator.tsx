@@ -1,3 +1,4 @@
+import { CDIScaleLabel, CdiScaleFormatter } from '@microsoft/msfs-garminsdk'
 import {
     DisplayComponent,
     FSComponent,
@@ -13,6 +14,8 @@ import {
 import { SimVarValueType } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from './G5CustomPublisher'
+import { G5NavEvents } from './G5NavPublisher'
+import { G5NavdataEvents } from './GpsPhaseSource'
 
 export enum HSIndicatorDisplayType {
     GlassCockpit = 0,
@@ -45,6 +48,17 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     private readonly magneticHeading: ConsumerSubject<number>
     private readonly apHeadingBug: ConsumerSubject<number>
     private readonly trackAngleDeg: ConsumerSubject<number>
+
+    private readonly gpsActiveWaypoint: ConsumerSubject<boolean>
+    private readonly gpsWpDesiredTrack: ConsumerSubject<number>
+    private readonly gpsWpCrossTrack: ConsumerSubject<number>
+    private readonly gpsCdiScaling: ConsumerSubject<number>
+    private readonly hsiCdiNeedle: ConsumerSubject<number>
+    private readonly hsiCdiNeedleValid: ConsumerSubject<boolean>
+    private readonly hsiGsiNeedle: ConsumerSubject<number>
+    private readonly navSelected: ConsumerSubject<number>
+    private readonly nav1Gsi: ConsumerSubject<number>
+    private readonly nav2Gsi: ConsumerSubject<number>
 
     // ---- Internal state Subjects (set by update() / onEvent()) ----
     private readonly navSource = Subject.create('GPS')
@@ -114,8 +128,10 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     crossTrackCurrent = 0
     crossTrackGoal = 0
     sourceIsGps = true
-    curPhase = 0
     curDeviation = 0
+
+    private readonly cdiScaleLabel: ConsumerSubject<CDIScaleLabel>
+    private readonly formatPhase = CdiScaleFormatter.create(false)
 
     // Private state-machine variables
     private logic_dmeSource = 1
@@ -139,7 +155,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         super(props)
 
         // Wire ConsumerSubjects to the event bus
-        const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents>()
+        const sub = props.bus.getSubscriber<AhrsEvents & G5CustomEvents & G5NavEvents>()
         this.magneticHeading = ConsumerSubject.create(sub.on('actual_hdg_deg').withPrecision(1), 0)
         this.apHeadingBug = ConsumerSubject.create(
             sub.on('ap_heading_selected').withPrecision(1),
@@ -148,6 +164,23 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         this.trackAngleDeg = ConsumerSubject.create(
             sub.on('track_angle_magnetic').withPrecision(1),
             0
+        )
+
+        this.gpsActiveWaypoint = ConsumerSubject.create(sub.on('gps_active_waypoint'), false)
+        this.gpsWpDesiredTrack = ConsumerSubject.create(sub.on('gps_wp_desired_track'), 0)
+        this.gpsWpCrossTrack = ConsumerSubject.create(sub.on('gps_wp_cross_track'), 0)
+        this.gpsCdiScaling = ConsumerSubject.create(sub.on('gps_cdi_scaling'), 0)
+        this.hsiCdiNeedle = ConsumerSubject.create(sub.on('hsi_cdi_needle'), 0)
+        this.hsiCdiNeedleValid = ConsumerSubject.create(sub.on('hsi_cdi_needle_valid'), false)
+        this.hsiGsiNeedle = ConsumerSubject.create(sub.on('hsi_gsi_needle'), 0)
+        this.navSelected = ConsumerSubject.create(sub.on('nav_selected'), 0)
+        this.nav1Gsi = ConsumerSubject.create(sub.on('nav1_gsi'), 0)
+        this.nav2Gsi = ConsumerSubject.create(sub.on('nav2_gsi'), 0)
+
+        const navSub = props.bus.getSubscriber<G5NavdataEvents>()
+        this.cdiScaleLabel = ConsumerSubject.create(
+            navSub.on('g5_cdi_scale_label'),
+            CDIScaleLabel.Enroute
         )
 
         // Copy external bug references
@@ -259,6 +292,17 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         this.magneticHeading.destroy()
         this.apHeadingBug.destroy()
         this.trackAngleDeg.destroy()
+        this.gpsActiveWaypoint.destroy()
+        this.gpsWpDesiredTrack.destroy()
+        this.gpsWpCrossTrack.destroy()
+        this.gpsCdiScaling.destroy()
+        this.hsiCdiNeedle.destroy()
+        this.hsiCdiNeedleValid.destroy()
+        this.hsiGsiNeedle.destroy()
+        this.navSelected.destroy()
+        this.nav1Gsi.destroy()
+        this.nav2Gsi.destroy()
+        this.cdiScaleLabel.destroy()
         super.destroy()
     }
 
@@ -555,10 +599,9 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         this.navSource.set('GPS')
         this.sourceIsGps = true
 
-        const wpIdValid =
-            SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) == true ? 1 : 0
-        const wpDesiredTrk = SimVar.GetSimVarValue('GPS WP DESIRED TRACK', SimVarValueType.Degree)
-        const wpXTrk = SimVar.GetSimVarValue('GPS WP CROSS TRK', SimVarValueType.NM)
+        const wpIdValid = this.gpsActiveWaypoint.get() ? 1 : 0
+        const wpDesiredTrk = this.gpsWpDesiredTrack.get()
+        const wpXTrk = this.gpsWpCrossTrack.get()
 
         this.addValueInFrames(+wpIdValid, this.gpsNextWpIdValidFrames, 20)
         this.addValueInFrames(wpDesiredTrk, this.gpsNextWpDesiredTrkFrames, 20)
@@ -568,9 +611,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             this.gpsNextWpIdValid = !!wpIdValid
         }
 
-        this.cdiNeedleVisible.set(
-            SimVar.GetSimVarValue('HSI CDI NEEDLE VALID', SimVarValueType.Bool)
-        )
+        this.cdiNeedleVisible.set(this.hsiCdiNeedleValid.get())
 
         if (!(Avionics.Utils as any).isValueOutlier(wpDesiredTrk, this.gpsNextWpDesiredTrkFrames)) {
             this.displayedCourse.set(this.gpsNextWpIdValid ? wpDesiredTrk : 0)
@@ -594,57 +635,39 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         this.toFromState.set(1)
         this.updateToFromVisibility()
 
-        this.curPhase = SimVar.GetSimVarValue('L:GPS_Current_Phase', SimVarValueType.Number)
-        this.curDeviation = SimVar.GetSimVarValue('GPS CDI SCALING', SimVarValueType.NM)
+        this.curDeviation = this.gpsCdiScaling.get()
 
-        const phases: Record<number, string> = {
-            0: 'OCN',
-            1: 'ENR',
-            2: '1 NM',
-            3: 'TERM',
-            4: '0.3 NM',
-            5: 'DPRT',
-            6: 'MAPR',
-            7: 'LNAV',
-            8: 'LNAV+V',
-            9: 'L/VNAV',
-            10: 'LP',
-            11: 'LPV',
-            12: 'RNP',
-            13: 'VISUAL',
-        }
-        const phaseLabel = phases[this.curPhase] || 'ENR'
-        this.flightPhaseText.set(phaseLabel)
-        this.flightPhaseVisible.set('visible')
-
-        if (SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) == false) {
+        if (this.gpsActiveWaypoint.get()) {
+            this.flightPhaseText.set(this.formatPhase(this.cdiScaleLabel.get()))
+        } else {
             this.flightPhaseText.set('ENR')
         }
+        this.flightPhaseVisible.set('visible')
 
-        this.crosstrackFullError = this.curPhase in phases ? this.curDeviation : parseFloat('2.0')
+        this.crosstrackFullError = this.curDeviation > 0 ? this.curDeviation : 2.0
 
         this.updateHSIDeviation()
     }
 
     /** Read HSI CDI/GSI needle SimVars and set position Subjects. */
     private updateHSIDeviation(): void {
-        const hsiNeedle = SimVar.GetSimVarValue('HSI CDI NEEDLE', SimVarValueType.Number) || 0
+        const hsiNeedle = this.hsiCdiNeedle.get() || 0
         const hsiPos = (hsiNeedle / 127) * 30
         this.hsiCdiNeedlePos.set(Math.min(Math.max(hsiPos, -30), 30))
 
-        const gsiNeedle = SimVar.GetSimVarValue('HSI GSI NEEDLE', SimVarValueType.Number) || 0
+        const gsiNeedle = this.hsiGsiNeedle.get() || 0
         const gsiClamped = Math.min(Math.max(gsiNeedle, -127), 127)
         const gsiPos = (gsiClamped / 127) * 35
         this.gsiNeedlePos.set(gsiPos)
 
         // Hollow diamond bug (other NAV's GSI)
-        const navSelected = SimVar.GetSimVarValue('AUTOPILOT NAV SELECTED', SimVarValueType.Number)
+        const navSelected = this.navSelected.get()
         if (navSelected == 1) {
-            const nav1Gsi = SimVar.GetSimVarValue('NAV GSI:1', SimVarValueType.Number) || 0
+            const nav1Gsi = this.nav1Gsi.get() || 0
             const nav1Clamped = Math.min(Math.max(nav1Gsi, -127), 127)
             this.hollowDiamondPos.set((nav1Clamped / 127) * 35)
         } else if (navSelected == 2) {
-            const nav2Gsi = SimVar.GetSimVarValue('NAV GSI:2', SimVarValueType.Number) || 0
+            const nav2Gsi = this.nav2Gsi.get() || 0
             const nav2Clamped = Math.min(Math.max(nav2Gsi, -127), 127)
             this.hollowDiamondPos.set((nav2Clamped / 127) * 35)
         }

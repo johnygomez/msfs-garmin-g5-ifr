@@ -405,7 +405,6 @@ export class PFD_Compass extends NavSystemElement {
     arcHsiElemId: any
     hsi: any
     arcHsi: any
-    nearestAirport: any
     headingSub = Subject.create(0)
     courseSub = Subject.create(0)
     cdiDeviationSub = Subject.create(0)
@@ -443,7 +442,6 @@ export class PFD_Compass extends NavSystemElement {
     init(_root) {
         this.hsi = this.gps.getChildById(this.hsiElemId ? this.hsiElemId : 'Compass')
         this.arcHsi = this.gps.getChildById(this.arcHsiElemId ? this.arcHsiElemId : 'ArcCompass')
-        this.nearestAirport = new NearestAirportList(this.gps)
         this.displayArc =
             SimVar.GetSimVarValue('L:Glasscockpit_HSI_Arc', SimVarValueType.Number) != 0
         if (this.hsi) {
@@ -461,12 +459,6 @@ export class PFD_Compass extends NavSystemElement {
             this.arcHsi.update(_deltaTime)
         } else {
             this.hsi.update(_deltaTime)
-        }
-        this.nearestAirport.Update(25, 200)
-        if (this.nearestAirport.airports.length == 0) {
-            SimVar.SetSimVarValue('L:GPS_Current_Phase', SimVarValueType.Number, 4)
-        } else {
-            SimVar.SetSimVarValue('L:GPS_Current_Phase', SimVarValueType.Number, 3)
         }
         if (this.gps.currFlightPlanManager) {
             if (this.ifTimer <= 0) {
