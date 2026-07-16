@@ -11,19 +11,40 @@ import { VerticalDeviationMode } from './VerticalDeviationIndicator'
 
 export type NavSource = 'GPS' | 'NAV1' | 'NAV2'
 
-type GpsVerticalMode = Extract<VerticalDeviationMode, 'GP' | 'VNAV' | 'None'>
+interface VerticalGuidance {
+    readonly mode: VerticalDeviationMode
+    readonly deviation: number
+}
+
+export enum GpsCurrentPhase {
+    Oceanic = 0,
+    Enroute = 1,
+    Terminal1NM = 2,
+    Terminal = 3,
+    Approach03NM = 4,
+    Departure = 5,
+    MissedApproach = 6,
+    LNav = 7,
+    LNavPlusV = 8,
+    LNavVNav = 9,
+    LP = 10,
+    LPV = 11,
+    RNP = 12,
+    Visual = 13,
+}
 
 const GSI_FULL_SCALE_DEFLECTION = 127
-const GPS_PHASE_LNAV_PLUS_V = 8
+
+const VNAV_FULL_SCALE_DEVIATION_METERS = 304.8
+
+const NO_GUIDANCE: VerticalGuidance = { mode: 'None', deviation: 0 }
 
 export class NavSourceDataProvider {
     private readonly gpsDrivesNav1: ConsumerSubject<boolean>
     private readonly navSelected: ConsumerSubject<number>
 
     readonly activeSource: MappedSubject<[boolean, number], NavSource>
-    readonly hasGs = Subject.create(false)
-    readonly gpsVerticalMode = Subject.create<GpsVerticalMode>('None')
-    readonly verticalDeviationMode: MappedSubject<[GpsVerticalMode, boolean], VerticalDeviationMode>
+    readonly verticalDeviationMode = Subject.create<VerticalDeviationMode>('None')
     readonly verticalDeviationValue = Subject.create(0)
 
     constructor(bus: EventBus) {
@@ -41,71 +62,58 @@ export class NavSourceDataProvider {
             this.gpsDrivesNav1,
             this.navSelected
         ).pause()
-
-        this.verticalDeviationMode = MappedSubject.create(
-            ([gpsVertical, hasGs]) => {
-                if (gpsVertical !== 'None') return gpsVertical
-                if (hasGs) return 'GS'
-                return 'None'
-            },
-            this.gpsVerticalMode,
-            this.hasGs
-        ).pause()
     }
 
     onUpdate(): void {
-        const source = this.activeSource.get()
-
-        this.gpsVerticalMode.set(this.computeGpsVerticalMode(source))
-        this.hasGs.set(this.isGlideslopePresent(source))
-
-        this.verticalDeviationValue.set(this.computeDeviationValue(source))
+        const guidance = this.resolveVerticalGuidance(this.activeSource.get())
+        this.verticalDeviationMode.set(guidance.mode)
+        this.verticalDeviationValue.set(guidance.deviation)
     }
 
     resume(): void {
         this.activeSource.resume()
-        this.verticalDeviationMode.resume()
     }
 
     destroy(): void {
         this.gpsDrivesNav1.destroy()
         this.navSelected.destroy()
         this.activeSource.destroy()
-        this.verticalDeviationMode.destroy()
     }
 
-    private computeGpsVerticalMode(source: NavSource): GpsVerticalMode {
-        const hasGlidepath =
-            source === 'GPS' && !!SimVar.GetSimVarValue('GPS HAS GLIDEPATH', SimVarValueType.Bool)
-        if (!hasGlidepath) return 'None'
-
-        const phase = SimVar.GetSimVarValue('L:GPS_Current_Phase', SimVarValueType.Number)
-        return phase === GPS_PHASE_LNAV_PLUS_V ? 'VNAV' : 'GP'
+    private resolveVerticalGuidance(source: NavSource): VerticalGuidance {
+        return this.glideslope(source) ?? this.gpsVerticalGuidance(source) ?? NO_GUIDANCE
     }
 
-    private isGlideslopePresent(source: NavSource): boolean {
-        if (source !== 'NAV1' && source !== 'NAV2') return false
+    private gpsVerticalGuidance(source: NavSource): VerticalGuidance | null {
+        if (source !== 'GPS') return null
+
+        const hasGlidepath = !!SimVar.GetSimVarValue('GPS HAS GLIDEPATH', SimVarValueType.Bool)
+        const errorMeters = SimVar.GetSimVarValue('GPS VERTICAL ERROR', SimVarValueType.Meters)
+        if (!hasGlidepath && errorMeters === 0) return null
+
+        // GPS GSI SCALING is nonzero only for an approach glidepath; enroute VNAV leaves
+        // it at 0. That is the GP-vs-VNAV discriminator here — L:GPS_Current_Phase reads 0
+        // on this hardware, so it only refines the advisory LNAV+V case where available.
+        const gsiScaling = SimVar.GetSimVarValue('GPS GSI SCALING', SimVarValueType.Meters)
+        const isApproachGlidepath = gsiScaling > 0
+
+        const phase = SimVar.GetSimVarValue(
+            'L:GPS_Current_Phase',
+            SimVarValueType.Number
+        ) as GpsCurrentPhase
+        const mode = isApproachGlidepath && phase !== GpsCurrentPhase.LNavPlusV ? 'GP' : 'VNAV'
+
+        const fullScale = isApproachGlidepath ? gsiScaling : VNAV_FULL_SCALE_DEVIATION_METERS
+        return { mode, deviation: errorMeters / fullScale }
+    }
+
+    private glideslope(source: NavSource): VerticalGuidance | null {
+        if (source !== 'NAV1' && source !== 'NAV2') return null
         const idx = this.navRadioIndex(source)
-        return !!SimVar.GetSimVarValue(`NAV HAS GLIDE SLOPE:${idx}`, SimVarValueType.Bool)
-    }
+        if (!SimVar.GetSimVarValue(`NAV HAS GLIDE SLOPE:${idx}`, SimVarValueType.Bool)) return null
 
-    private computeDeviationValue(source: NavSource): number {
-        switch (this.verticalDeviationMode.get()) {
-            case 'GS': {
-                const idx = this.navRadioIndex(source)
-                const raw = SimVar.GetSimVarValue(`NAV GSI:${idx}`, SimVarValueType.Number)
-                return raw / GSI_FULL_SCALE_DEFLECTION
-            }
-            case 'GP':
-            case 'VNAV': {
-                const scaling = SimVar.GetSimVarValue('GPS GSI SCALING', SimVarValueType.Meters)
-                if (scaling <= 0) return 0
-                const error = SimVar.GetSimVarValue('GPS VERTICAL ERROR', SimVarValueType.Meters)
-                return error / scaling
-            }
-            default:
-                return 0
-        }
+        const raw = SimVar.GetSimVarValue(`NAV GSI:${idx}`, SimVarValueType.Number)
+        return { mode: 'GS', deviation: raw / GSI_FULL_SCALE_DEFLECTION }
     }
 
     private navRadioIndex(source: NavSource): 1 | 2 {

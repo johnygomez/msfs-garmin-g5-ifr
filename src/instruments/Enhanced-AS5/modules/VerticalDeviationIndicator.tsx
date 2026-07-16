@@ -11,8 +11,6 @@ import { Colors } from './Utils'
 
 export type VerticalDeviationMode = 'None' | 'GS' | 'GP' | 'VNAV'
 
-type BugShape = 'chevron' | 'diamond' | 'hollow-diamond'
-
 const DOTS_PER_SIDE = 2
 const DOT_SPACING = 20
 const MAX_DEFLECTION = 45
@@ -102,7 +100,7 @@ class VerticalModeIndicator extends DisplayComponent<VerticalModeIndicatorProps>
     public render(): VNode {
         return (
             <div class="vertical-deviation-mode-indicator" style={this.style}>
-                <span class="vertical-mode">G</span>
+                <span class="vertical-mode">{this.modeLetter}</span>
             </div>
         )
     }
@@ -127,10 +125,9 @@ interface VerticalDeviationBugProps extends ComponentProps {
 }
 
 class VerticalDeviationBug extends DisplayComponent<VerticalDeviationBugProps> {
-    private readonly shape: MappedSubject<[VerticalDeviationMode], BugShape | undefined>
-    private readonly points: MappedSubject<[BugShape | undefined], string>
-    private readonly fill: MappedSubject<[BugShape | undefined], string>
-    private readonly stroke: MappedSubject<[BugShape | undefined], string>
+    private readonly points: MappedSubject<[VerticalDeviationMode], string>
+    private readonly fill: MappedSubject<[VerticalDeviationMode], string>
+    private readonly stroke: MappedSubject<[VerticalDeviationMode], string>
     private readonly transform: MappedSubject<[number], string>
 
     constructor(props: VerticalDeviationBugProps) {
@@ -174,7 +171,7 @@ class VerticalDeviationBug extends DisplayComponent<VerticalDeviationBugProps> {
             case 'GP':
                 return `${cx - w},${cy} ${cx},${cy - w} ${cx + w},${cy} ${cx},${cy + w}`
             case 'VNAV':
-                return `${cx - w},${cy} ${cx},${cy - w} ${cx + w},${cy} ${cx},${cy + w}`
+                return `${cx - w},${cy} ${cx + w * 0.75},${cy - w} ${cx + w * 0.75},${cy - w / 2} ${cx},${cy} ${cx + w * 0.75},${cy + w / 2} ${cx + w * 0.75},${cy + w}`
             default:
                 return ''
         }
