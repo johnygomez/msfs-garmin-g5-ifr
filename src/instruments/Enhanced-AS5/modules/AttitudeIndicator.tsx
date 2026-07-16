@@ -428,6 +428,7 @@ class BankScale extends DisplayComponent<BankScaleProps> {
                     fill={Colors.GREEN}
                     stroke={Colors.BLACK}
                     transform={this.rateOneTurnLeftTransform}
+                    visibility={this.rateOneTurnAngle.map(a => (a > 7 ? 'inherit' : 'hidden'))}
                 />
 
                 <path
@@ -436,6 +437,7 @@ class BankScale extends DisplayComponent<BankScaleProps> {
                     fill={Colors.GREEN}
                     stroke={Colors.BLACK}
                     transform={this.rateOneTurnRightTransform}
+                    visibility={this.rateOneTurnAngle.map(a => (a > 7 ? 'inherit' : 'hidden'))}
                 />
 
                 <path
