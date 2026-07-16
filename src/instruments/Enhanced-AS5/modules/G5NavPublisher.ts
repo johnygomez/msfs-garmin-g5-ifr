@@ -16,6 +16,7 @@ export interface G5NavEvents {
     gps_cdi_scaling: number
     gps_wp_next_id: string
     gps_wp_distance: number
+    gps_wp_bearing: number
     gps_obs_active: boolean
 
     // ---- HSI ----
@@ -89,6 +90,7 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     ['gps_cdi_scaling', { name: 'GPS CDI SCALING', type: SimVarValueType.NM }],
     ['gps_wp_next_id', { name: 'GPS WP NEXT ID', type: SimVarValueType.String }],
     ['gps_wp_distance', { name: 'GPS WP DISTANCE', type: SimVarValueType.NM }],
+    ['gps_wp_bearing', { name: 'GPS WP BEARING', type: SimVarValueType.Degree }],
     ['gps_obs_active', { name: 'GPS OBS ACTIVE', type: SimVarValueType.Bool }],
 
     // HSI

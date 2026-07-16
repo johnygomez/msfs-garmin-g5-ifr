@@ -19,14 +19,9 @@ import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 import { AltimeterComponent } from './Altimeter'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
 import { AttitudeIndicatorComponent } from './AttitudeIndicator'
+import { AutopilotAnnunciationProvider } from './AutopilotAnnunciationProvider'
 import { CDIComponent } from './CDI'
-import {
-    PFD_AutopilotDisplay,
-    PFD_Attitude,
-    PFD_Altimeter,
-    PFD_Compass,
-    AltimeterSubjects,
-} from './CommonPFD_MFD'
+import { PFD_Attitude, PFD_Altimeter, PFD_Compass, AltimeterSubjects } from './CommonPFD_MFD'
 import { ContextualMenuComponent, ContextualMenuElementData } from './ContextualMenu'
 import { G5CustomPublisher } from './G5CustomPublisher'
 import { G5NavPublisher } from './G5NavPublisher'
@@ -323,6 +318,7 @@ export class AS5 extends NavSystem {
     private navPublisher?: G5NavPublisher
     private navSourceProvider?: NavSourceDataProvider
     private navdataStack?: NavdataStack
+    private apAnnunciationProvider?: AutopilotAnnunciationProvider
 
     // Reactive Subjects for contextual menu dynamic values
     readonly menuHeadingTextSub = Subject.create('---°')
@@ -355,10 +351,8 @@ export class AS5 extends NavSystem {
         const pfd = this.pageGroups[0].pages[0] as AS5_PFD
         const mfd = this.pageGroups[0].pages[1] as AS5_MFD
         const pfdEls = pfd.element.elements
-        const apDisplay = pfdEls[0] as PFD_AutopilotDisplay
-        const airspeed = pfdEls[2] as PFD_Airspeed_Enhanced
-        const altimeter = pfdEls[3] as PFD_Altimeter
-        const cdi = pfdEls[5] as AS5_PFD_CDI
+        const airspeed = pfdEls[1] as PFD_Airspeed_Enhanced
+        const cdi = pfdEls[4] as AS5_PFD_CDI
         const hsi = mfd.element.elements[0] as AS5_MFD_HSI
 
         this.navSourceProvider = new NavSourceDataProvider(this.bus)
@@ -367,26 +361,12 @@ export class AS5 extends NavSystem {
         this.navdataStack.init().catch(e => console.error('NavdataStack init failed', e))
 
         const altimeterSubjects: AltimeterSubjects = {
-            indicatedAltitude: Subject.create(0),
-            baroPressure: Subject.create(0),
-            verticalSpeed: Subject.create(0),
-            referenceAltitude: Subject.create(0),
             verticalDeviationMode: this.navSourceProvider.verticalDeviationMode,
             verticalDeviationValue: this.navSourceProvider.verticalDeviationValue,
         }
-        altimeter.subjects = altimeterSubjects
 
-        const apSubjects: APInfoBarSubjects = {
-            apStatus: apDisplay.apStatusSubject,
-            apStatusDisplay: apDisplay.apStatusDisplaySubject,
-            apLateralActive: apDisplay.apLateralActiveSubject,
-            apLateralArmed: apDisplay.apLateralArmedSubject,
-            apVerticalActive: apDisplay.apVerticalActiveSubject,
-            apModeReference: apDisplay.apModeReferenceSubject,
-            apArmed: apDisplay.apArmedSubject,
-            apArmedReference: apDisplay.apArmedReferenceSubject,
-            apYDStatus: apDisplay.apYDStatusSubject,
-        }
+        this.apAnnunciationProvider = new AutopilotAnnunciationProvider()
+        const apSubjects: APInfoBarSubjects = this.apAnnunciationProvider.subjects
 
         const spdSubjects: AirspeedSubjects = {
             indicatedAirspeed: airspeed.indicatedAirspeedSub,
@@ -475,6 +455,7 @@ export class AS5 extends NavSystem {
         this.navPublisher?.onUpdate()
         this.navdataStack?.onUpdate()
         this.navSourceProvider?.onUpdate()
+        this.apAnnunciationProvider?.onUpdate()
         this.updateKnobTooltipValue()
 
         // Update menu value Subjects (only when value changes)
@@ -499,6 +480,7 @@ export class AS5 extends NavSystem {
     computeEvent(_event) {
         const popUpWasOpen = this.popUpElement != null
         super.computeEvent(_event)
+        this.apAnnunciationProvider?.onEvent(_event)
         switch (_event) {
             case 'Knob_Inc':
                 if (this.currentInteractionState == 2) {
@@ -690,7 +672,6 @@ export class AS5_PFD extends NavSystemPage {
     constructor() {
         super('PFD', 'PFD', null)
         this.element = new NavSystemElementGroup([
-            new PFD_AutopilotDisplay(),
             new PFD_Attitude(),
             new PFD_Airspeed_Enhanced(),
             new PFD_Altimeter(),
@@ -882,14 +863,6 @@ export class AS5_MFD_HSI extends PFD_Compass {
         this.headingValueSub.set('000'.slice(hdg.length) + hdg + '\u00B0')
 
         this.groundSpeedValueSub.set(fastToFixed(Simplane.getGroundSpeed(), 0) + '')
-
-        // HSIComponent.update() must be called explicitly here because it reads
-        // SimVars that are not published to the EventBus (CDI, bearing, DME data).
-        // The declarative transforms (rose, heading bug, etc.) are driven by
-        // ConsumerSubjects / MappedSubjects bound in JSX.
-        if (this._hsiComponent) {
-            this._hsiComponent.update(_deltaTime)
-        }
 
         if ((this.cdiSource == 1 || this.cdiSource == 2) && this.dmeSource != this.cdiSource) {
             this.dmeSource = this.cdiSource
