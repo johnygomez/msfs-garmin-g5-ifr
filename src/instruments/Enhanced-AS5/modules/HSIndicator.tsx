@@ -26,6 +26,22 @@ export enum HSIndicatorDisplayType {
     HUD_Simplified = 2,
 }
 
+/** Resolved active CDI source. */
+enum NavSource {
+    Nav1 = 1,
+    Nav2 = 2,
+    Gps = 3,
+}
+
+/** Bearing-pointer source selection (cycled by the BRG knob). */
+enum BearingSource {
+    Off = 0,
+    Nav1 = 1,
+    Nav2 = 2,
+    Gps = 3,
+    Adf = 4,
+}
+
 const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, min), max)
 
@@ -462,7 +478,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             ([gpsDrives, apprHold, apprType, navSel]) => {
                 const navCoupled =
                     !gpsDrives || (apprHold && apprType !== ApproachType.APPROACH_TYPE_RNAV)
-                return navCoupled && navSel !== 0 ? ((navSel - 1) % 2) + 1 : 3
+                return navCoupled && navSel !== 0 ? ((navSel - 1) % 2) + 1 : NavSource.Gps
             },
             this.gpsDrivesNav1,
             this.apprHold,
@@ -474,9 +490,9 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     private readonly navSource = this.track(
         MappedSubject.create(
             ([src, tacan, loc1, loc2]) => {
-                if (src === 3) return 'GPS'
+                if (src === NavSource.Gps) return 'GPS'
                 if (tacan) return 'TCN' + src
-                return ((src === 1 ? loc1 : loc2) ? 'LOC' : 'VOR') + src
+                return ((src === NavSource.Nav1 ? loc1 : loc2) ? 'LOC' : 'VOR') + src
             },
             this.cdiSource,
             this.tacanDriven,
@@ -488,8 +504,8 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     private readonly displayedCourse = this.track(
         MappedSubject.create(
             ([src, active, gpsTrk, course1, course2]) => {
-                if (src === 3) return active ? gpsTrk : 0
-                return src === 1 ? course1 : course2
+                if (src === NavSource.Gps) return active ? gpsTrk : 0
+                return src === NavSource.Nav1 ? course1 : course2
             },
             this.cdiSource,
             this.gpsActive,
@@ -501,7 +517,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     private readonly toFrom = this.track(
         MappedSubject.create(
-            ([src, tf1, tf2]) => (src === 3 ? 1 : src === 1 ? tf1 : tf2),
+            ([src, tf1, tf2]) => (src === NavSource.Gps ? 1 : src === NavSource.Nav1 ? tf1 : tf2),
             this.cdiSource,
             this.navToFrom(this.nav1),
             this.navToFrom(this.nav2)
@@ -510,7 +526,8 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     private readonly cdiValid = this.track(
         MappedSubject.create(
-            ([src, valid, has1, has2]) => (src === 3 ? valid : src === 1 ? has1 : has2),
+            ([src, valid, has1, has2]) =>
+                src === NavSource.Gps ? valid : src === NavSource.Nav1 ? has1 : has2,
             this.cdiSource,
             this.cdiNeedleValid,
             this.navHas(this.nav1),
@@ -550,7 +567,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     // ---- GPS-only annunciations ----
     private readonly phaseVisible = this.track(
-        this.cdiSource.map(s => (s === 3 ? 'visible' : 'hidden'))
+        this.cdiSource.map(s => (s === NavSource.Gps ? 'visible' : 'hidden'))
     )
     private readonly phaseText = this.track(
         MappedSubject.create(
@@ -562,7 +579,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     private readonly xtkVisible = this.track(
         MappedSubject.create(
             ([src, active, xtk, scaling]) => {
-                if (src !== 3) return 'hidden'
+                if (src !== NavSource.Gps) return 'hidden'
                 const fullError = scaling > 0 ? scaling : 2
                 return Math.abs(active ? xtk : 0) >= fullError ? 'visible' : 'hidden'
             },
@@ -609,20 +626,22 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     // ---- DME readout ----
     private readonly dmeDisplay = this.track(this.dmeDisplayed.map(d => (d ? 'inherit' : 'none')))
     private readonly dmeSourceLabel = this.track(this.dmeSource.map(s => 'NAV' + s))
+    private readonly nav1Dme = this.navDme(this.nav1)
+    private readonly nav2Dme = this.navDme(this.nav2)
     private readonly dmeIdent = this.track(
         MappedSubject.create(
             ([src, r1, r2]) => (src === 2 ? r2 : r1).ident,
             this.dmeSource,
-            this.navDme(this.nav1),
-            this.navDme(this.nav2)
+            this.nav1Dme,
+            this.nav2Dme
         )
     )
     private readonly dmeDist = this.track(
         MappedSubject.create(
             ([src, r1, r2]) => (src === 2 ? r2 : r1).dist,
             this.dmeSource,
-            this.navDme(this.nav1),
-            this.navDme(this.nav2)
+            this.nav1Dme,
+            this.nav2Dme
         )
     )
 
@@ -760,13 +779,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             MappedSubject.create(
                 ([src, n1, n2, gps, adf]): BearingState => {
                     switch (src) {
-                        case 1:
+                        case BearingSource.Nav1:
                             return { visible: true, source: 'NAV1', ...n1 }
-                        case 2:
+                        case BearingSource.Nav2:
                             return { visible: true, source: 'NAV2', ...n2 }
-                        case 3:
+                        case BearingSource.Gps:
                             return { visible: true, source: 'GPS', ...gps }
-                        case 4:
+                        case BearingSource.Adf:
                             return { visible: true, source: 'ADF', ...adf }
                         default:
                             return NO_BEARING
@@ -832,13 +851,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     private adjustCourse(direction: 1 | -1): void {
         const src = this.cdiSource.get()
-        if (src === 1) {
+        if (src === NavSource.Nav1) {
             SimVar.SetSimVarValue(
                 direction > 0 ? 'K:VOR1_OBI_INC' : 'K:VOR1_OBI_DEC',
                 SimVarValueType.Number,
                 0
             )
-        } else if (src === 2) {
+        } else if (src === NavSource.Nav2) {
             SimVar.SetSimVarValue(
                 direction > 0 ? 'K:VOR2_OBI_INC' : 'K:VOR2_OBI_DEC',
                 SimVarValueType.Number,
@@ -855,13 +874,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     private centerCourse(): void {
         const src = this.cdiSource.get()
-        if (src === 1) {
+        if (src === NavSource.Nav1) {
             SimVar.SetSimVarValue(
                 'K:VOR1_SET',
                 SimVarValueType.Number,
                 (180 + this.nav1.radial.get()) % 360
             )
-        } else if (src === 2) {
+        } else if (src === NavSource.Nav2) {
             SimVar.SetSimVarValue(
                 'K:VOR2_SET',
                 SimVarValueType.Number,
@@ -876,13 +895,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     private cycleCdiSource(): void {
         let next = (this.cdiSource.get() % 3) + 1
-        if (next === 2 && !this.nav2Available.get()) {
-            next = 3
+        if (next === NavSource.Nav2 && !this.nav2Available.get()) {
+            next = NavSource.Gps
         }
-        if ((next === 3) !== this.gpsDrivesNav1.get()) {
+        if ((next === NavSource.Gps) !== this.gpsDrivesNav1.get()) {
             SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Bool, 0)
         }
-        if (next !== 3) {
+        if (next !== NavSource.Gps) {
             ;(Simplane as any).setAutoPilotSelectedNav(next)
         }
     }
