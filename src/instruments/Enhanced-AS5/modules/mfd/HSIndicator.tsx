@@ -20,12 +20,6 @@ import { G5NavdataEvents } from '../providers/GpsPhaseSource'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 
-export enum HSIndicatorDisplayType {
-    GlassCockpit = 0,
-    HUD = 1,
-    HUD_Simplified = 2,
-}
-
 /** Resolved active CDI source. */
 enum NavSource {
     Nav1 = 1,
@@ -76,7 +70,7 @@ interface BearingState extends BearingReadout {
     source: string
 }
 
-const NO_BEARING: BearingState = { visible: false, source: '', ident: '', dist: '', angle: NaN }
+const NO_BEARING: BearingState = { visible: true, source: '', ident: '', dist: '', angle: NaN }
 
 /** Static compass card: background disc, graduation ticks, and cardinal labels. */
 class CompassCard extends DisplayComponent<{ noBackground: boolean }> {
@@ -196,6 +190,50 @@ class CoursePointer extends DisplayComponent<CoursePointerProps> {
                         fill-opacity="0"
                     />
                 ))}
+            </g>
+        )
+    }
+}
+
+interface TrackIndicatorProps extends ComponentProps {
+    trackAngle: Subscribable<number>
+}
+
+class TrackIndicator extends DisplayComponent<TrackIndicatorProps> {
+    private readonly trackTransform: MappedSubject<[number], string>
+
+    constructor(props: TrackIndicatorProps) {
+        super(props)
+
+        this.trackTransform = MappedSubject.create(
+            ([angle]) => `rotate(${angle}, 50, 50)`,
+            this.props.trackAngle
+        ).pause()
+    }
+
+    public onAfterRender(): void {
+        this.trackTransform.resume()
+    }
+
+    public destroy(): void {
+        this.trackTransform.destroy()
+        super.destroy()
+    }
+
+    public render(): VNode {
+        return (
+            <g transform={this.trackTransform}>
+                <polygon class="track-arrow" points="46,0 54,0 50,4" fill={Colors.MAGENTA} />
+                <line
+                    x1="50"
+                    y1="4"
+                    x2="50"
+                    y2="50"
+                    stroke={Colors.WHITE}
+                    stroke-width="1"
+                    stroke-dasharray="4"
+                    opacity="0.5"
+                />
             </g>
         )
     }
@@ -417,7 +455,6 @@ export interface HSIComponentProps extends ComponentProps {
     noCenterText: boolean
     noBackground: boolean
     noAffectSimRadioNav: boolean
-    displayStyle: HSIndicatorDisplayType
     heading?: Subscribable<number>
     onApi?: (instance: HSIComponent) => void
 }
@@ -542,7 +579,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     private readonly headingBugTransform = this.track(
         this.headingSource.map(h => `rotate(${h}, 50, 50)`)
     )
-    private readonly trackTransform = this.track(this.trackAngle.map(t => `rotate(${t}, 50, 50)`))
     private readonly headingText = this.track(this.magneticHeading.map(formatHeading))
     private readonly courseTransform = this.track(
         this.displayedCourse.map(c => `rotate(${c}, 50, 50)`)
@@ -907,8 +943,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     }
 
     render(): VNode {
-        const full = this.props.displayStyle !== HSIndicatorDisplayType.HUD_Simplified
-
         return (
             <svg class="hsi" width="100%" height="100%" viewBox="-28 -15 156 116">
                 {[-135, -90, -45, 45, 90, 135].map(angle => (
@@ -940,13 +974,9 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                         display={this.innerCircleVisible}
                     />
 
-                    {full && (
+                    {
                         <>
-                            <polygon
-                                points="50,-4 52,0 50,4 48,0"
-                                fill={Colors.MAGENTA}
-                                transform={this.trackTransform}
-                            />
+                            <TrackIndicator trackAngle={this.trackAngle} />
                             <BearingPointer state={this.bearing1} variant={1} />
                             <BearingPointer state={this.bearing2} variant={2} />
                             <CoursePointer
@@ -960,7 +990,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                                 fromVisible={this.fromVisible}
                             />
                         </>
-                    )}
+                    }
                 </g>
 
                 <polygon points="46,-3 54,-3 50,3" fill={Colors.WHITE} stroke={Colors.BLACK} />
@@ -974,7 +1004,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                     {this.headingText}
                 </text>
 
-                {full && (
+                {
                     <>
                         {!this.props.noCenterText && (
                             <CenterText
@@ -995,7 +1025,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                         <BearingInfoPanel state={this.bearing1} side="left" />
                         <BearingInfoPanel state={this.bearing2} side="right" />
                     </>
-                )}
+                }
             </svg>
         )
     }

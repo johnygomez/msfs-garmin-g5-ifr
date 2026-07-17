@@ -20,7 +20,7 @@ import { AltimeterSubjects } from '../pfd/AltimeterKnob'
 import { NavSource } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
-import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
+import { HSIComponent } from './HSIndicator'
 
 interface SelectedHeadingInfoProps extends ComponentProps {
     bus: EventBus
@@ -179,7 +179,6 @@ export class MfdContent extends DisplayComponent<MfdContentProps> {
                         noCenterText={false}
                         noBackground={false}
                         noAffectSimRadioNav={false}
-                        displayStyle={HSIndicatorDisplayType.GlassCockpit}
                         onApi={instance => hsiComponent.set(instance)}
                     />
                 </div>
