@@ -231,27 +231,33 @@ export class AS5_MFD extends NavSystemPage {
         return [
             {
                 name: 'Back',
-                callback: gps.SwitchToInteractionState.bind(gps, 0),
+                callback: () => gps.SwitchToInteractionState(0),
                 isInactive: () => false,
                 imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
             },
             {
                 name: 'Heading',
-                callback: gps.menuHeadingEnter.bind(gps),
+                callback: () => gps.menuHeadingEnter(),
                 isInactive: () => false,
                 value: gps.menuHeadingTextSub,
             },
             {
                 name: 'Course',
-                callback: gps.menuCrsEnter.bind(gps),
+                callback: () => gps.menuCrsEnter(),
                 isInactive: () => false,
                 value: gps.menuCourseTextSub,
             },
             {
                 name: 'PFD',
-                callback: gps.SwitchToPageName.bind(gps, 'Main', 'PFD'),
+                callback: () => gps.SwitchToPageName('Main', 'PFD'),
                 isInactive: () => false,
                 imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png',
+            },
+            {
+                name: 'Setup',
+                callback: () => gps.SwitchToPageName('Main', 'Setup'),
+                isInactive: () => false,
+                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/SETUP.png',
             },
         ]
     }

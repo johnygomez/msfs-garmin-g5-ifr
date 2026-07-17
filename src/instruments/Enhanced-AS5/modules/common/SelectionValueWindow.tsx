@@ -8,7 +8,7 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { NavSystemElement } from './NavSystem'
+import { NavSystemElement, OverlayDescriptor } from './NavSystem'
 
 export enum KnobValueUnit {
     Degrees = 0,
@@ -39,7 +39,6 @@ export class SelectionValueElement extends NavSystemElement {
     private readonly title = Subject.create('')
     private readonly value = Subject.create('')
 
-    private context: SelectionValueContext | null = null
     private valuePipe?: Subscription
 
     get subjects(): SelectionValueSubjects {
@@ -50,44 +49,43 @@ export class SelectionValueElement extends NavSystemElement {
         }
     }
 
-    setContext(context: SelectionValueContext): void {
-        this.context = context
-    }
-
     init(_root: HTMLElement): void {}
-
-    onEnter(): void {
-        if (!this.context) return
-        this.title.set(this.context.title)
-        this.valuePipe?.destroy()
-        this.valuePipe = this.context.displayValue.pipe(this.value)
-        this.state.set('Active')
-        this.activeContext.set(this.context)
-    }
 
     onUpdate(_deltaTime: number): void {}
 
-    onExit(): void {
+    createOverlay(context: SelectionValueContext): OverlayDescriptor {
+        this.title.set(context.title)
         this.valuePipe?.destroy()
-        this.valuePipe = undefined
-        this.state.set('Inactive')
-        this.activeContext.set(null)
-    }
+        this.valuePipe = context.displayValue.pipe(this.value)
+        this.state.set('Active')
+        this.activeContext.set(context)
 
-    onEvent(event: string): void {
-        switch (event) {
-            case 'Knob_Inc':
-                this.context?.onIncrement()
-                break
-            case 'Knob_Dec':
-                this.context?.onDecrement()
-                break
-            case 'Knob_Push':
-                this.gps.closePopUpElement()
-                break
-            case 'Knob_Long_Push':
-                this.context?.onSync?.()
-                break
+        const deactivate = () => {
+            this.valuePipe?.destroy()
+            this.valuePipe = undefined
+            this.state.set('Inactive')
+            this.activeContext.set(null)
+        }
+
+        return {
+            kind: 'selectionValue',
+            onEvent: event => {
+                switch (event) {
+                    case 'Knob_Inc':
+                        context.onIncrement()
+                        break
+                    case 'Knob_Dec':
+                        context.onDecrement()
+                        break
+                    case 'Knob_Push':
+                        this.gps.closeOverlay()
+                        break
+                    case 'Knob_Long_Push':
+                        context.onSync?.()
+                        break
+                }
+            },
+            onClose: deactivate,
         }
     }
 }

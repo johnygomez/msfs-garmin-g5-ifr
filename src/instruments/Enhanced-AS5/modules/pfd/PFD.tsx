@@ -133,19 +133,19 @@ export class AS5_PFD extends NavSystemPage {
         return [
             {
                 name: 'Back',
-                callback: gps.SwitchToInteractionState.bind(gps, 0),
+                callback: () => gps.SwitchToInteractionState(0),
                 isInactive: () => false,
                 imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
             },
             {
                 name: 'Heading',
-                callback: gps.menuHeadingEnter.bind(gps),
+                callback: () => gps.menuHeadingEnter(),
                 isInactive: () => false,
                 value: gps.menuHeadingTextSub,
             },
             {
                 name: 'Altitude',
-                callback: gps.menuAltitudeEnter.bind(gps),
+                callback: () => gps.menuAltitudeEnter(),
                 isInactive: () => false,
                 value: gps.menuAltitudeTextSub,
             },
@@ -157,7 +157,7 @@ export class AS5_PFD extends NavSystemPage {
             },
             {
                 name: 'MFD',
-                callback: gps.SwitchToPageName.bind(gps, 'Main', 'MFD'),
+                callback: () => gps.SwitchToPageName('Main', 'MFD'),
                 isInactive: () => false,
                 imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/MFD.png',
             },

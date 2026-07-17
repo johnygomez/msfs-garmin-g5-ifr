@@ -17,7 +17,7 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { ContextualMenuComponent, ContextualMenuSettings } from './common/ContextualMenu'
-import { NavSystem, NavSystemElementContainer, NavSystemPageGroup } from './common/NavSystem'
+import { NavSystem, NavSystemPageGroup } from './common/NavSystem'
 import {
     KnobValueUnit,
     SelectionValueContext,
@@ -115,11 +115,6 @@ export class AS5 extends NavSystem {
     private readonly mfdPage = new AS5_MFD()
 
     private readonly selectionValueElement = new SelectionValueElement()
-    private readonly selectionValueWindow = new NavSystemElementContainer(
-        'Selection Value',
-        'SelectionValueWindow',
-        this.selectionValueElement
-    )
 
     private adcPublisher?: AdcPublisher
     private ahrsPublisher?: AhrsPublisher
@@ -152,7 +147,7 @@ export class AS5 extends NavSystem {
     connectedCallback() {
         super.connectedCallback()
         this.menuMaxElems = 4
-        this.selectionValueWindow.setGPS(this)
+        this.registerOverlayElement(this.selectionValueElement)
 
         this.navSourceProvider = new NavSourceDataProvider(this.bus)
         this.navSourceProvider.resume()
@@ -209,7 +204,7 @@ export class AS5 extends NavSystem {
     }
 
     computeEvent(_event: string) {
-        const popUpWasOpen = this.popUpElement != null
+        const popUpWasOpen = this.activeOverlay != null
         super.computeEvent(_event)
         this.apAnnunciationProvider?.onEvent(_event)
         switch (_event) {
@@ -285,8 +280,7 @@ export class AS5 extends NavSystem {
     }
 
     private openSelectionValueWindow(context: SelectionValueContext) {
-        this.selectionValueElement.setContext(context)
-        this.switchToPopUpPage(this.selectionValueWindow)
+        this.openOverlay(this.selectionValueElement.createOverlay(context))
     }
 
     private bindKnobTooltip() {
