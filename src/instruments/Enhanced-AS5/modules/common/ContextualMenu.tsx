@@ -1,259 +1,195 @@
 import {
+    ComponentProps,
     DisplayComponent,
     FSComponent,
-    VNode,
-    ComponentProps,
+    MappedSubject,
+    MappedSubscribable,
     Subject,
     Subscribable,
     Subscription,
+    VNode,
 } from '@microsoft/msfs-sdk'
 
-/**
- * Descriptor for a single menu element.
- *
- * Replaces the old {@link ContextualMenuElement} / {@link ContextualMenuElementImage} /
- * {@link ContextualMenuElementValue} class hierarchy. All dynamic values flow
- * through reactive Subjects rather than per-frame diffAndSet* calls.
- */
 export interface ContextualMenuElementData {
-    /** Display name of the element. */
     name: string
-    /** Called when ENT is pressed on this element. */
     callback: () => boolean | void
-    /** Return true when the element should be rendered as inactive (greyed out, non-selectable). */
     isInactive: () => boolean
-    /** If set the element renders an image below the name. */
     imageSrc?: string
-    /** If set the element renders a reactive value below the name. */
     value?: Subscribable<string>
 }
 
-/** Props for {@link ContextualMenuComponent}. */
-export interface ContextualMenuComponentProps extends ComponentProps {
-    /** Current menu elements array (can change when switching menus). */
-    elements: Subject<ContextualMenuElementData[]>
-    /** Index of the currently selected element. */
-    cursorIndex: Subject<number>
-    /** Scroll offset — first visible element index. */
-    displayBeginIndex: Subject<number>
-    /** Maximum number of element slots rendered. */
+export interface ContextualMenuSettings {
+    state: Subscribable<string>
+    elements: Subscribable<ContextualMenuElementData[]>
+    cursorIndex: Subscribable<number>
+    displayBeginIndex: Subscribable<number>
     maxVisibleElements: number
-    /** Output: slider visibility state, set to 'Active' or 'Inactive' by the component. */
-    sliderState: Subject<string>
-    /** Output: slider-cursor CSS style string, set by the component. */
-    sliderCursorStyle: Subject<string>
 }
 
-/**
- * Declarative contextual menu component.
- *
- * Renders a fixed number of element slots and reactively updates their content,
- * display, and selection state whenever the input Subjects change. The slider
- * state is computed and pushed to output Subjects that the NavSystem already
- * subscribes to (so the HTML-template slider elements are updated).
- *
- * Replaces the imperative {@linkcode ContextualMenu} / {@linkcode ContextualMenu.Update}
- * pattern which used `diffAndSetHTML` / `diffAndSetAttribute` / `diffAndSetStyle`
- * on every frame.
- */
-export class ContextualMenuComponent extends DisplayComponent<ContextualMenuComponentProps> {
-    /** Refs for each slot div. Index maps to `displayBeginIndex + slotIndex`. */
-    private readonly slotRefs: ReturnType<typeof FSComponent.createRef<HTMLDivElement>>[] = []
+export interface ContextualMenuComponentProps extends ComponentProps, ContextualMenuSettings {}
 
-    /** Top-level subscriptions (element array, cursor index, display begin index). */
-    private readonly subs: Subscription[] = []
+interface ContextualMenuSlotProps extends ComponentProps {
+    element: Subscribable<ContextualMenuElementData | undefined>
+    isSelected: Subscribable<boolean>
+}
 
-    /** Per-element subscriptions to their `value` Subjects. Rebuilt when elements change. */
-    private valueSubs: Subscription[] = []
+class ContextualMenuSlot extends DisplayComponent<ContextualMenuSlotProps> {
+    private readonly value = Subject.create('')
 
-    // -- constructor ----------------------------------------------------------
+    private readonly rootStyle = this.props.element.map(element =>
+        element ? 'display: block;' : 'display: none;'
+    )
+    private readonly name = this.props.element.map(element => element?.name ?? '')
+    private readonly imageSrc = this.props.element.map(element => element?.imageSrc ?? '')
+    private readonly imageStyle = this.props.element.map(element =>
+        element?.imageSrc ? '' : 'display: none;'
+    )
+    private readonly valueStyle = this.props.element.map(element =>
+        element?.value ? '' : 'display: none;'
+    )
 
-    constructor(props: ContextualMenuComponentProps) {
+    private readonly state = MappedSubject.create(
+        ([element, isSelected]) => this.computeState(element, isSelected),
+        this.props.element,
+        this.props.isSelected
+    )
+
+    private readonly valueBinding: Subscription
+    private valuePipe?: Subscription
+
+    constructor(props: ContextualMenuSlotProps) {
         super(props)
-        // Create one ref per visible slot
-        for (let i = 0; i < props.maxVisibleElements; i++) {
-            this.slotRefs.push(FSComponent.createRef<HTMLDivElement>())
-        }
+        this.valueBinding = props.element.sub(element => this.rebindValue(element), false, true)
     }
 
-    // -- lifecycle ------------------------------------------------------------
-
-    /** @inheritdoc */
     onAfterRender(): void {
-        // When the elements array changes: rebuild slot content and state
-        this.subs.push(this.props.elements.sub(() => this.onElementsChanged(), true))
-        // When the cursor moves: update per-slot state attribute only
-        this.subs.push(this.props.cursorIndex.sub(() => this.updateSlotStates()))
-        // When the scroll position changes: update visibility and slider
-        this.subs.push(
-            this.props.displayBeginIndex.sub(() => {
-                this.updateSlotVisibility()
-                this.updateSlider()
-            })
-        )
+        this.valueBinding.resume(true)
     }
 
-    /** @inheritdoc */
     destroy(): void {
-        this.valueSubs.forEach(s => s.destroy())
-        this.subs.forEach(s => s.destroy())
+        this.valuePipe?.destroy()
+        this.valueBinding.destroy()
+        this.rootStyle.destroy()
+        this.name.destroy()
+        this.imageSrc.destroy()
+        this.imageStyle.destroy()
+        this.valueStyle.destroy()
+        this.state.destroy()
         super.destroy()
     }
 
-    // -- reactive update helpers ----------------------------------------------
-
-    /** Full rebuild: elements array changed. */
-    private onElementsChanged(): void {
-        // Tear down old per-value subscriptions
-        this.valueSubs.forEach(s => s.destroy())
-        this.valueSubs = []
-
-        const elements = this.props.elements.get()
-        const beginIdx = this.props.displayBeginIndex.get()
-        const cursor = this.props.cursorIndex.get()
-
-        for (let slotIdx = 0; slotIdx < this.props.maxVisibleElements; slotIdx++) {
-            const elemIdx = beginIdx + slotIdx
-            const slotEl = this.slotRefs[slotIdx].getOrDefault()
-            if (!slotEl) continue
-
-            if (elemIdx >= elements.length) {
-                slotEl.style.display = 'none'
-                continue
-            }
-
-            slotEl.style.display = 'block'
-            const elem = elements[elemIdx]
-
-            // Apply state
-            this.applySlotState(slotEl, elem, elemIdx === cursor)
-
-            // Apply content
-            this.applySlotContent(slotEl, elem)
-        }
-
-        this.updateSlider()
-    }
-
-    /** Cursor-only update: just refresh state attributes. */
-    private updateSlotStates(): void {
-        const elements = this.props.elements.get()
-        const beginIdx = this.props.displayBeginIndex.get()
-        const cursor = this.props.cursorIndex.get()
-
-        for (let slotIdx = 0; slotIdx < this.props.maxVisibleElements; slotIdx++) {
-            const elemIdx = beginIdx + slotIdx
-            if (elemIdx >= elements.length) continue
-
-            const slotEl = this.slotRefs[slotIdx].getOrDefault()
-            if (!slotEl) continue
-
-            const elem = elements[elemIdx]
-            this.applySlotState(slotEl, elem, elemIdx === cursor)
-        }
-    }
-
-    /** Scroll-only update: just refresh display and slider. */
-    private updateSlotVisibility(): void {
-        const elements = this.props.elements.get()
-        const beginIdx = this.props.displayBeginIndex.get()
-        const cursor = this.props.cursorIndex.get()
-
-        for (let slotIdx = 0; slotIdx < this.props.maxVisibleElements; slotIdx++) {
-            const elemIdx = beginIdx + slotIdx
-            const slotEl = this.slotRefs[slotIdx].getOrDefault()
-            if (!slotEl) continue
-
-            if (elemIdx >= elements.length) {
-                slotEl.style.display = 'none'
-            } else {
-                slotEl.style.display = 'block'
-                // State may have changed because the element mapped to this
-                // slot is different now
-                const elem = elements[elemIdx]
-                this.applySlotState(slotEl, elem, elemIdx === cursor)
-                this.applySlotContent(slotEl, elem)
-            }
-        }
-    }
-
-    /** Set the `state` attribute on a single slot element. */
-    private applySlotState(
-        el: HTMLDivElement,
-        elem: ContextualMenuElementData,
+    private computeState(
+        element: ContextualMenuElementData | undefined,
         isSelected: boolean
-    ): void {
-        if (elem.isInactive()) {
-            el.setAttribute('state', 'Inactive')
-        } else if (isSelected) {
-            el.setAttribute('state', 'Selected')
-        } else {
-            el.setAttribute('state', 'Unselected')
-        }
+    ): string {
+        if (!element || element.isInactive()) return 'Inactive'
+        return isSelected ? 'Selected' : 'Unselected'
     }
 
-    /** Set the inner HTML of a single slot element based on element type. */
-    private applySlotContent(el: HTMLDivElement, elem: ContextualMenuElementData): void {
-        if (elem.imageSrc) {
-            // Image element: name + image
-            el.innerHTML =
-                `<div class="ContextualMenuElementName">${elem.name}</div>` +
-                `<div class="ContextualMenuElementImage"><img src="${elem.imageSrc}"></div>`
-        } else if (elem.value) {
-            // Value element: name + reactive value
-            el.innerHTML =
-                `<div class="ContextualMenuElementName">${elem.name}</div>` +
-                `<div class="ContextualMenuElementValue">${elem.value.get()}</div>`
-
-            // Subscribe to value changes for the life of this element set
-            const valueDiv = el.querySelector('.ContextualMenuElementValue')
-            if (valueDiv) {
-                this.valueSubs.push(
-                    elem.value.sub(v => {
-                        valueDiv.textContent = v
-                    })
-                )
-            }
-        } else {
-            // Plain text element
-            el.textContent = elem.name
-        }
+    private rebindValue(element: ContextualMenuElementData | undefined): void {
+        this.valuePipe?.destroy()
+        this.valuePipe = element?.value?.pipe(this.value)
+        if (!element?.value) this.value.set('')
     }
 
-    /** Compute slider state and cursor style, push to output Subjects. */
-    private updateSlider(): void {
-        const total = this.props.elements.get().length
-        const max = this.props.maxVisibleElements
-        const beginIdx = this.props.displayBeginIndex.get()
-
-        if (total <= max) {
-            this.props.sliderState.set('Inactive')
-            this.props.sliderCursorStyle.set('')
-            return
-        }
-
-        const cursorHeight = (max * 100) / total
-        const pct = beginIdx / (total - max)
-        const cursorTop = Math.min(pct, 1.0) * (100 - cursorHeight)
-
-        this.props.sliderState.set('Active')
-        this.props.sliderCursorStyle.set('height:' + cursorHeight + '%; top:' + cursorTop + '%')
-    }
-
-    // -- render ---------------------------------------------------------------
-
-    /** @inheritdoc */
     render(): VNode {
-        // Render fixed slots inside #ContextualMenuElements.
-        // The slider is NOT rendered here — it lives in the HTML template and
-        // is updated via the sliderState / sliderCursorStyle output Subjects
-        // that NavSystem already subscribes to.
         return (
-            <>
-                {this.slotRefs.map(ref => (
-                    <div ref={ref} class="ContextualMenuElement" style="display:none" />
-                ))}
-            </>
+            <div class="ContextualMenuElement" style={this.rootStyle} state={this.state}>
+                <div class="ContextualMenuElementName">{this.name}</div>
+                <div class="ContextualMenuElementImage" style={this.imageStyle}>
+                    <img src={this.imageSrc} />
+                </div>
+                <div class="ContextualMenuElementValue" style={this.valueStyle}>
+                    {this.value}
+                </div>
+            </div>
+        )
+    }
+}
+
+interface ContextualMenuSlotSubjects {
+    element: MappedSubscribable<ContextualMenuElementData | undefined>
+    isSelected: MappedSubscribable<boolean>
+}
+
+export class ContextualMenuComponent extends DisplayComponent<ContextualMenuComponentProps> {
+    private readonly slots: ContextualMenuSlotSubjects[]
+
+    private readonly sliderState = this.props.elements
+        .map(elements => (elements.length > this.props.maxVisibleElements ? 'Active' : 'Inactive'))
+        .pause()
+
+    private readonly sliderCursorStyle = MappedSubject.create(
+        ([elements, displayBeginIndex]) =>
+            this.computeSliderCursorStyle(elements.length, displayBeginIndex),
+        this.props.elements,
+        this.props.displayBeginIndex
+    ).pause()
+
+    constructor(props: ContextualMenuComponentProps) {
+        super(props)
+        this.slots = Array.from({ length: props.maxVisibleElements }, (_, slotIndex) =>
+            this.createSlotSubjects(slotIndex)
+        )
+    }
+
+    onAfterRender(): void {
+        this.slots.forEach(slot => {
+            slot.element.resume()
+            slot.isSelected.resume()
+        })
+        this.sliderState.resume()
+        this.sliderCursorStyle.resume()
+    }
+
+    destroy(): void {
+        this.slots.forEach(slot => {
+            slot.element.destroy()
+            slot.isSelected.destroy()
+        })
+        this.sliderState.destroy()
+        this.sliderCursorStyle.destroy()
+        super.destroy()
+    }
+
+    private createSlotSubjects(slotIndex: number): ContextualMenuSlotSubjects {
+        return {
+            element: MappedSubject.create(
+                ([elements, displayBeginIndex]) => elements[displayBeginIndex + slotIndex],
+                this.props.elements,
+                this.props.displayBeginIndex
+            ).pause(),
+            isSelected: MappedSubject.create(
+                ([displayBeginIndex, cursorIndex]) => displayBeginIndex + slotIndex === cursorIndex,
+                this.props.displayBeginIndex,
+                this.props.cursorIndex
+            ).pause(),
+        }
+    }
+
+    private computeSliderCursorStyle(elementCount: number, displayBeginIndex: number): string {
+        const maxVisible = this.props.maxVisibleElements
+        if (elementCount <= maxVisible) return ''
+
+        const heightPercent = (maxVisible * 100) / elementCount
+        const scrollRatio = Math.min(displayBeginIndex / (elementCount - maxVisible), 1)
+        const topPercent = scrollRatio * (100 - heightPercent)
+        return `height: ${heightPercent}%; top: ${topPercent}%;`
+    }
+
+    render(): VNode {
+        return (
+            <div id="ContextualMenu" state={this.props.state}>
+                <div id="ContextualMenuElements">
+                    {this.slots.map(slot => (
+                        <ContextualMenuSlot element={slot.element} isSelected={slot.isSelected} />
+                    ))}
+                </div>
+                <div id="SliderMenu" state={this.sliderState}>
+                    <div id="SliderMenuBackground" />
+                    <div id="SliderMenuCursor" style={this.sliderCursorStyle} />
+                </div>
+            </div>
         )
     }
 }

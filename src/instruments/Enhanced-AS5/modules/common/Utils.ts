@@ -63,12 +63,19 @@ export enum Colors {
 }
 
 /**
+ * Rounds a heading/course value to a whole degree in the `1..360` range,
+ * mapping 0 to 360.
+ */
+export function normalizeDegrees360(value: number): number {
+    const degrees = Math.round(value)
+    return degrees == 0 ? 360 : degrees
+}
+
+/**
  * Formats a heading/course value as a zero-padded three-digit degree string,
  * mapping 0 to 360 (`8` → `'008°'`, `0` → `'360°'`).
  */
 export function formatDegrees3(value: number): string {
-    let degrees = Math.round(value)
-    if (degrees == 0) degrees = 360
-    const text = degrees.toFixed(0)
+    const text = normalizeDegrees360(value).toFixed(0)
     return '000'.slice(text.length) + text + '°'
 }

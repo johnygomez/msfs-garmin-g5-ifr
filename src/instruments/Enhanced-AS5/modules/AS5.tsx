@@ -11,18 +11,22 @@ import {
     NavComSimVarPublisher,
     SimVarValueType,
     Subject,
+    Subscribable,
+    Subscription,
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { ContextualMenuComponent } from './common/ContextualMenu'
+import { ContextualMenuComponent, ContextualMenuSettings } from './common/ContextualMenu'
 import { HighlightComponent, HighlightElementRefs } from './common/Highlight'
+import { NavSystem, NavSystemElementContainer, NavSystemPageGroup } from './common/NavSystem'
 import {
-    NavSystem,
-    NavSystemElement,
-    NavSystemElementContainer,
-    NavSystemPageGroup,
-} from './common/NavSystem'
-import { formatDegrees3 } from './common/Utils'
+    KnobValueUnit,
+    SelectionValueContext,
+    SelectionValueElement,
+    SelectionValueSubjects,
+    SelectionValueWindowComponent,
+} from './common/SelectionValueWindow'
+import { formatDegrees3, normalizeDegrees360 } from './common/Utils'
 import { AS5_MFD, MfdContent } from './mfd/MFD'
 import { AS5_PFD, PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
@@ -32,6 +36,8 @@ import { NavSourceDataProvider } from './providers/NavSourceDataProvider'
 import { G5CustomEvents, G5CustomPublisher } from './publishers/G5CustomPublisher'
 import { G5NavPublisher } from './publishers/G5NavPublisher'
 
+const HEADING_KNOB_RESET_MS = 600
+
 interface AS5InstrumentProps extends ComponentProps {
     bus: EventBus
     mfd: AS5_MFD
@@ -39,7 +45,9 @@ interface AS5InstrumentProps extends ComponentProps {
     airspeedData: AirspeedDataProvider
     navData: NavSourceDataProvider
     onHighlightApi: (refs: HighlightElementRefs) => void
-    pageState: Subject<string>
+    pageState: Subscribable<string>
+    menu: ContextualMenuSettings
+    selectionValue: SelectionValueSubjects
 }
 
 class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
@@ -68,6 +76,8 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         />
                     </div>
                 </div>
+                <ContextualMenuComponent {...this.props.menu} />
+                <SelectionValueWindowComponent {...this.props.selectionValue} />
             </>
         )
     }
@@ -91,11 +101,18 @@ export class AS5 extends NavSystem {
         29.92
     )
 
-    readonly menuHeadingTextSub = this.apHeadingSelected.map(formatDegrees3)
+    private readonly selectedHeadingDegrees = this.apHeadingSelected.map(normalizeDegrees360)
+    private readonly selectedCourseDegrees = this.nav1Obs.map(normalizeDegrees360)
+
+    readonly menuHeadingTextSub = this.selectedHeadingDegrees.map(formatDegrees3)
     readonly menuAltitudeTextSub = this.apAltitudeSelected.map(
         altitude => fastToFixed(altitude, 0) + 'ft'
     )
-    readonly menuCourseTextSub = this.nav1Obs.map(formatDegrees3)
+    readonly menuCourseTextSub = this.selectedCourseDegrees.map(formatDegrees3)
+
+    private readonly knobValue = Subject.create(0)
+    private readonly knobUnit = Subject.create<KnobValueUnit>(KnobValueUnit.Degrees)
+    private knobValuePipe?: Subscription
 
     pageGroups: NavSystemPageGroup[]
     highlightRefs: HighlightElementRefs
@@ -103,8 +120,12 @@ export class AS5 extends NavSystem {
     private readonly pfdPage = new AS5_PFD()
     private readonly mfdPage = new AS5_MFD()
 
-    private selectionValueElement: AS5_SelectionValueElement
-    private selectionValueWindow: NavSystemElementContainer
+    private readonly selectionValueElement = new SelectionValueElement()
+    private readonly selectionValueWindow = new NavSystemElementContainer(
+        'Selection Value',
+        'SelectionValueWindow',
+        this.selectionValueElement
+    )
 
     private adcPublisher?: AdcPublisher
     private ahrsPublisher?: AhrsPublisher
@@ -116,10 +137,10 @@ export class AS5 extends NavSystem {
     private navdataStack?: NavdataStack
     private apAnnunciationProvider?: AutopilotAnnunciationProvider
 
-    private lastHdgKnobTime: number
-    private lastHdgKnobSign: number
-    private hdgKnobAccel: InputAcceleration
-    private hdgKnobTarget: number
+    private readonly headingKnobAccel = new InputAcceleration({ increment: 1 })
+    private lastHeadingKnobTime = 0
+    private lastHeadingKnobSign = 0
+    private headingKnobTarget = 0
 
     constructor() {
         super()
@@ -134,19 +155,9 @@ export class AS5 extends NavSystem {
         return this.instrumentIndex == 2
     }
 
-    private get isPfdInstrument(): boolean {
-        return this.instrumentIndex == 1
-    }
-
     connectedCallback() {
         super.connectedCallback()
         this.menuMaxElems = 4
-        this.selectionValueElement = new AS5_SelectionValueElement()
-        this.selectionValueWindow = new NavSystemElementContainer(
-            'Selection Value',
-            'SelectionValueWindow',
-            this.selectionValueElement
-        )
         this.selectionValueWindow.setGPS(this)
 
         this.navSourceProvider = new NavSourceDataProvider(this.bus)
@@ -169,6 +180,8 @@ export class AS5 extends NavSystem {
         this.customPublisher.startPublish()
         this.navPublisher.startPublish()
 
+        this.bindKnobTooltip()
+
         FSComponent.render(
             <AS5Instrument
                 bus={this.bus}
@@ -178,20 +191,16 @@ export class AS5 extends NavSystem {
                 navData={this.navSourceProvider}
                 onHighlightApi={refs => (this.highlightRefs = refs)}
                 pageState={this.pageState}
+                menu={{
+                    state: this.contextualMenuState,
+                    elements: this.menuElementsSub,
+                    cursorIndex: this.menuCursorIndexSub,
+                    displayBeginIndex: this.menuDisplayBeginIndexSub,
+                    maxVisibleElements: this.menuMaxElems,
+                }}
+                selectionValue={this.selectionValueElement.subjects}
             />,
             this.getChildById('Electricity')
-        )
-
-        FSComponent.render(
-            <ContextualMenuComponent
-                elements={this.menuElementsSub}
-                cursorIndex={this.menuCursorIndexSub}
-                displayBeginIndex={this.menuDisplayBeginIndexSub}
-                maxVisibleElements={this.menuMaxElems}
-                sliderState={this.sliderState}
-                sliderCursorStyle={this.sliderCursorStyle}
-            />,
-            this.getChildById('ContextualMenuElements')
         )
     }
 
@@ -204,7 +213,6 @@ export class AS5 extends NavSystem {
         this.navdataStack?.onUpdate()
         this.airspeedProvider?.onUpdate(_deltaTime)
         this.apAnnunciationProvider?.onUpdate()
-        this.updateKnobTooltipValue()
     }
 
     computeEvent(_event: string) {
@@ -244,59 +252,93 @@ export class AS5 extends NavSystem {
 
     onPowerOn() {
         super.onPowerOn()
-        if (this.instrumentIndex == 2) this.SwitchToPageName('Main', 'MFD')
+        if (this.isMfdInstrument) this.SwitchToPageName('Main', 'MFD')
         else this.SwitchToPageName('Main', 'PFD')
     }
 
-    private updateKnobTooltipValue() {
-        let value, unit
-        if (
-            this.popUpElement === this.selectionValueWindow &&
-            this.selectionValueElement.rawValue
-        ) {
-            value = this.selectionValueElement.rawValue()
-            unit = this.selectionValueElement.unit
+    menuHeadingEnter() {
+        this.openSelectionValueWindow({
+            title: 'Select Heading',
+            displayValue: this.menuHeadingTextSub,
+            knobValue: this.selectedHeadingDegrees,
+            knobUnit: KnobValueUnit.Degrees,
+            onIncrement: () => this.incrementHeading(),
+            onDecrement: () => this.decrementHeading(),
+            onSync: () => this.syncHeading(),
+        })
+    }
+
+    menuCrsEnter() {
+        this.openSelectionValueWindow({
+            title: 'Select Course',
+            displayValue: this.menuCourseTextSub,
+            knobValue: this.selectedCourseDegrees,
+            knobUnit: KnobValueUnit.Degrees,
+            onIncrement: () => this.incrementCourse(),
+            onDecrement: () => this.decrementCourse(),
+        })
+    }
+
+    menuAltitudeEnter() {
+        this.openSelectionValueWindow({
+            title: 'Select Altitude',
+            displayValue: this.menuAltitudeTextSub,
+            knobValue: this.apAltitudeSelected,
+            knobUnit: KnobValueUnit.Feet,
+            onIncrement: () => this.incrementAltitude(),
+            onDecrement: () => this.decrementAltitude(),
+            onSync: () => this.syncAltitude(),
+        })
+    }
+
+    private openSelectionValueWindow(context: SelectionValueContext) {
+        this.selectionValueElement.setContext(context)
+        this.switchToPopUpPage(this.selectionValueWindow)
+    }
+
+    private bindKnobTooltip() {
+        this.selectionValueElement.activeContext.sub(
+            context => this.rebindKnobValueSource(context),
+            true
+        )
+        this.knobValue.sub(value => this.setKnobSimVar('Knob_Value', value), true)
+        this.knobUnit.sub(unit => this.setKnobSimVar('Knob_Unit', unit), true)
+    }
+
+    private rebindKnobValueSource(context: SelectionValueContext | null) {
+        this.knobValuePipe?.destroy()
+        if (context) {
+            this.knobUnit.set(context.knobUnit)
+            this.knobValuePipe = context.knobValue.pipe(this.knobValue)
         } else if (this.isMfdInstrument) {
-            value = this.getMenuHeadingRawValue()
-            unit = 0
+            this.knobUnit.set(KnobValueUnit.Degrees)
+            this.knobValuePipe = this.selectedHeadingDegrees.pipe(this.knobValue)
         } else {
-            value = this.baroSettingInHg.get()
-            unit = 2
+            this.knobUnit.set(KnobValueUnit.InHg)
+            this.knobValuePipe = this.baroSettingInHg.pipe(this.knobValue)
         }
+    }
+
+    private setKnobSimVar(name: string, value: number) {
         SimVar.SetSimVarValue(
-            'L:AS5_' + this.instrumentIndex + '_Knob_Value',
+            `L:AS5_${this.instrumentIndex}_${name}`,
             SimVarValueType.Number,
             value
         )
-        SimVar.SetSimVarValue(
-            'L:AS5_' + this.instrumentIndex + '_Knob_Unit',
-            SimVarValueType.Number,
-            unit
-        )
     }
 
-    private getMenuHeadingText() {
-        return this.menuHeadingTextSub.get()
-    }
-
-    private getMenuHeadingRawValue() {
-        const heading = Math.round(this.apHeadingSelected.get())
-        return heading == 0 ? 360 : heading
-    }
-
-    private changeHeading(_sign: number) {
+    private changeHeading(sign: number) {
         const now = Date.now()
-        const dt = now - (this.lastHdgKnobTime || 0)
-        this.hdgKnobAccel = this.hdgKnobAccel || new InputAcceleration({ increment: 1 })
-        if (dt > 600 || _sign != this.lastHdgKnobSign) {
-            this.hdgKnobTarget = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
-            this.hdgKnobAccel.resume()
+        const elapsed = now - this.lastHeadingKnobTime
+        if (elapsed > HEADING_KNOB_RESET_MS || sign != this.lastHeadingKnobSign) {
+            this.headingKnobTarget = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
+            this.headingKnobAccel.resume()
         }
-        this.lastHdgKnobTime = now
-        this.lastHdgKnobSign = _sign
-        const step = this.hdgKnobAccel.doStep()
-        this.hdgKnobTarget = (((this.hdgKnobTarget + _sign * step) % 360) + 360) % 360
-        SimVar.SetSimVarValue('K:HEADING_BUG_SET', SimVarValueType.Number, this.hdgKnobTarget)
+        this.lastHeadingKnobTime = now
+        this.lastHeadingKnobSign = sign
+        const step = this.headingKnobAccel.doStep()
+        this.headingKnobTarget = (((this.headingKnobTarget + sign * step) % 360) + 360) % 360
+        SimVar.SetSimVarValue('K:HEADING_BUG_SET', SimVarValueType.Number, this.headingKnobTarget)
     }
 
     private incrementHeading() {
@@ -316,57 +358,12 @@ export class AS5 extends NavSystem {
         )
     }
 
-    menuHeadingEnter() {
-        this.selectionValueElement.setContext(
-            'Select Heading',
-            this.getMenuHeadingText.bind(this),
-            this.incrementHeading.bind(this),
-            this.decrementHeading.bind(this),
-            this.syncHeading.bind(this)
-        )
-        this.selectionValueElement.rawValue = this.getMenuHeadingRawValue.bind(this)
-        this.selectionValueElement.unit = 0
-        this.switchToPopUpPage(this.selectionValueWindow)
-    }
-
-    private getMenuCrsText() {
-        return this.menuCourseTextSub.get()
-    }
-
-    private getMenuCrsRawValue() {
-        const crs = Math.round(this.nav1Obs.get())
-        return crs == 0 ? 360 : crs
-    }
-
-    private incrementCrs() {
+    private incrementCourse() {
         SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0)
     }
 
-    private decrementCrs() {
+    private decrementCourse() {
         SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0)
-    }
-
-    private syncCrs() {}
-
-    menuCrsEnter() {
-        this.selectionValueElement.setContext(
-            'Select Course',
-            this.getMenuCrsText.bind(this),
-            this.incrementCrs.bind(this),
-            this.decrementCrs.bind(this),
-            this.syncCrs.bind(this)
-        )
-        this.selectionValueElement.rawValue = this.getMenuCrsRawValue.bind(this)
-        this.selectionValueElement.unit = 0
-        this.switchToPopUpPage(this.selectionValueWindow)
-    }
-
-    private getMenuAltitudeText() {
-        return this.menuAltitudeTextSub.get()
-    }
-
-    private getMenuAltitudeRawValue() {
-        return this.apAltitudeSelected.get()
     }
 
     private incrementAltitude() {
@@ -383,81 +380,6 @@ export class AS5 extends NavSystem {
             SimVarValueType.Number,
             Math.round(Simplane.getAltitude() / 100) * 100
         )
-    }
-
-    menuAltitudeEnter() {
-        this.selectionValueElement.setContext(
-            'Select Altitude',
-            this.getMenuAltitudeText.bind(this),
-            this.incrementAltitude.bind(this),
-            this.decrementAltitude.bind(this),
-            this.syncAltitude.bind(this)
-        )
-        this.selectionValueElement.rawValue = this.getMenuAltitudeRawValue.bind(this)
-        this.selectionValueElement.unit = 1
-        this.switchToPopUpPage(this.selectionValueWindow)
-    }
-}
-
-export class AS5_SelectionValueElement extends NavSystemElement {
-    window: HTMLElement
-    title: HTMLElement
-    value: HTMLElement
-    getCallback: any
-    incCallback: any
-    decCallback: any
-    syncCallback: any
-    rawValue: any
-    unit: number
-
-    init(_root: HTMLElement) {
-        this.window = _root
-        this.title = this.gps.getChildById('SelectionValueWindowTitle')
-        this.value = this.gps.getChildById('SelectionValueWindowValue')
-    }
-
-    onEnter() {
-        if (this.getCallback && this.value) diffAndSetText(this.value, this.getCallback())
-        diffAndSetAttribute(this.window, 'state', 'Active')
-    }
-
-    onUpdate(_deltaTime: number) {
-        if (this.getCallback && this.value) diffAndSetText(this.value, this.getCallback())
-    }
-
-    onExit() {
-        diffAndSetAttribute(this.window, 'state', 'Inactive')
-    }
-
-    onEvent(_event: string) {
-        switch (_event) {
-            case 'Knob_Inc':
-                if (this.incCallback) this.incCallback()
-                break
-            case 'Knob_Dec':
-                if (this.decCallback) this.decCallback()
-                break
-            case 'Knob_Push':
-                this.gps.closePopUpElement()
-                break
-            case 'Knob_Long_Push':
-                if (this.syncCallback) this.syncCallback()
-                break
-        }
-    }
-
-    setContext(
-        _titleText: string,
-        _getCallback: () => string,
-        _incCallback = EmptyCallback.Void,
-        _decCallback = EmptyCallback.Void,
-        _syncCallback = EmptyCallback.Void
-    ) {
-        diffAndSetText(this.title, _titleText)
-        this.getCallback = _getCallback
-        this.incCallback = _incCallback
-        this.decCallback = _decCallback
-        this.syncCallback = _syncCallback
     }
 }
 

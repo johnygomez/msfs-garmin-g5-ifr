@@ -21,14 +21,9 @@ export class NavSystem extends BaseInstrument {
     currentSearchFieldWaypoint: any
     contextualMenuDisplayBeginIndex: number
     menuMaxElems: number
-    contextualMenu: any
-    menuSlider: any
-    menuSliderCursor: any
 
     readonly pageState = Subject.create('')
     readonly contextualMenuState = Subject.create('Inactive')
-    readonly sliderState = Subject.create('Inactive')
-    readonly sliderCursorStyle = Subject.create('')
     readonly menuElementsSub = Subject.create<ContextualMenuElementData[]>([])
     readonly menuCursorIndexSub = Subject.create(0)
     readonly menuDisplayBeginIndexSub = Subject.create(0)
@@ -58,23 +53,6 @@ export class NavSystem extends BaseInstrument {
 
     disconnectedCallback() {
         super.disconnectedCallback()
-    }
-
-    connectedCallback() {
-        super.connectedCallback()
-        this.contextualMenu = this.getChildById('ContextualMenu')
-        this.menuSlider = this.getChildById('SliderMenu')
-        this.menuSliderCursor = this.getChildById('SliderMenuCursor')
-
-        this.contextualMenuState.sub(state => {
-            if (this.contextualMenu) this.contextualMenu.setAttribute('state', state)
-        }, true)
-        this.sliderState.sub(state => {
-            if (this.menuSlider) this.menuSlider.setAttribute('state', state)
-        }, true)
-        this.sliderCursorStyle.sub(style => {
-            if (this.menuSliderCursor) this.menuSliderCursor.setAttribute('style', style)
-        }, true)
     }
 
     onUpdate(_deltaTime: number): void {}
