@@ -4,6 +4,7 @@ import {
     VNode,
     ComponentProps,
     Subject,
+    Subscribable,
     Subscription,
 } from '@microsoft/msfs-sdk'
 
@@ -24,7 +25,7 @@ export interface ContextualMenuElementData {
     /** If set the element renders an image below the name. */
     imageSrc?: string
     /** If set the element renders a reactive value below the name. */
-    value?: Subject<string>
+    value?: Subscribable<string>
 }
 
 /** Props for {@link ContextualMenuComponent}. */

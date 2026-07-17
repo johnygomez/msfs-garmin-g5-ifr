@@ -3,22 +3,32 @@ import {
     ConsumerSubject,
     EventBus,
     MappedSubject,
+    MappedSubscribable,
     SimVarValueType,
     Subject,
+    Subscribable,
 } from '@microsoft/msfs-sdk'
 
+import { AltimeterSubjects } from './CommonPFD_MFD'
 import { G5CustomEvents } from './G5CustomPublisher'
+import { G5NavEvents } from './G5NavPublisher'
 import { G5NavdataEvents } from './GpsPhaseSource'
 import { VerticalDeviationMode } from './VerticalDeviationIndicator'
 
 export type NavSource = 'GPS' | 'NAV1' | 'NAV2'
+
+export interface CDISubjects {
+    cdiSource: Subscribable<number>
+    cdiDeviation: Subscribable<number>
+    cdiVisible: Subscribable<boolean>
+}
 
 interface VerticalGuidance {
     readonly mode: VerticalDeviationMode
     readonly deviation: number
 }
 
-const GSI_FULL_SCALE_DEFLECTION = 127
+const NEEDLE_FULL_SCALE_DEFLECTION = 127
 
 const VNAV_FULL_SCALE_DEVIATION_METERS = 304.8
 
@@ -30,18 +40,52 @@ export class NavSourceDataProvider {
     /** The resolved Garmin GPS CDI-scaling phase label, published by NavdataStack. */
     readonly cdiScaleLabel: ConsumerSubject<CDIScaleLabel>
 
+    private readonly nav1HasNav: ConsumerSubject<boolean>
+    private readonly nav2HasNav: ConsumerSubject<boolean>
+    private readonly nav1Cdi: ConsumerSubject<number>
+    private readonly nav2Cdi: ConsumerSubject<number>
+    private readonly gpsWpNextId: ConsumerSubject<string>
+    private readonly gpsWpCrossTrack: ConsumerSubject<number>
+
     readonly activeSource: MappedSubject<[boolean, number], NavSource>
     readonly verticalDeviationMode = Subject.create<VerticalDeviationMode>('None')
     readonly verticalDeviationValue = Subject.create(0)
+
+    private readonly cdiSource: MappedSubscribable<number>
+    private readonly cdiDeviation: MappedSubject<[NavSource, number, number, number], number>
+    private readonly cdiVisible: MappedSubject<[NavSource, boolean, boolean, string], boolean>
+
+    get cdiSubjects(): CDISubjects {
+        return {
+            cdiSource: this.cdiSource,
+            cdiDeviation: this.cdiDeviation,
+            cdiVisible: this.cdiVisible,
+        }
+    }
+
+    get altimeterSubjects(): AltimeterSubjects {
+        return {
+            verticalDeviationMode: this.verticalDeviationMode,
+            verticalDeviationValue: this.verticalDeviationValue,
+        }
+    }
 
     constructor(bus: EventBus) {
         const g5Sub = bus.getSubscriber<G5CustomEvents>()
         this.gpsDrivesNav1 = ConsumerSubject.create(g5Sub.on('gps_drives_nav1'), false)
         this.navSelected = ConsumerSubject.create(g5Sub.on('nav_selected'), 0)
 
-        const navSub = bus.getSubscriber<G5NavdataEvents>()
+        const navSub = bus.getSubscriber<G5NavEvents>()
+        this.nav1HasNav = ConsumerSubject.create(navSub.on('nav1_has_nav'), false)
+        this.nav2HasNav = ConsumerSubject.create(navSub.on('nav2_has_nav'), false)
+        this.nav1Cdi = ConsumerSubject.create(navSub.on('nav1_cdi'), 0)
+        this.nav2Cdi = ConsumerSubject.create(navSub.on('nav2_cdi'), 0)
+        this.gpsWpNextId = ConsumerSubject.create(navSub.on('gps_wp_next_id'), '')
+        this.gpsWpCrossTrack = ConsumerSubject.create(navSub.on('gps_wp_cross_track'), 0)
+
+        const navdataSub = bus.getSubscriber<G5NavdataEvents>()
         this.cdiScaleLabel = ConsumerSubject.create(
-            navSub.on('g5_cdi_scale_label'),
+            navdataSub.on('g5_cdi_scale_label'),
             CDIScaleLabel.Enroute
         )
 
@@ -55,6 +99,44 @@ export class NavSourceDataProvider {
             this.gpsDrivesNav1,
             this.navSelected
         ).pause()
+
+        this.cdiSource = this.activeSource.map(source =>
+            source === 'NAV1' ? 1 : source === 'NAV2' ? 2 : 3
+        )
+
+        this.cdiDeviation = MappedSubject.create(
+            ([source, nav1Cdi, nav2Cdi, crossTrack]) => {
+                switch (source) {
+                    case 'NAV1':
+                        return nav1Cdi / NEEDLE_FULL_SCALE_DEFLECTION
+                    case 'NAV2':
+                        return nav2Cdi / NEEDLE_FULL_SCALE_DEFLECTION
+                    default:
+                        return crossTrack
+                }
+            },
+            this.activeSource,
+            this.nav1Cdi,
+            this.nav2Cdi,
+            this.gpsWpCrossTrack
+        )
+
+        this.cdiVisible = MappedSubject.create(
+            ([source, nav1HasNav, nav2HasNav, gpsWpId]) => {
+                switch (source) {
+                    case 'NAV1':
+                        return nav1HasNav
+                    case 'NAV2':
+                        return nav2HasNav
+                    default:
+                        return gpsWpId !== ''
+                }
+            },
+            this.activeSource,
+            this.nav1HasNav,
+            this.nav2HasNav,
+            this.gpsWpNextId
+        )
     }
 
     onUpdate(): void {
@@ -71,6 +153,15 @@ export class NavSourceDataProvider {
         this.gpsDrivesNav1.destroy()
         this.navSelected.destroy()
         this.cdiScaleLabel.destroy()
+        this.nav1HasNav.destroy()
+        this.nav2HasNav.destroy()
+        this.nav1Cdi.destroy()
+        this.nav2Cdi.destroy()
+        this.gpsWpNextId.destroy()
+        this.gpsWpCrossTrack.destroy()
+        this.cdiSource.destroy()
+        this.cdiDeviation.destroy()
+        this.cdiVisible.destroy()
         this.activeSource.destroy()
     }
 
@@ -102,7 +193,7 @@ export class NavSourceDataProvider {
         if (!SimVar.GetSimVarValue(`NAV HAS GLIDE SLOPE:${idx}`, SimVarValueType.Bool)) return null
 
         const raw = SimVar.GetSimVarValue(`NAV GSI:${idx}`, SimVarValueType.Number)
-        return { mode: 'GS', deviation: raw / GSI_FULL_SCALE_DEFLECTION }
+        return { mode: 'GS', deviation: raw / NEEDLE_FULL_SCALE_DEFLECTION }
     }
 
     private navRadioIndex(source: NavSource): 1 | 2 {

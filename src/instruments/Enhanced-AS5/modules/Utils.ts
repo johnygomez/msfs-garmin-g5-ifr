@@ -59,3 +59,14 @@ export enum Colors {
     /** Horizontal-compass shadow-gradient colour. */
     SHADOW_COMPASS_BLUE = 'rgb(9, 39, 61)',
 }
+
+/**
+ * Formats a heading/course value as a zero-padded three-digit degree string,
+ * mapping 0 to 360 (`8` → `'008°'`, `0` → `'360°'`).
+ */
+export function formatDegrees3(value: number): string {
+    let degrees = Math.round(value)
+    if (degrees == 0) degrees = 360
+    const text = degrees.toFixed(0)
+    return '000'.slice(text.length) + text + '°'
+}

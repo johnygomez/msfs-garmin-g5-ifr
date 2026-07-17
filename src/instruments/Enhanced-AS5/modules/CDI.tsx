@@ -3,7 +3,6 @@ import {
     DisplayComponent,
     FSComponent,
     MappedSubject,
-    Subject,
     Subscribable,
     VNode,
 } from '@microsoft/msfs-sdk'
@@ -13,9 +12,9 @@ import { Colors } from './Utils'
 type IndicatorShape = 'diamond' | 'triangle'
 
 export interface CDIProps extends ComponentProps {
-    cdiSource: Subject<number>
-    cdiDeviation: Subject<number>
-    isVisible: Subject<boolean>
+    cdiSource: Subscribable<number>
+    cdiDeviation: Subscribable<number>
+    isVisible: Subscribable<boolean>
 }
 
 interface CDIScaleDotsProps extends ComponentProps {

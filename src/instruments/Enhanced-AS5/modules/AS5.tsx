@@ -1,268 +1,45 @@
 import {
-    FSComponent,
-    DisplayComponent,
-    VNode,
-    ComponentProps,
-    InputAcceleration,
-    SimVarValueType,
-    Subject,
-    Subscription,
-    EventBus,
+    AdcEvents,
     AdcPublisher,
     AhrsPublisher,
-    NavComSimVarPublisher,
+    ComponentProps,
     ConsumerSubject,
-    AhrsEvents,
+    DisplayComponent,
+    EventBus,
+    FSComponent,
+    InputAcceleration,
+    NavComSimVarPublisher,
+    SimVarValueType,
+    VNode,
 } from '@microsoft/msfs-sdk'
 
-import { AirspeedIndicatorComponent } from './AirspeedIndicator'
-import { AltimeterComponent } from './Altimeter'
-import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
-import { AttitudeIndicatorComponent } from './AttitudeIndicator'
 import { AutopilotAnnunciationProvider } from './AutopilotAnnunciationProvider'
-import { CDIComponent } from './CDI'
-import { PFD_Attitude, PFD_Altimeter, PFD_Compass, AltimeterSubjects } from './CommonPFD_MFD'
-import { ContextualMenuComponent, ContextualMenuElementData } from './ContextualMenu'
-import { G5CustomPublisher } from './G5CustomPublisher'
+import { ContextualMenuComponent } from './ContextualMenu'
+import { G5CustomEvents, G5CustomPublisher } from './G5CustomPublisher'
 import { G5NavPublisher } from './G5NavPublisher'
 import { HighlightComponent, HighlightElementRefs } from './Highlight'
-import { HorizontalCompassComponent } from './HorizontalCompass'
-import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
+import { AS5_MFD, MfdContent } from './MFD'
 import { NavdataStack } from './NavdataStack'
 import { NavSourceDataProvider } from './NavSourceDataProvider'
 import {
     NavSystem,
-    NavSystemPage,
-    NavSystemPageGroup,
     NavSystemElement,
-    NavSystemElementGroup,
     NavSystemElementContainer,
+    NavSystemPageGroup,
 } from './NavSystem'
-import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
-import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSlipIndicator'
-import { VerticalDeviationIndicatorComponent } from './VerticalDeviationIndicator'
+import { AS5_PFD, PfdContent } from './PFD'
+import { formatDegrees3 } from './Utils'
 
-export interface AirspeedSubjects {
-    indicatedAirspeed: Subject<number>
-    trueAirspeed: Subject<number>
-    displayRefSpeed: Subject<string>
-    refSpeedMach: Subject<number>
-    refSpeed: Subject<number>
-    airspeedTrend: Subject<number>
-    maxSpeed: Subject<number>
-    displayMach: Subject<boolean>
-    noTrueAirspeed: Subject<boolean>
-}
-
-export interface HSISubjects {
-    heading: Subject<number>
-    course: Subject<number>
-    cdiDeviation: Subject<number>
-    bearing1: Subject<number>
-    bearing2: Subject<number>
-    dmeDistance: Subject<number>
-    turnRate: Subject<number>
-    headingValue: Subject<string>
-    groundSpeedValue: Subject<string>
-    waypointDistanceValue: Subject<string>
-    waypointMode: Subject<string>
-    hsiComponent: Subject<HSIComponent | null>
-}
-
-interface PfdContentProps extends ComponentProps {
+interface AS5InstrumentProps extends ComponentProps {
     bus: EventBus
-    apSubjects: APInfoBarSubjects
-    altimeter: AltimeterSubjects
-    airspeed: AirspeedSubjects
-    cdiSource: Subject<number>
-    cdiDeviation: Subject<number>
-    cdiVisible: Subject<boolean>
-}
-
-class PfdContent extends DisplayComponent<PfdContentProps> {
-    private readonly turnRate: ConsumerSubject<number>
-    private readonly slipSkid: ConsumerSubject<number>
-
-    constructor(props: PfdContentProps) {
-        super(props)
-        const sub = props.bus.getSubscriber<AhrsEvents>()
-        this.turnRate = ConsumerSubject.create(sub.on('delta_heading_rate').withPrecision(2), 0)
-        this.slipSkid = ConsumerSubject.create(sub.on('turn_coordinator_ball').withPrecision(2), 0)
-    }
-
-    destroy(): void {
-        this.turnRate.destroy()
-        this.slipSkid.destroy()
-        super.destroy()
-    }
-
-    render(): VNode {
-        const spd = this.props.airspeed
-        const alt = this.props.altimeter
-        return (
-            <>
-                <div id="AP">
-                    <APInfoBarComponent {...this.props.apSubjects} />
-                </div>
-                <div id="Horizon">
-                    <AttitudeIndicatorComponent tas={spd.trueAirspeed} bus={this.props.bus} />
-                </div>
-                <div id="Altimeter">
-                    <AltimeterComponent bus={this.props.bus} height={1020} />
-                </div>
-                <div id="VerticalDeviation">
-                    <VerticalDeviationIndicatorComponent
-                        mode={alt.verticalDeviationMode}
-                        deviation={alt.verticalDeviationValue}
-                    />
-                </div>
-                <div id="Airspeed">
-                    <AirspeedIndicatorComponent
-                        bus={this.props.bus}
-                        height={1020}
-                        noColor={false}
-                        indicatedAirspeed={spd.indicatedAirspeed}
-                        refSpeed={spd.refSpeed}
-                        airspeedTrend={spd.airspeedTrend}
-                        maxSpeed={spd.maxSpeed}
-                    />
-                </div>
-                <div id="Compass">
-                    <HorizontalCompassComponent
-                        bus={this.props.bus}
-                        truncateLeft={50}
-                        truncateRight={78}
-                        spacing={50}
-                        groundTrackActive={true}
-                    />
-                </div>
-                <div id="CDI">
-                    <CDIComponent
-                        cdiSource={this.props.cdiSource}
-                        cdiDeviation={this.props.cdiDeviation}
-                        isVisible={this.props.cdiVisible}
-                    />
-                </div>
-                <div id="BottomIndicators">
-                    <SlipSkidIndicatorComponent slipSkid={this.slipSkid} />
-                    <TurnRateIndicatorComponent turnRate={this.turnRate} />
-                </div>
-            </>
-        )
-    }
-}
-
-interface MfdContentProps extends ComponentProps {
-    bus: EventBus
-    hsi: HSISubjects
-    altimeter: AltimeterSubjects
-    groundSpeedEl: Subject<HTMLElement | null>
-    waypointDistanceEl: Subject<HTMLElement | null>
-    headingValueEl: Subject<HTMLElement | null>
-}
-
-class MfdContent extends DisplayComponent<MfdContentProps> {
-    private readonly shvRef = FSComponent.createRef<HTMLDivElement>()
-    private readonly gsvRef = FSComponent.createRef<HTMLDivElement>()
-    private readonly wdvRef = FSComponent.createRef<HTMLDivElement>()
-
-    private readonly subs: Subscription[] = []
-
-    onAfterRender() {
-        this.props.groundSpeedEl.set(this.gsvRef.getOrDefault())
-        this.props.waypointDistanceEl.set(this.wdvRef.getOrDefault())
-        this.props.headingValueEl.set(this.shvRef.getOrDefault())
-
-        this.subs.push(
-            this.props.hsi.headingValue.sub(v => {
-                const el = this.shvRef.getOrDefault()
-                if (el) el.textContent = v
-            }, true),
-            this.props.hsi.groundSpeedValue.sub(v => {
-                const el = this.gsvRef.getOrDefault()
-                if (el) el.textContent = v
-            }, true),
-            this.props.hsi.waypointDistanceValue.sub(v => {
-                const el = this.wdvRef.getOrDefault()
-                if (el) el.textContent = v
-            }, true),
-            this.props.hsi.waypointMode.sub(v => {
-                const el = this.wdvRef.getOrDefault()
-                if (el) el.setAttribute('mode', v)
-            }, true)
-        )
-    }
-
-    destroy(): void {
-        this.subs.forEach(s => s.destroy())
-        super.destroy()
-    }
-
-    render(): VNode {
-        const hsi = this.props.hsi
-        const alt = this.props.altimeter
-        return (
-            <>
-                <div id="HSICompass">
-                    <HSIComponent
-                        bus={this.props.bus}
-                        noCenterText={false}
-                        noBackground={false}
-                        noAffectSimRadioNav={false}
-                        displayStyle={HSIndicatorDisplayType.GlassCockpit}
-                        heading={hsi.heading}
-                        onApi={instance => this.props.hsi.hsiComponent.set(instance)}
-                    />
-                </div>
-                <div id="Infos">
-                    <div id="SelectedHeading">
-                        <svg id="SelectedHeadingSymbol" viewBox="0 0 50 100">
-                            <path d="M0,0 h50 v30 l-30,20 l30,20 v30 h-50 Z" fill="aqua" />
-                        </svg>
-                        <div id="SelectedHeadingValue" ref={this.shvRef}>
-                            360°
-                        </div>
-                    </div>
-                    <div id="GroundSpeed">
-                        <div>GS KT</div>
-                        <div id="GroundSpeedValue" ref={this.gsvRef}>
-                            90
-                        </div>
-                    </div>
-                    <div id="WaypointDistance">
-                        <div>DIST NM</div>
-                        <div id="WaypointDistanceValue" ref={this.wdvRef}>
-                            0.0
-                        </div>
-                    </div>
-                </div>
-                <div id="VerticalDeviation">
-                    <VerticalDeviationIndicatorComponent
-                        mode={alt.verticalDeviationMode}
-                        deviation={alt.verticalDeviationValue}
-                    />
-                </div>
-            </>
-        )
-    }
-}
-
-interface InstrumentProps extends ComponentProps {
-    bus: EventBus
-    apSubjects: APInfoBarSubjects
-    altimeter: AltimeterSubjects
-    airspeed: AirspeedSubjects
-    cdiSource: Subject<number>
-    cdiDeviation: Subject<number>
-    cdiVisible: Subject<boolean>
-    hsi: HSISubjects
-    groundSpeedEl: Subject<HTMLElement | null>
-    waypointDistanceEl: Subject<HTMLElement | null>
-    headingValueEl: Subject<HTMLElement | null>
+    pfd: AS5_PFD
+    mfd: AS5_MFD
+    autopilot: AutopilotAnnunciationProvider
+    navData: NavSourceDataProvider
     onHighlightApi: (refs: HighlightElementRefs) => void
 }
 
-class AS5Instrument extends DisplayComponent<InstrumentProps> {
+class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
     render(): VNode {
         return (
             <>
@@ -273,22 +50,18 @@ class AS5Instrument extends DisplayComponent<InstrumentProps> {
                     <div id="PFD">
                         <PfdContent
                             bus={this.props.bus}
-                            apSubjects={this.props.apSubjects}
-                            altimeter={this.props.altimeter}
-                            airspeed={this.props.airspeed}
-                            cdiSource={this.props.cdiSource}
-                            cdiDeviation={this.props.cdiDeviation}
-                            cdiVisible={this.props.cdiVisible}
+                            autopilot={this.props.autopilot.subjects}
+                            airspeed={this.props.pfd.airspeedSubjects}
+                            altimeter={this.props.navData.altimeterSubjects}
+                            cdi={this.props.navData.cdiSubjects}
                         />
                     </div>
                     <div id="MFD">
                         <MfdContent
                             bus={this.props.bus}
-                            hsi={this.props.hsi}
-                            altimeter={this.props.altimeter}
-                            groundSpeedEl={this.props.groundSpeedEl}
-                            waypointDistanceEl={this.props.waypointDistanceEl}
-                            headingValueEl={this.props.headingValueEl}
+                            altimeter={this.props.navData.altimeterSubjects}
+                            navSource={this.props.navData.activeSource}
+                            hsiComponent={this.props.mfd.hsi.hsiComponentSub}
                         />
                     </div>
                 </div>
@@ -298,19 +71,38 @@ class AS5Instrument extends DisplayComponent<InstrumentProps> {
 }
 
 export class AS5 extends NavSystem {
-    gps: any
-    pagesContainer: any
-    highlightRefs: HighlightElementRefs
-    selectionValueElement: any
-    selectionValueWindow: any
-    lastHdgKnobTime: number
-    lastHdgKnobSign: number
-    hdgKnobAccel: InputAcceleration
-    hdgKnobTarget: number
-    pageGroups: NavSystemPageGroup[]
-    menuMaxElems: number
-
     readonly bus = new EventBus()
+
+    private readonly knobSub = this.bus.getSubscriber<G5CustomEvents & AdcEvents>()
+    private readonly apHeadingSelected = ConsumerSubject.create(
+        this.knobSub.on('ap_heading_selected'),
+        0
+    )
+    private readonly apAltitudeSelected = ConsumerSubject.create(
+        this.knobSub.on('ap_altitude_selected'),
+        0
+    )
+    private readonly nav1Obs = ConsumerSubject.create(this.knobSub.on('nav1_obs'), 0)
+    private readonly baroSettingInHg = ConsumerSubject.create(
+        this.knobSub.on('altimeter_baro_setting_inhg'),
+        29.92
+    )
+
+    readonly menuHeadingTextSub = this.apHeadingSelected.map(formatDegrees3)
+    readonly menuAltitudeTextSub = this.apAltitudeSelected.map(
+        altitude => fastToFixed(altitude, 0) + 'ft'
+    )
+    readonly menuCourseTextSub = this.nav1Obs.map(formatDegrees3)
+
+    pageGroups: NavSystemPageGroup[]
+    highlightRefs: HighlightElementRefs
+
+    private readonly pfdPage = new AS5_PFD()
+    private readonly mfdPage = new AS5_MFD()
+
+    private selectionValueElement: AS5_SelectionValueElement
+    private selectionValueWindow: NavSystemElementContainer
+
     private adcPublisher?: AdcPublisher
     private ahrsPublisher?: AhrsPublisher
     private navComPublisher?: NavComSimVarPublisher
@@ -320,21 +112,22 @@ export class AS5 extends NavSystem {
     private navdataStack?: NavdataStack
     private apAnnunciationProvider?: AutopilotAnnunciationProvider
 
-    // Reactive Subjects for contextual menu dynamic values
-    readonly menuHeadingTextSub = Subject.create('---°')
-    readonly menuAltitudeTextSub = Subject.create('-----ft')
-    readonly menuCourseTextSub = Subject.create('---°')
-    private _lastMenuHeadingText = ''
-    private _lastMenuAltitudeText = ''
-    private _lastMenuCourseText = ''
+    private lastHdgKnobTime: number
+    private lastHdgKnobSign: number
+    private hdgKnobAccel: InputAcceleration
+    private hdgKnobTarget: number
 
     constructor() {
         super()
-        this.pageGroups = [new NavSystemPageGroup('Main', this, [new AS5_PFD(), new AS5_MFD()])]
+        this.pageGroups = [new NavSystemPageGroup('Main', this, [this.pfdPage, this.mfdPage])]
     }
 
     get templateID() {
         return 'AS5'
+    }
+
+    private get isMfdPageActive(): boolean {
+        return this.pageGroups?.[0]?.pageIndex == 1
     }
 
     connectedCallback() {
@@ -348,60 +141,11 @@ export class AS5 extends NavSystem {
         )
         this.selectionValueWindow.setGPS(this)
 
-        const pfd = this.pageGroups[0].pages[0] as AS5_PFD
-        const mfd = this.pageGroups[0].pages[1] as AS5_MFD
-        const pfdEls = pfd.element.elements
-        const airspeed = pfdEls[1] as PFD_Airspeed_Enhanced
-        const cdi = pfdEls[4] as AS5_PFD_CDI
-        const hsi = mfd.element.elements[0] as AS5_MFD_HSI
-
         this.navSourceProvider = new NavSourceDataProvider(this.bus)
         this.navSourceProvider.resume()
         this.navdataStack = new NavdataStack(this.bus)
         this.navdataStack.init().catch(e => console.error('NavdataStack init failed', e))
-
-        const altimeterSubjects: AltimeterSubjects = {
-            verticalDeviationMode: this.navSourceProvider.verticalDeviationMode,
-            verticalDeviationValue: this.navSourceProvider.verticalDeviationValue,
-        }
-
         this.apAnnunciationProvider = new AutopilotAnnunciationProvider()
-        const apSubjects: APInfoBarSubjects = this.apAnnunciationProvider.subjects
-
-        const spdSubjects: AirspeedSubjects = {
-            indicatedAirspeed: airspeed.indicatedAirspeedSub,
-            trueAirspeed: airspeed.trueAirspeedSub,
-            displayRefSpeed: airspeed.displayRefSpeedSub,
-            refSpeedMach: airspeed.refSpeedMachSub,
-            refSpeed: airspeed.refSpeedSub,
-            airspeedTrend: airspeed.airspeedTrendSub,
-            maxSpeed: airspeed.maxSpeedSub,
-            displayMach: airspeed.displayMachSub,
-            noTrueAirspeed: airspeed.noTrueAirspeedSub,
-        }
-
-        const hsiComponent = Subject.create<HSIComponent | null>(null)
-
-        const hsiSubjects: HSISubjects = {
-            heading: hsi.headingSub,
-            course: hsi.courseSub,
-            cdiDeviation: hsi.cdiDeviationSub,
-            bearing1: hsi.bearing1Sub,
-            bearing2: hsi.bearing2Sub,
-            dmeDistance: hsi.dmeDistanceSub,
-            turnRate: hsi.turnRateSub,
-            headingValue: hsi.headingValueSub,
-            groundSpeedValue: hsi.groundSpeedValueSub,
-            waypointDistanceValue: hsi.waypointDistanceValueSub,
-            waypointMode: hsi.waypointModeSub,
-            hsiComponent,
-        }
-
-        hsi.bindHSIComponent(hsiComponent)
-
-        const groundSpeedEl = Subject.create<HTMLElement | null>(null)
-        const waypointDistanceEl = Subject.create<HTMLElement | null>(null)
-        const headingValueEl = Subject.create<HTMLElement | null>(null)
 
         this.adcPublisher = new AdcPublisher(this.bus)
         this.ahrsPublisher = new AhrsPublisher(this.bus)
@@ -418,22 +162,15 @@ export class AS5 extends NavSystem {
         FSComponent.render(
             <AS5Instrument
                 bus={this.bus}
-                apSubjects={apSubjects}
-                altimeter={altimeterSubjects}
-                airspeed={spdSubjects}
-                cdiSource={cdi.cdiSourceSub}
-                cdiDeviation={cdi.cdiDeviationSub}
-                cdiVisible={cdi.cdiVisibleSub}
-                hsi={hsiSubjects}
-                groundSpeedEl={groundSpeedEl}
-                waypointDistanceEl={waypointDistanceEl}
-                headingValueEl={headingValueEl}
-                onHighlightApi={r => (this.highlightRefs = r)}
+                pfd={this.pfdPage}
+                mfd={this.mfdPage}
+                autopilot={this.apAnnunciationProvider}
+                navData={this.navSourceProvider}
+                onHighlightApi={refs => (this.highlightRefs = refs)}
             />,
             this.getChildById('Electricity')
         )
 
-        // Mount the declarative contextual menu component
         FSComponent.render(
             <ContextualMenuComponent
                 elements={this.menuElementsSub}
@@ -447,7 +184,7 @@ export class AS5 extends NavSystem {
         )
     }
 
-    onUpdate(_deltaTime) {
+    onUpdate(_deltaTime: number) {
         this.adcPublisher?.onUpdate()
         this.ahrsPublisher?.onUpdate()
         this.navComPublisher?.onUpdate()
@@ -457,27 +194,9 @@ export class AS5 extends NavSystem {
         this.navSourceProvider?.onUpdate()
         this.apAnnunciationProvider?.onUpdate()
         this.updateKnobTooltipValue()
-
-        // Update menu value Subjects (only when value changes)
-        const hdg = this.getMenuHeadingText()
-        if (hdg !== this._lastMenuHeadingText) {
-            this.menuHeadingTextSub.set(hdg)
-            this._lastMenuHeadingText = hdg
-        }
-        const alt = this.getMenuAltitudeText()
-        if (alt !== this._lastMenuAltitudeText) {
-            this.menuAltitudeTextSub.set(alt)
-            this._lastMenuAltitudeText = alt
-        }
-        const crs = this.getMenuCrsText()
-        if (crs !== this._lastMenuCourseText) {
-            this.menuCourseTextSub.set(crs)
-            this._lastMenuCourseText = crs
-        }
     }
 
-    syncCrs() {}
-    computeEvent(_event) {
+    computeEvent(_event: string) {
         const popUpWasOpen = this.popUpElement != null
         super.computeEvent(_event)
         this.apAnnunciationProvider?.onEvent(_event)
@@ -485,7 +204,7 @@ export class AS5 extends NavSystem {
             case 'Knob_Inc':
                 if (this.currentInteractionState == 2) {
                     this.computeEvent('NavigationSmallInc')
-                } else if (this.pageGroups?.[0]?.pageIndex == 1 && !popUpWasOpen) {
+                } else if (this.isMfdPageActive && !popUpWasOpen) {
                     this.incrementHeading()
                 } else if (!popUpWasOpen) {
                     this.computeEvent('BARO_INC')
@@ -494,7 +213,7 @@ export class AS5 extends NavSystem {
             case 'Knob_Dec':
                 if (this.currentInteractionState == 2) {
                     this.computeEvent('NavigationSmallDec')
-                } else if (this.pageGroups?.[0]?.pageIndex == 1 && !popUpWasOpen) {
+                } else if (this.isMfdPageActive && !popUpWasOpen) {
                     this.decrementHeading()
                 } else if (!popUpWasOpen) {
                     this.computeEvent('BARO_DEC')
@@ -505,22 +224,20 @@ export class AS5 extends NavSystem {
                 else if (!popUpWasOpen) this.computeEvent('MENU_Push')
                 break
             case 'Knob_Long_Push':
-                if (
-                    this.currentInteractionState == 0 &&
-                    this.pageGroups?.[0]?.pageIndex == 1 &&
-                    !popUpWasOpen
-                ) {
+                if (this.currentInteractionState == 0 && this.isMfdPageActive && !popUpWasOpen) {
                     this.syncHeading()
                 }
                 break
         }
     }
+
     onPowerOn() {
         super.onPowerOn()
         if (this.instrumentIndex == 2) this.SwitchToPageName('Main', 'MFD')
         else this.SwitchToPageName('Main', 'PFD')
     }
-    updateKnobTooltipValue() {
+
+    private updateKnobTooltipValue() {
         let value, unit
         if (
             this.popUpElement === this.selectionValueWindow &&
@@ -528,11 +245,11 @@ export class AS5 extends NavSystem {
         ) {
             value = this.selectionValueElement.rawValue()
             unit = this.selectionValueElement.unit
-        } else if (this.pageGroups?.[0]?.pageIndex == 1) {
+        } else if (this.isMfdPageActive) {
             value = this.getMenuHeadingRawValue()
             unit = 0
         } else {
-            value = SimVar.GetSimVarValue('KOHLSMAN SETTING HG:1', SimVarValueType.InHG)
+            value = this.baroSettingInHg.get()
             unit = 2
         }
         SimVar.SetSimVarValue(
@@ -546,20 +263,17 @@ export class AS5 extends NavSystem {
             unit
         )
     }
-    getMenuHeadingText() {
-        let hdg = fastToFixed(Simplane.getAutoPilotHeadingLockValueDegrees(), 0)
-        let headingValue = parseFloat(hdg)
-        if (headingValue == 0) {
-            headingValue = 360
-        }
-        hdg = headingValue + ''
-        return '000'.slice(hdg.length) + hdg + Avionics.Utils.DEGREE_SYMBOL
+
+    private getMenuHeadingText() {
+        return this.menuHeadingTextSub.get()
     }
-    getMenuHeadingRawValue() {
-        const heading = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
+
+    private getMenuHeadingRawValue() {
+        const heading = Math.round(this.apHeadingSelected.get())
         return heading == 0 ? 360 : heading
     }
-    changeHeading(_sign) {
+
+    private changeHeading(_sign: number) {
         const now = Date.now()
         const dt = now - (this.lastHdgKnobTime || 0)
         this.hdgKnobAccel = this.hdgKnobAccel || new InputAcceleration({ increment: 1 })
@@ -573,19 +287,23 @@ export class AS5 extends NavSystem {
         this.hdgKnobTarget = (((this.hdgKnobTarget + _sign * step) % 360) + 360) % 360
         SimVar.SetSimVarValue('K:HEADING_BUG_SET', SimVarValueType.Number, this.hdgKnobTarget)
     }
-    incrementHeading() {
+
+    private incrementHeading() {
         this.changeHeading(1)
     }
-    decrementHeading() {
+
+    private decrementHeading() {
         this.changeHeading(-1)
     }
-    syncHeading() {
+
+    private syncHeading() {
         SimVar.SetSimVarValue(
             'K:HEADING_BUG_SET',
             SimVarValueType.Number,
             Math.round(Simplane.getHeadingMagnetic())
         )
     }
+
     menuHeadingEnter() {
         this.selectionValueElement.setContext(
             'Select Heading',
@@ -598,23 +316,26 @@ export class AS5 extends NavSystem {
         this.selectionValueElement.unit = 0
         this.switchToPopUpPage(this.selectionValueWindow)
     }
-    getMenuCrsText() {
-        let crs = fastToFixed(Simplane.getNavObs(1), 0)
-        let crsValue = parseFloat(crs)
-        if (crsValue == 0) crsValue = 360
-        crs = crsValue + ''
-        return '000'.slice(crs.length) + crs + Avionics.Utils.DEGREE_SYMBOL
+
+    private getMenuCrsText() {
+        return this.menuCourseTextSub.get()
     }
-    getMenuCrsRawValue() {
-        const crs = Math.round(Simplane.getNavObs(1))
+
+    private getMenuCrsRawValue() {
+        const crs = Math.round(this.nav1Obs.get())
         return crs == 0 ? 360 : crs
     }
-    incrementCrs() {
+
+    private incrementCrs() {
         SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0)
     }
-    decrementCrs() {
+
+    private decrementCrs() {
         SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0)
     }
+
+    private syncCrs() {}
+
     menuCrsEnter() {
         this.selectionValueElement.setContext(
             'Select Course',
@@ -627,30 +348,31 @@ export class AS5 extends NavSystem {
         this.selectionValueElement.unit = 0
         this.switchToPopUpPage(this.selectionValueWindow)
     }
-    getMenuAltitudeText() {
-        return (
-            fastToFixed(
-                SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet),
-                0
-            ) + 'ft'
-        )
+
+    private getMenuAltitudeText() {
+        return this.menuAltitudeTextSub.get()
     }
-    getMenuAltitudeRawValue() {
-        return SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR', SimVarValueType.Feet)
+
+    private getMenuAltitudeRawValue() {
+        return this.apAltitudeSelected.get()
     }
-    incrementAltitude() {
+
+    private incrementAltitude() {
         SimVar.SetSimVarValue('K:AP_ALT_VAR_INC', SimVarValueType.Number, 100)
     }
-    decrementAltitude() {
+
+    private decrementAltitude() {
         SimVar.SetSimVarValue('K:AP_ALT_VAR_DEC', SimVarValueType.Number, 100)
     }
-    syncAltitude() {
+
+    private syncAltitude() {
         SimVar.SetSimVarValue(
             'K:AP_ALT_VAR_SET_ENGLISH',
             SimVarValueType.Number,
             Math.round(Simplane.getAltitude() / 100) * 100
         )
     }
+
     menuAltitudeEnter() {
         this.selectionValueElement.setContext(
             'Select Altitude',
@@ -664,236 +386,7 @@ export class AS5 extends NavSystem {
         this.switchToPopUpPage(this.selectionValueWindow)
     }
 }
-export class AS5_PFD extends NavSystemPage {
-    gps: any
-    element: NavSystemElementGroup
-    defaultMenu: ContextualMenuElementData[]
 
-    constructor() {
-        super('PFD', 'PFD', null)
-        this.element = new NavSystemElementGroup([
-            new PFD_Attitude(),
-            new PFD_Airspeed_Enhanced(),
-            new PFD_Altimeter(),
-            new AS5_PFD_Compass(),
-            new AS5_PFD_CDI(),
-        ])
-    }
-
-    init() {
-        super.init()
-        this.defaultMenu = [
-            {
-                name: 'Back',
-                callback: this.gps.SwitchToInteractionState.bind(this.gps, 0),
-                isInactive: () => false,
-                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
-            },
-            {
-                name: 'Heading',
-                callback: this.gps.menuHeadingEnter.bind(this.gps),
-                isInactive: () => false,
-                value: (this.gps as AS5).menuHeadingTextSub,
-            },
-            {
-                name: 'Altitude',
-                callback: this.gps.menuAltitudeEnter.bind(this.gps),
-                isInactive: () => false,
-                value: (this.gps as AS5).menuAltitudeTextSub,
-            },
-            {
-                name: 'Pitch',
-                callback: () => false,
-                isInactive: () => true,
-                value: Subject.create('-----°'),
-            },
-            {
-                name: 'MFD',
-                callback: this.gps.SwitchToPageName.bind(this.gps, 'Main', 'MFD'),
-                isInactive: () => false,
-                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/MFD.png',
-            },
-        ]
-    }
-
-    onUpdate(deltaTime) {
-        super.onUpdate(deltaTime)
-    }
-}
-export class AS5_MFD extends NavSystemPage {
-    gps: any
-    element: NavSystemElementGroup
-    defaultMenu: ContextualMenuElementData[]
-
-    constructor() {
-        super('MFD', 'MFD', null)
-        this.element = new NavSystemElementGroup([new AS5_MFD_HSI('HSICompass')])
-    }
-
-    init() {
-        super.init()
-        this.defaultMenu = [
-            {
-                name: 'Back',
-                callback: this.gps.SwitchToInteractionState.bind(this.gps, 0),
-                isInactive: () => false,
-                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
-            },
-            {
-                name: 'Heading',
-                callback: this.gps.menuHeadingEnter.bind(this.gps),
-                isInactive: () => false,
-                value: (this.gps as AS5).menuHeadingTextSub,
-            },
-            {
-                name: 'Course',
-                callback: this.gps.menuCrsEnter.bind(this.gps),
-                isInactive: () => false,
-                value: (this.gps as AS5).menuCourseTextSub,
-            },
-            {
-                name: 'PFD',
-                callback: this.gps.SwitchToPageName.bind(this.gps, 'Main', 'PFD'),
-                isInactive: () => false,
-                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png',
-            },
-        ]
-    }
-}
-export class AS5_PFD_Compass extends NavSystemElement {
-    headingSub = Subject.create(0)
-    trackSub = Subject.create(0)
-    courseSub = Subject.create(0)
-
-    init(_root) {}
-    onEnter() {}
-    onUpdate(_deltaTime) {
-        // Data is published to the EventBus by AhrsPublisher + G5CustomPublisher.
-        // Display components read from the bus via ConsumerSubject.
-        // Subject fields (headingSub, trackSub, courseSub) retained for backward
-        // compatibility until Phase F cleanup.
-    }
-    onExit() {}
-    onEvent(_event) {}
-}
-export class AS5_PFD_CDI extends NavSystemElement {
-    cdiSourceSub = Subject.create(3)
-    cdiDeviationSub = Subject.create(0)
-    cdiVisibleSub = Subject.create(false)
-
-    init(_root) {}
-    onEnter() {}
-    onUpdate(_deltaTime) {
-        const cdiSource = SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)
-            ? 3
-            : Simplane.getAutoPilotSelectedNav()
-        switch (cdiSource) {
-            case 1:
-            case 2:
-                this.cdiVisibleSub.set(Simplane.getNavHasNav(cdiSource))
-                this.cdiDeviationSub.set(
-                    SimVar.GetSimVarValue('NAV CDI:' + cdiSource, SimVarValueType.Number) / 127
-                )
-                this.cdiSourceSub.set(cdiSource)
-                break
-            case 3:
-                this.cdiVisibleSub.set(
-                    SimVar.GetSimVarValue('GPS WP NEXT ID', SimVarValueType.String) != ''
-                )
-                this.cdiDeviationSub.set(
-                    SimVar.GetSimVarValue('GPS WP CROSS TRK', SimVarValueType.NM)
-                )
-                this.cdiSourceSub.set(3)
-                break
-        }
-    }
-    onExit() {}
-    onEvent(_event) {}
-}
-export class AS5_MFD_HSI extends PFD_Compass {
-    headingValueSub = Subject.create('---°')
-    groundSpeedValueSub = Subject.create('0')
-    waypointDistanceValueSub = Subject.create('---')
-    waypointModeSub = Subject.create('GPS')
-
-    private _cdiSource: number = 0
-    private _dmeSource: number = 0
-
-    set cdiSource(_val: number) {
-        this._cdiSource = _val
-    }
-    get cdiSource(): number {
-        return this._cdiSource
-    }
-    set dmeSource(_val: number) {
-        this._dmeSource = _val
-    }
-    get dmeSource(): number {
-        return this._dmeSource
-    }
-
-    bindHSIComponent(hsiComponentSub: Subject<HSIComponent | null>): void {
-        this._subs.push(
-            hsiComponentSub.sub(instance => {
-                this._hsiComponent = instance
-            })
-        )
-    }
-
-    init(_root) {}
-    private _hsiComponent: HSIComponent | null = null
-    private readonly _subs: Subscription[] = []
-
-    onEvent(_event: any) {
-        // Forward events to the FSComponent HSI so CDI switching, bearing
-        // selection, etc. still work. Override inherited PFD_Compass.onEvent()
-        // which would crash trying to access this.hsi.onEvent().
-        if (this._hsiComponent) {
-            this._hsiComponent.onEvent(_event)
-        }
-    }
-
-    onUpdate(_deltaTime) {
-        this.headingSub.set(Simplane.getAutoPilotHeadingLockValueDegrees())
-        this.courseSub.set(Simplane.getNavObs(1))
-
-        let headingValue = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
-        if (headingValue == 0) headingValue = 360
-        const hdg = fastToFixed(headingValue, 0)
-        this.headingValueSub.set('000'.slice(hdg.length) + hdg + '\u00B0')
-
-        this.groundSpeedValueSub.set(fastToFixed(Simplane.getGroundSpeed(), 0) + '')
-
-        if ((this.cdiSource == 1 || this.cdiSource == 2) && this.dmeSource != this.cdiSource) {
-            this.dmeSource = this.cdiSource
-        } else {
-            let distanceText = '---'
-            let mode = 'GPS'
-            switch (this.cdiSource) {
-                case 1:
-                case 2: {
-                    const dmeDist = Simplane.getNavDme(this.cdiSource)
-                    if (!isNaN(dmeDist)) distanceText = fastToFixed(dmeDist, 1)
-                    mode = 'VOR'
-                    break
-                }
-                case 3:
-                    if (
-                        SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool) ==
-                        true
-                    )
-                        distanceText = fastToFixed(
-                            SimVar.GetSimVarValue('GPS WP DISTANCE', SimVarValueType.NM),
-                            1
-                        )
-                    mode = 'GPS'
-                    break
-            }
-            this.waypointDistanceValueSub.set(distanceText)
-            this.waypointModeSub.set(mode)
-        }
-    }
-}
 export class AS5_SelectionValueElement extends NavSystemElement {
     window: HTMLElement
     title: HTMLElement
@@ -905,7 +398,7 @@ export class AS5_SelectionValueElement extends NavSystemElement {
     rawValue: any
     unit: number
 
-    init(_root) {
+    init(_root: HTMLElement) {
         this.window = _root
         this.title = this.gps.getChildById('SelectionValueWindowTitle')
         this.value = this.gps.getChildById('SelectionValueWindowValue')
@@ -915,13 +408,16 @@ export class AS5_SelectionValueElement extends NavSystemElement {
         if (this.getCallback && this.value) diffAndSetText(this.value, this.getCallback())
         diffAndSetAttribute(this.window, 'state', 'Active')
     }
-    onUpdate(_deltaTime) {
+
+    onUpdate(_deltaTime: number) {
         if (this.getCallback && this.value) diffAndSetText(this.value, this.getCallback())
     }
+
     onExit() {
         diffAndSetAttribute(this.window, 'state', 'Inactive')
     }
-    onEvent(_event) {
+
+    onEvent(_event: string) {
         switch (_event) {
             case 'Knob_Inc':
                 if (this.incCallback) this.incCallback()
@@ -939,8 +435,8 @@ export class AS5_SelectionValueElement extends NavSystemElement {
     }
 
     setContext(
-        _titleText,
-        _getCallback,
+        _titleText: string,
+        _getCallback: () => string,
         _incCallback = EmptyCallback.Void,
         _decCallback = EmptyCallback.Void,
         _syncCallback = EmptyCallback.Void
@@ -952,4 +448,5 @@ export class AS5_SelectionValueElement extends NavSystemElement {
         this.syncCallback = _syncCallback
     }
 }
+
 registerInstrument('as5-element', AS5)

@@ -28,6 +28,7 @@ export interface G5NavEvents {
 
     // ---- NAV 1 ----
     nav1_has_nav: boolean
+    nav1_cdi: number
     nav1_signal: number
     nav1_ident: string
     nav1_has_dme: boolean
@@ -41,6 +42,7 @@ export interface G5NavEvents {
 
     // ---- NAV 2 ----
     nav2_has_nav: boolean
+    nav2_cdi: number
     nav2_signal: number
     nav2_ident: string
     nav2_has_dme: boolean
@@ -102,6 +104,7 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
 
     // NAV 1
     ['nav1_has_nav', { name: 'NAV HAS NAV:1', type: SimVarValueType.Bool }],
+    ['nav1_cdi', { name: 'NAV CDI:1', type: SimVarValueType.Number }],
     ['nav1_signal', { name: 'NAV SIGNAL:1', type: SimVarValueType.Number }],
     ['nav1_ident', { name: 'NAV IDENT:1', type: SimVarValueType.String }],
     ['nav1_has_dme', { name: 'NAV HAS DME:1', type: SimVarValueType.Bool }],
@@ -115,6 +118,7 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
 
     // NAV 2
     ['nav2_has_nav', { name: 'NAV HAS NAV:2', type: SimVarValueType.Bool }],
+    ['nav2_cdi', { name: 'NAV CDI:2', type: SimVarValueType.Number }],
     ['nav2_signal', { name: 'NAV SIGNAL:2', type: SimVarValueType.Number }],
     ['nav2_ident', { name: 'NAV IDENT:2', type: SimVarValueType.String }],
     ['nav2_has_dme', { name: 'NAV HAS DME:2', type: SimVarValueType.Bool }],
