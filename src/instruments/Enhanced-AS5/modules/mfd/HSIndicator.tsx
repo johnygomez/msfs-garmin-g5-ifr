@@ -153,13 +153,6 @@ class CoursePointer extends DisplayComponent<CoursePointerProps> {
                     stroke={stroke}
                 />
                 <polygon
-                    points="46,75 54,75 50,80"
-                    fill={fill}
-                    stroke={Colors.BLACK}
-                    stroke-width="0.2"
-                    display={this.props.fromVisible}
-                />
-                <polygon
                     points="49,74.5 51,74.5 51,25.5 49,25.5"
                     fill={fill}
                     fill-opacity={fillOpacity}
@@ -168,16 +161,25 @@ class CoursePointer extends DisplayComponent<CoursePointerProps> {
                     transform={this.props.cdiTransform}
                 />
                 <polygon
-                    points="51,25 49,25 49,15 45,15 50,4 55,15 51,15"
+                    class="course-arrow-head"
+                    points="51,25 49,25 49,13 45,15 50,4 55,15 51,13"
                     fill={fill}
                     fill-opacity={fillOpacity}
                     stroke={stroke}
                 />
                 <polygon
-                    points="46,25 54,25 50,20"
+                    class="course-from-to-arrow"
+                    points="45,55 50,57 55,55 50,65"
                     fill={fill}
                     stroke={Colors.BLACK}
-                    stroke-width="0.2"
+                    stroke-width="1"
+                    display={this.props.fromVisible}
+                />
+                <polygon
+                    points="45,45 50,43 55,45 50,35"
+                    fill={fill}
+                    stroke={Colors.BLACK}
+                    stroke-width="1"
                     display={this.props.toVisible}
                 />
                 {[-20, -10, 10, 20].map(pos => (
