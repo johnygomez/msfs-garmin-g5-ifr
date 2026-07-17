@@ -7,7 +7,6 @@ import {
     FSComponent,
     MappedSubject,
     NodeReference,
-    Subject,
     Subscribable,
     VNode,
 } from '@microsoft/msfs-sdk'
@@ -30,10 +29,9 @@ export interface AirspeedIndicatorComponentProps extends ComponentProps {
     bus: EventBus
     height: number
     noColor: boolean
-    indicatedAirspeed: Subject<number>
-    refSpeed: Subject<number>
-    airspeedTrend: Subject<number>
-    maxSpeed: Subject<number>
+    indicatedAirspeed: Subscribable<number>
+    refSpeed: Subscribable<number>
+    airspeedTrend: Subscribable<number>
 }
 
 interface IASDisplayBoxProps extends ComponentProps {
@@ -329,7 +327,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private readonly vyseVisibility: MappedSubject<[number], string>
 
     /** Red barber-pole arc above the maximum speed. */
-    private readonly endElementTransform: MappedSubject<[number, number, number], string>
+    private readonly endElementTransform: MappedSubject<[number, number], string>
 
     private barY(speed: number, ck: number): number {
         return Math.min(Math.max(-100, this.centerY + -UNITS_PER_KT * (speed - ck)), this.height)
@@ -445,14 +443,13 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         ).pause()
 
         this.endElementTransform = MappedSubject.create(
-            ([v, ck, maxV]) => {
-                const effectiveMax = maxV > 0 ? maxV : this.maxValue
-                if (effectiveMax <= 0) return 'translate(0, 0)'
+            ([v, ck]) => {
+                if (this.maxValue <= 0) return 'translate(0, 0)'
                 const y =
                     100 +
                     Math.min(
                         Math.max(
-                            (ck - effectiveMax + (this.height - 100) / (2 * UNITS_PER_KT)) *
+                            (ck - this.maxValue + (this.height - 100) / (2 * UNITS_PER_KT)) *
                                 UNITS_PER_KT,
                             -100
                         ),
@@ -462,8 +459,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                 return `translate(0, ${y})`
             },
             ias,
-            this.centerKt,
-            props.maxSpeed
+            this.centerKt
         ).pause()
 
         const sub = props.bus.getSubscriber<G5CustomEvents>()

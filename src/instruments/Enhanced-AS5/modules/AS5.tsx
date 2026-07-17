@@ -13,6 +13,7 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
+import { AirspeedDataProvider } from './AirspeedDataProvider'
 import { AutopilotAnnunciationProvider } from './AutopilotAnnunciationProvider'
 import { ContextualMenuComponent } from './ContextualMenu'
 import { G5CustomEvents, G5CustomPublisher } from './G5CustomPublisher'
@@ -32,9 +33,9 @@ import { formatDegrees3 } from './Utils'
 
 interface AS5InstrumentProps extends ComponentProps {
     bus: EventBus
-    pfd: AS5_PFD
     mfd: AS5_MFD
     autopilot: AutopilotAnnunciationProvider
+    airspeedData: AirspeedDataProvider
     navData: NavSourceDataProvider
     onHighlightApi: (refs: HighlightElementRefs) => void
 }
@@ -51,7 +52,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         <PfdContent
                             bus={this.props.bus}
                             autopilot={this.props.autopilot.subjects}
-                            airspeed={this.props.pfd.airspeedSubjects}
+                            airspeed={this.props.airspeedData.subjects}
                             altimeter={this.props.navData.altimeterSubjects}
                             cdi={this.props.navData.cdiSubjects}
                         />
@@ -109,6 +110,7 @@ export class AS5 extends NavSystem {
     private customPublisher?: G5CustomPublisher
     private navPublisher?: G5NavPublisher
     private navSourceProvider?: NavSourceDataProvider
+    private airspeedProvider?: AirspeedDataProvider
     private navdataStack?: NavdataStack
     private apAnnunciationProvider?: AutopilotAnnunciationProvider
 
@@ -143,6 +145,8 @@ export class AS5 extends NavSystem {
 
         this.navSourceProvider = new NavSourceDataProvider(this.bus)
         this.navSourceProvider.resume()
+        this.airspeedProvider = new AirspeedDataProvider(this.bus)
+        this.airspeedProvider.resume()
         this.navdataStack = new NavdataStack(this.bus)
         this.navdataStack.init().catch(e => console.error('NavdataStack init failed', e))
         this.apAnnunciationProvider = new AutopilotAnnunciationProvider()
@@ -162,9 +166,9 @@ export class AS5 extends NavSystem {
         FSComponent.render(
             <AS5Instrument
                 bus={this.bus}
-                pfd={this.pfdPage}
                 mfd={this.mfdPage}
                 autopilot={this.apAnnunciationProvider}
+                airspeedData={this.airspeedProvider}
                 navData={this.navSourceProvider}
                 onHighlightApi={refs => (this.highlightRefs = refs)}
             />,
@@ -192,6 +196,7 @@ export class AS5 extends NavSystem {
         this.navPublisher?.onUpdate()
         this.navdataStack?.onUpdate()
         this.navSourceProvider?.onUpdate()
+        this.airspeedProvider?.onUpdate(_deltaTime)
         this.apAnnunciationProvider?.onUpdate()
         this.updateKnobTooltipValue()
     }

@@ -11,6 +11,7 @@ import {
 
 import type { AS5 } from './AS5'
 
+import { AirspeedSubjects } from './AirspeedDataProvider'
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 import { AltimeterComponent } from './Altimeter'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
@@ -21,17 +22,8 @@ import { ContextualMenuElementData } from './ContextualMenu'
 import { HorizontalCompassComponent } from './HorizontalCompass'
 import { CDISubjects } from './NavSourceDataProvider'
 import { NavSystemElementGroup, NavSystemPage } from './NavSystem'
-import { PFD_Airspeed_Enhanced } from './PFD_Airspeed_Enhanced'
 import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSlipIndicator'
 import { VerticalDeviationIndicatorComponent } from './VerticalDeviationIndicator'
-
-export interface AirspeedSubjects {
-    indicatedAirspeed: Subject<number>
-    trueAirspeed: Subject<number>
-    refSpeed: Subject<number>
-    airspeedTrend: Subject<number>
-    maxSpeed: Subject<number>
-}
 
 export interface PfdContentProps extends ComponentProps {
     bus: EventBus
@@ -96,7 +88,6 @@ export class PfdContent extends DisplayComponent<PfdContentProps> {
                         indicatedAirspeed={airspeed.indicatedAirspeed}
                         refSpeed={airspeed.refSpeed}
                         airspeedTrend={airspeed.airspeedTrend}
-                        maxSpeed={airspeed.maxSpeed}
                     />
                 </div>
                 <div id="Compass">
@@ -127,25 +118,9 @@ export class PfdContent extends DisplayComponent<PfdContentProps> {
 export class AS5_PFD extends NavSystemPage {
     declare gps: AS5
 
-    readonly airspeed = new PFD_Airspeed_Enhanced()
-
     constructor() {
         super('PFD', 'PFD', null)
-        this.element = new NavSystemElementGroup([
-            new PFD_Attitude(),
-            this.airspeed,
-            new PFD_Altimeter(),
-        ])
-    }
-
-    get airspeedSubjects(): AirspeedSubjects {
-        return {
-            indicatedAirspeed: this.airspeed.indicatedAirspeedSub,
-            trueAirspeed: this.airspeed.trueAirspeedSub,
-            refSpeed: this.airspeed.refSpeedSub,
-            airspeedTrend: this.airspeed.airspeedTrendSub,
-            maxSpeed: this.airspeed.maxSpeedSub,
-        }
+        this.element = new NavSystemElementGroup([new PFD_Attitude(), new PFD_Altimeter()])
     }
 
     init(): void {

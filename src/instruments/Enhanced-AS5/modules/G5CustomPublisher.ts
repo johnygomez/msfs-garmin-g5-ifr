@@ -36,6 +36,16 @@ export interface G5CustomEvents {
     number_of_engines: number
     /** Autopilot selected navigation source (1=NAV1, 2=NAV2, 0=GPS). */
     nav_selected: number
+    /** Whether autopilot flight-level-change mode is active. */
+    ap_flc_active: boolean
+    /** Whether autopilot Mach hold is active. */
+    ap_mach_hold: boolean
+    /** Whether the autopilot managed speed reference is in Mach. */
+    ap_managed_speed_in_mach: boolean
+    /** Autopilot selected Mach reference. */
+    ap_mach_selected: number
+    /** Autopilot selected airspeed reference, in knots. */
+    ap_ias_selected: number
 }
 
 /**
@@ -64,6 +74,14 @@ const G5_CUSTOM_SIMVARS = new Map<keyof G5CustomEvents, SimVarPublisherEntry<any
     ['ap_heading_selected', { name: 'AUTOPILOT HEADING LOCK DIR:1', type: SimVarValueType.Degree }],
     ['number_of_engines', { name: 'NUMBER OF ENGINES', type: SimVarValueType.Number }],
     ['nav_selected', { name: 'AUTOPILOT NAV SELECTED', type: SimVarValueType.Number }],
+    ['ap_flc_active', { name: 'AUTOPILOT FLIGHT LEVEL CHANGE', type: SimVarValueType.Bool }],
+    ['ap_mach_hold', { name: 'AUTOPILOT MACH HOLD', type: SimVarValueType.Bool }],
+    [
+        'ap_managed_speed_in_mach',
+        { name: 'AUTOPILOT MANAGED SPEED IN MACH', type: SimVarValueType.Bool },
+    ],
+    ['ap_mach_selected', { name: 'AUTOPILOT MACH HOLD VAR', type: SimVarValueType.Mach }],
+    ['ap_ias_selected', { name: 'AUTOPILOT AIRSPEED HOLD VAR', type: SimVarValueType.Knots }],
 ])
 
 /**
