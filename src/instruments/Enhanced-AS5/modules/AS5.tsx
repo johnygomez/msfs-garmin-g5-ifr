@@ -195,7 +195,6 @@ export class AS5 extends NavSystem {
         this.customPublisher?.onUpdate()
         this.navPublisher?.onUpdate()
         this.navdataStack?.onUpdate()
-        this.navSourceProvider?.onUpdate()
         this.airspeedProvider?.onUpdate(_deltaTime)
         this.apAnnunciationProvider?.onUpdate()
         this.updateKnobTooltipValue()

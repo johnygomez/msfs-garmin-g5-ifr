@@ -8,6 +8,7 @@ import {
     NavdataComputer,
 } from '@microsoft/msfs-garminsdk'
 import {
+    ConsumerSubject,
     ConsumerValue,
     EventBus,
     FacilityLoader,
@@ -23,6 +24,7 @@ import {
     Subscription,
 } from '@microsoft/msfs-sdk'
 
+import { G5NavEvents } from './G5NavPublisher'
 import {
     deriveCdiScaleLabelFromSimVars,
     G5NavdataEvents,
@@ -59,6 +61,10 @@ export class NavdataStack {
     private readonly routeSync = new GarminFlightPlanRouteSyncManager()
     private readonly publisher: Publisher<G5NavdataEvents>
     private readonly navdataLabel: ConsumerValue<CDIScaleLabel>
+    private readonly gpsActiveWaypoint: ConsumerSubject<boolean>
+    private readonly gpsApproachActive: ConsumerSubject<boolean>
+    private readonly gpsHasGlidepath: ConsumerSubject<boolean>
+    private readonly gpsCdiScaling: ConsumerSubject<number>
 
     private isInitialized = false
     private efbRouteSub?: Subscription
@@ -80,6 +86,12 @@ export class NavdataStack {
             bus.getSubscriber<LNavDataEvents>().on('lnavdata_cdi_scale_label'),
             CDIScaleLabel.Oceanic
         )
+
+        const navSub = bus.getSubscriber<G5NavEvents>()
+        this.gpsActiveWaypoint = ConsumerSubject.create(navSub.on('gps_active_waypoint'), false)
+        this.gpsApproachActive = ConsumerSubject.create(navSub.on('gps_approach_active'), false)
+        this.gpsHasGlidepath = ConsumerSubject.create(navSub.on('gps_has_glidepath'), false)
+        this.gpsCdiScaling = ConsumerSubject.create(navSub.on('gps_cdi_scaling'), 0)
     }
 
     async init(): Promise<void> {
@@ -117,6 +129,10 @@ export class NavdataStack {
         this.efbRouteSub?.destroy()
         this.navdataLabel.destroy()
         this.routeSync.destroy()
+        this.gpsActiveWaypoint.destroy()
+        this.gpsApproachActive.destroy()
+        this.gpsHasGlidepath.destroy()
+        this.gpsCdiScaling.destroy()
     }
 
     private async loadRoute(route: ReadonlyFlightPlanRoute): Promise<void> {
@@ -128,7 +144,16 @@ export class NavdataStack {
     }
 
     private resolveLabel(): CDIScaleLabel {
-        return readVendorCdiScaleLabel() ?? this.fmsLabel() ?? deriveCdiScaleLabelFromSimVars()
+        return (
+            readVendorCdiScaleLabel() ??
+            this.fmsLabel() ??
+            deriveCdiScaleLabelFromSimVars(
+                this.gpsActiveWaypoint.get(),
+                this.gpsApproachActive.get(),
+                this.gpsHasGlidepath.get(),
+                this.gpsCdiScaling.get()
+            )
+        )
     }
 
     private fmsLabel(): CDIScaleLabel | null {

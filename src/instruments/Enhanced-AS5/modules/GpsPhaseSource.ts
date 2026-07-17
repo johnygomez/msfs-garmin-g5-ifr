@@ -1,5 +1,4 @@
 import { CDIScaleLabel } from '@microsoft/msfs-garminsdk'
-import { SimVarValueType } from '@microsoft/msfs-sdk'
 
 /** Bus topic carrying the resolved GPS CDI-scaling phase label for the G5 displays. */
 export interface G5NavdataEvents {
@@ -17,19 +16,21 @@ const SCALE_LABEL_BY_MAX_NM: readonly [number, CDIScaleLabel][] = [
  * navigator populates. It always yields a correct lateral scale, but the sim exposes no RNAV
  * service level, so an active approach is reported as LPV (with glidepath) or LNAV (without).
  */
-export function deriveCdiScaleLabelFromSimVars(): CDIScaleLabel {
-    if (!SimVar.GetSimVarValue('GPS IS ACTIVE WAY POINT', SimVarValueType.Bool)) {
+export function deriveCdiScaleLabelFromSimVars(
+    isActiveWaypoint: boolean,
+    isApproachActive: boolean,
+    hasGlidepath: boolean,
+    cdiScalingNm: number
+): CDIScaleLabel {
+    if (!isActiveWaypoint) {
         return CDIScaleLabel.Enroute
     }
 
-    if (SimVar.GetSimVarValue('GPS IS APPROACH ACTIVE', SimVarValueType.Bool)) {
-        return SimVar.GetSimVarValue('GPS HAS GLIDEPATH', SimVarValueType.Bool)
-            ? CDIScaleLabel.LPV
-            : CDIScaleLabel.LNav
+    if (isApproachActive) {
+        return hasGlidepath ? CDIScaleLabel.LPV : CDIScaleLabel.LNav
     }
 
-    const scaleNm = SimVar.GetSimVarValue('GPS CDI SCALING', SimVarValueType.NM)
-    return SCALE_LABEL_BY_MAX_NM.find(([max]) => scaleNm <= max)?.[1] ?? CDIScaleLabel.Oceanic
+    return SCALE_LABEL_BY_MAX_NM.find(([max]) => cdiScalingNm <= max)?.[1] ?? CDIScaleLabel.Oceanic
 }
 
 /**

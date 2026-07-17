@@ -4,8 +4,6 @@ import {
     EventBus,
     MappedSubject,
     MappedSubscribable,
-    SimVarValueType,
-    Subject,
     Subscribable,
 } from '@microsoft/msfs-sdk'
 
@@ -47,13 +45,22 @@ export class NavSourceDataProvider {
     private readonly gpsWpNextId: ConsumerSubject<string>
     private readonly gpsWpCrossTrack: ConsumerSubject<number>
 
+    private readonly gpsHasGlidepath: ConsumerSubject<boolean>
+    private readonly gpsVerticalError: ConsumerSubject<number>
+    private readonly gpsGsiScaling: ConsumerSubject<number>
+    private readonly nav1HasGlideslope: ConsumerSubject<boolean>
+    private readonly nav2HasGlideslope: ConsumerSubject<boolean>
+    private readonly nav1Gsi: ConsumerSubject<number>
+    private readonly nav2Gsi: ConsumerSubject<number>
+
     readonly activeSource: MappedSubject<[boolean, number], NavSource>
-    readonly verticalDeviationMode = Subject.create<VerticalDeviationMode>('None')
-    readonly verticalDeviationValue = Subject.create(0)
+    readonly verticalDeviationMode: MappedSubscribable<VerticalDeviationMode>
+    readonly verticalDeviationValue: MappedSubscribable<number>
 
     private readonly cdiSource: MappedSubscribable<number>
     private readonly cdiDeviation: MappedSubject<[NavSource, number, number, number], number>
     private readonly cdiVisible: MappedSubject<[NavSource, boolean, boolean, string], boolean>
+    private readonly verticalGuidance: MappedSubject<any, VerticalGuidance>
 
     get cdiSubjects(): CDISubjects {
         return {
@@ -82,6 +89,13 @@ export class NavSourceDataProvider {
         this.nav2Cdi = ConsumerSubject.create(navSub.on('nav2_cdi'), 0)
         this.gpsWpNextId = ConsumerSubject.create(navSub.on('gps_wp_next_id'), '')
         this.gpsWpCrossTrack = ConsumerSubject.create(navSub.on('gps_wp_cross_track'), 0)
+        this.gpsHasGlidepath = ConsumerSubject.create(navSub.on('gps_has_glidepath'), false)
+        this.gpsVerticalError = ConsumerSubject.create(navSub.on('gps_vertical_error'), 0)
+        this.gpsGsiScaling = ConsumerSubject.create(navSub.on('gps_gsi_scaling'), 0)
+        this.nav1HasGlideslope = ConsumerSubject.create(navSub.on('nav1_has_glideslope'), false)
+        this.nav2HasGlideslope = ConsumerSubject.create(navSub.on('nav2_has_glideslope'), false)
+        this.nav1Gsi = ConsumerSubject.create(navSub.on('nav1_gsi'), 0)
+        this.nav2Gsi = ConsumerSubject.create(navSub.on('nav2_gsi'), 0)
 
         const navdataSub = bus.getSubscriber<G5NavdataEvents>()
         this.cdiScaleLabel = ConsumerSubject.create(
@@ -137,16 +151,61 @@ export class NavSourceDataProvider {
             this.nav2HasNav,
             this.gpsWpNextId
         )
-    }
 
-    onUpdate(): void {
-        const guidance = this.resolveVerticalGuidance(this.activeSource.get())
-        this.verticalDeviationMode.set(guidance.mode)
-        this.verticalDeviationValue.set(guidance.deviation)
+        this.verticalGuidance = MappedSubject.create(
+            ([
+                source,
+                scaleLabel,
+                hasGlidepath,
+                verticalError,
+                gsiScaling,
+                nav1HasGS,
+                nav2HasGS,
+                nav1Gsi,
+                nav2Gsi,
+            ]) => {
+                if (source === 'GPS') {
+                    if (!hasGlidepath && verticalError === 0) return NO_GUIDANCE
+                    const isApproach = gsiScaling > 0 && scaleLabel !== CDIScaleLabel.LNavPlusV
+                    const mode: VerticalDeviationMode = isApproach ? 'GP' : 'VNAV'
+                    const fullScale = isApproach ? gsiScaling : VNAV_FULL_SCALE_DEVIATION_METERS
+                    return {
+                        mode,
+                        deviation: verticalError / fullScale,
+                    }
+                }
+                if (source === 'NAV1' && nav1HasGS) {
+                    return {
+                        mode: 'GS' as const,
+                        deviation: nav1Gsi / NEEDLE_FULL_SCALE_DEFLECTION,
+                    }
+                }
+                if (source === 'NAV2' && nav2HasGS) {
+                    return {
+                        mode: 'GS' as const,
+                        deviation: nav2Gsi / NEEDLE_FULL_SCALE_DEFLECTION,
+                    }
+                }
+                return NO_GUIDANCE
+            },
+            this.activeSource,
+            this.cdiScaleLabel,
+            this.gpsHasGlidepath,
+            this.gpsVerticalError,
+            this.gpsGsiScaling,
+            this.nav1HasGlideslope,
+            this.nav2HasGlideslope,
+            this.nav1Gsi,
+            this.nav2Gsi
+        ).pause()
+
+        this.verticalDeviationMode = this.verticalGuidance.map(g => g.mode)
+        this.verticalDeviationValue = this.verticalGuidance.map(g => g.deviation)
     }
 
     resume(): void {
         this.activeSource.resume()
+        this.verticalGuidance.resume()
     }
 
     destroy(): void {
@@ -159,44 +218,17 @@ export class NavSourceDataProvider {
         this.nav2Cdi.destroy()
         this.gpsWpNextId.destroy()
         this.gpsWpCrossTrack.destroy()
+        this.gpsHasGlidepath.destroy()
+        this.gpsVerticalError.destroy()
+        this.gpsGsiScaling.destroy()
+        this.nav1HasGlideslope.destroy()
+        this.nav2HasGlideslope.destroy()
+        this.nav1Gsi.destroy()
+        this.nav2Gsi.destroy()
         this.cdiSource.destroy()
         this.cdiDeviation.destroy()
         this.cdiVisible.destroy()
         this.activeSource.destroy()
-    }
-
-    private resolveVerticalGuidance(source: NavSource): VerticalGuidance {
-        return this.glideslope(source) ?? this.gpsVerticalGuidance(source) ?? NO_GUIDANCE
-    }
-
-    private gpsVerticalGuidance(source: NavSource): VerticalGuidance | null {
-        if (source !== 'GPS') return null
-
-        const hasGlidepath = !!SimVar.GetSimVarValue('GPS HAS GLIDEPATH', SimVarValueType.Bool)
-        const errorMeters = SimVar.GetSimVarValue('GPS VERTICAL ERROR', SimVarValueType.Meters)
-        if (!hasGlidepath && errorMeters === 0) return null
-
-        // GPS GSI SCALING is nonzero only on an approach glidepath; advisory LNAV+V is VNAV.
-        const gsiScaling = SimVar.GetSimVarValue('GPS GSI SCALING', SimVarValueType.Meters)
-        const isApproachGlidepath = gsiScaling > 0
-
-        const label = this.cdiScaleLabel.get()
-        const mode = isApproachGlidepath && label !== CDIScaleLabel.LNavPlusV ? 'GP' : 'VNAV'
-
-        const fullScale = isApproachGlidepath ? gsiScaling : VNAV_FULL_SCALE_DEVIATION_METERS
-        return { mode, deviation: errorMeters / fullScale }
-    }
-
-    private glideslope(source: NavSource): VerticalGuidance | null {
-        if (source !== 'NAV1' && source !== 'NAV2') return null
-        const idx = this.navRadioIndex(source)
-        if (!SimVar.GetSimVarValue(`NAV HAS GLIDE SLOPE:${idx}`, SimVarValueType.Bool)) return null
-
-        const raw = SimVar.GetSimVarValue(`NAV GSI:${idx}`, SimVarValueType.Number)
-        return { mode: 'GS', deviation: raw / NEEDLE_FULL_SCALE_DEFLECTION }
-    }
-
-    private navRadioIndex(source: NavSource): 1 | 2 {
-        return source === 'NAV2' ? 2 : 1
+        this.verticalGuidance.destroy()
     }
 }

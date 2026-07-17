@@ -18,6 +18,10 @@ export interface G5NavEvents {
     gps_wp_distance: number
     gps_wp_bearing: number
     gps_obs_active: boolean
+    gps_approach_active: boolean
+    gps_has_glidepath: boolean
+    gps_vertical_error: number
+    gps_gsi_scaling: number
 
     // ---- HSI ----
     hsi_cdi_needle: number
@@ -39,6 +43,7 @@ export interface G5NavEvents {
     nav1_obs: number
     nav1_to_from: number
     nav1_act_freq: number
+    nav1_has_glideslope: boolean
 
     // ---- NAV 2 ----
     nav2_has_nav: boolean
@@ -54,6 +59,7 @@ export interface G5NavEvents {
     nav2_to_from: number
     nav2_act_freq: number
     nav2_available: boolean
+    nav2_has_glideslope: boolean
 
     // ---- ADF 1 ----
     adf1_signal: number
@@ -90,6 +96,10 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     ['gps_wp_desired_track', { name: 'GPS WP DESIRED TRACK', type: SimVarValueType.Degree }],
     ['gps_wp_cross_track', { name: 'GPS WP CROSS TRK', type: SimVarValueType.NM }],
     ['gps_cdi_scaling', { name: 'GPS CDI SCALING', type: SimVarValueType.NM }],
+    ['gps_approach_active', { name: 'GPS IS APPROACH ACTIVE', type: SimVarValueType.Bool }],
+    ['gps_has_glidepath', { name: 'GPS HAS GLIDEPATH', type: SimVarValueType.Bool }],
+    ['gps_vertical_error', { name: 'GPS VERTICAL ERROR', type: SimVarValueType.Meters }],
+    ['gps_gsi_scaling', { name: 'GPS GSI SCALING', type: SimVarValueType.Meters }],
     ['gps_wp_next_id', { name: 'GPS WP NEXT ID', type: SimVarValueType.String }],
     ['gps_wp_distance', { name: 'GPS WP DISTANCE', type: SimVarValueType.NM }],
     ['gps_wp_bearing', { name: 'GPS WP BEARING', type: SimVarValueType.Degree }],
@@ -115,6 +125,7 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     ['nav1_obs', { name: 'NAV OBS:1', type: SimVarValueType.Degree }],
     ['nav1_to_from', { name: 'NAV TOFROM:1', type: SimVarValueType.Number }],
     ['nav1_act_freq', { name: 'NAV ACTIVE FREQUENCY:1', type: SimVarValueType.MHz }],
+    ['nav1_has_glideslope', { name: 'NAV HAS GLIDE SLOPE:1', type: SimVarValueType.Bool }],
 
     // NAV 2
     ['nav2_has_nav', { name: 'NAV HAS NAV:2', type: SimVarValueType.Bool }],
@@ -130,6 +141,7 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     ['nav2_to_from', { name: 'NAV TOFROM:2', type: SimVarValueType.Number }],
     ['nav2_act_freq', { name: 'NAV ACTIVE FREQUENCY:2', type: SimVarValueType.MHz }],
     ['nav2_available', { name: 'NAV AVAILABLE:2', type: SimVarValueType.Bool }],
+    ['nav2_has_glideslope', { name: 'NAV HAS GLIDE SLOPE:2', type: SimVarValueType.Bool }],
 
     // ADF 1
     ['adf1_signal', { name: 'ADF SIGNAL:1', type: SimVarValueType.Number }],
