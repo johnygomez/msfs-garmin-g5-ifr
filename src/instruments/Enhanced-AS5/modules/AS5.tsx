@@ -10,6 +10,7 @@ import {
     InputAcceleration,
     NavComSimVarPublisher,
     SimVarValueType,
+    Subject,
     VNode,
 } from '@microsoft/msfs-sdk'
 
@@ -38,6 +39,7 @@ interface AS5InstrumentProps extends ComponentProps {
     airspeedData: AirspeedDataProvider
     navData: NavSourceDataProvider
     onHighlightApi: (refs: HighlightElementRefs) => void
+    pageState: Subject<string>
 }
 
 class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
@@ -47,7 +49,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                 <div id="highlight" style="position:absolute; width: 100%; height:100%;">
                     <HighlightComponent onApi={this.props.onHighlightApi} />
                 </div>
-                <div id="PageContainer">
+                <div id="PageContainer" state={this.props.pageState}>
                     <div id="PFD">
                         <PfdContent
                             bus={this.props.bus}
@@ -128,8 +130,12 @@ export class AS5 extends NavSystem {
         return 'AS5'
     }
 
-    private get isMfdPageActive(): boolean {
-        return this.pageGroups?.[0]?.pageIndex == 1
+    private get isMfdInstrument(): boolean {
+        return this.instrumentIndex == 2
+    }
+
+    private get isPfdInstrument(): boolean {
+        return this.instrumentIndex == 1
     }
 
     connectedCallback() {
@@ -171,6 +177,7 @@ export class AS5 extends NavSystem {
                 airspeedData={this.airspeedProvider}
                 navData={this.navSourceProvider}
                 onHighlightApi={refs => (this.highlightRefs = refs)}
+                pageState={this.pageState}
             />,
             this.getChildById('Electricity')
         )
@@ -208,7 +215,7 @@ export class AS5 extends NavSystem {
             case 'Knob_Inc':
                 if (this.currentInteractionState == 2) {
                     this.computeEvent('NavigationSmallInc')
-                } else if (this.isMfdPageActive && !popUpWasOpen) {
+                } else if (this.isMfdInstrument && !popUpWasOpen) {
                     this.incrementHeading()
                 } else if (!popUpWasOpen) {
                     this.computeEvent('BARO_INC')
@@ -217,7 +224,7 @@ export class AS5 extends NavSystem {
             case 'Knob_Dec':
                 if (this.currentInteractionState == 2) {
                     this.computeEvent('NavigationSmallDec')
-                } else if (this.isMfdPageActive && !popUpWasOpen) {
+                } else if (this.isMfdInstrument && !popUpWasOpen) {
                     this.decrementHeading()
                 } else if (!popUpWasOpen) {
                     this.computeEvent('BARO_DEC')
@@ -228,7 +235,7 @@ export class AS5 extends NavSystem {
                 else if (!popUpWasOpen) this.computeEvent('MENU_Push')
                 break
             case 'Knob_Long_Push':
-                if (this.currentInteractionState == 0 && this.isMfdPageActive && !popUpWasOpen) {
+                if (this.currentInteractionState == 0 && this.isMfdInstrument && !popUpWasOpen) {
                     this.syncHeading()
                 }
                 break
@@ -249,7 +256,7 @@ export class AS5 extends NavSystem {
         ) {
             value = this.selectionValueElement.rawValue()
             unit = this.selectionValueElement.unit
-        } else if (this.isMfdPageActive) {
+        } else if (this.isMfdInstrument) {
             value = this.getMenuHeadingRawValue()
             unit = 0
         } else {
@@ -301,6 +308,7 @@ export class AS5 extends NavSystem {
     }
 
     private syncHeading() {
+        if (!this.isMfdInstrument) return
         SimVar.SetSimVarValue(
             'K:HEADING_BUG_SET',
             SimVarValueType.Number,

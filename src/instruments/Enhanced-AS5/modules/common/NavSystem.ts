@@ -66,14 +66,6 @@ export class NavSystem extends BaseInstrument {
         this.menuSlider = this.getChildById('SliderMenu')
         this.menuSliderCursor = this.getChildById('SliderMenuCursor')
 
-        this.pageState.sub(state => {
-            if (!this.pagesContainer) {
-                this.pagesContainer = this.getChildById('PageContainer')
-            }
-            if (this.pagesContainer) {
-                this.pagesContainer.setAttribute('state', state)
-            }
-        }, true)
         this.contextualMenuState.sub(state => {
             if (this.contextualMenu) this.contextualMenu.setAttribute('state', state)
         }, true)
@@ -202,6 +194,10 @@ export class NavSystem extends BaseInstrument {
                         this.currentPageGroupIndex =
                             (this.currentPageGroupIndex + 1) % this.pageGroups.length
                         this.pageGroups[this.currentPageGroupIndex].onEnter()
+                        const currentPage = this.getCurrentPage()
+                        if (currentPage) {
+                            this.pageState.set(currentPage.htmlElemId)
+                        }
                     }
                 }
                 if (_event === 'NavigationLargeDec') {
@@ -211,6 +207,10 @@ export class NavSystem extends BaseInstrument {
                             (this.currentPageGroupIndex + this.pageGroups.length - 1) %
                             this.pageGroups.length
                         this.pageGroups[this.currentPageGroupIndex].onEnter()
+                        const currentPage = this.getCurrentPage()
+                        if (currentPage) {
+                            this.pageState.set(currentPage.htmlElemId)
+                        }
                     }
                 }
                 if (_event === 'NavigationPush') {
@@ -296,13 +296,6 @@ export class NavSystem extends BaseInstrument {
 
         if (this.popUpElement) {
             this.popUpElement.onUpdate(this.deltaTime)
-        }
-
-        if (!this.pagesContainer) {
-            this.pagesContainer = this.getChildById('PageContainer')
-        }
-        if (this.pagesContainer) {
-            this.pageState.set(this.getCurrentPage().htmlElemId)
         }
 
         this.updateGroups()
@@ -421,6 +414,7 @@ export class NavSystem extends BaseInstrument {
         }
         this.overridePage = _page
         this.overridePage.onEnter()
+        this.pageState.set(this.overridePage.htmlElemId)
     }
 
     closeOverridePage() {
@@ -431,6 +425,10 @@ export class NavSystem extends BaseInstrument {
             this.SwitchToInteractionState(0)
         }
         this.overridePage = null
+        const currentPage = this.getCurrentPage()
+        if (currentPage) {
+            this.pageState.set(currentPage.htmlElemId)
+        }
     }
 
     SwitchToPageName(_menu: string, _page: string) {
@@ -506,6 +504,10 @@ export class NavSystem extends BaseInstrument {
 
     leaveEventPage() {
         this.getCurrentPageGroup().onEnter()
+        const currentPage = this.getCurrentPage()
+        if (currentPage) {
+            this.pageState.set(currentPage.htmlElemId)
+        }
     }
 
     closePopUpElement() {
@@ -631,6 +633,9 @@ export class NavSystemPageGroup {
             this.pages[this.pageIndex].onExit()
             this.pageIndex = (this.pageIndex + 1) % this.pages.length
             this.pages[this.pageIndex].onEnter()
+            if (this.gps) {
+                this.gps.pageState.set(this.pages[this.pageIndex].htmlElemId)
+            }
         }
     }
 
@@ -639,6 +644,9 @@ export class NavSystemPageGroup {
             this.pages[this.pageIndex].onExit()
             this.pageIndex = (this.pageIndex + this.pages.length - 1) % this.pages.length
             this.pages[this.pageIndex].onEnter()
+            if (this.gps) {
+                this.gps.pageState.set(this.pages[this.pageIndex].htmlElemId)
+            }
         }
     }
 
@@ -652,6 +660,9 @@ export class NavSystemPageGroup {
             }
         }
         this.onEnter()
+        if (this.gps) {
+            this.gps.pageState.set(this.pages[this.pageIndex].htmlElemId)
+        }
     }
 }
 
