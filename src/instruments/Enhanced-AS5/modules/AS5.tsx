@@ -17,7 +17,6 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { ContextualMenuComponent, ContextualMenuSettings } from './common/ContextualMenu'
-import { HighlightComponent, HighlightElementRefs } from './common/Highlight'
 import { NavSystem, NavSystemElementContainer, NavSystemPageGroup } from './common/NavSystem'
 import {
     KnobValueUnit,
@@ -44,7 +43,6 @@ interface AS5InstrumentProps extends ComponentProps {
     autopilot: AutopilotAnnunciationProvider
     airspeedData: AirspeedDataProvider
     navData: NavSourceDataProvider
-    onHighlightApi: (refs: HighlightElementRefs) => void
     pageState: Subscribable<string>
     menu: ContextualMenuSettings
     selectionValue: SelectionValueSubjects
@@ -54,9 +52,6 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
     render(): VNode {
         return (
             <>
-                <div id="highlight" style="position:absolute; width: 100%; height:100%;">
-                    <HighlightComponent onApi={this.props.onHighlightApi} />
-                </div>
                 <div id="PageContainer" state={this.props.pageState}>
                     <div id="PFD">
                         <PfdContent
@@ -115,7 +110,6 @@ export class AS5 extends NavSystem {
     private knobValuePipe?: Subscription
 
     pageGroups: NavSystemPageGroup[]
-    highlightRefs: HighlightElementRefs
 
     private readonly pfdPage = new AS5_PFD()
     private readonly mfdPage = new AS5_MFD()
@@ -189,7 +183,6 @@ export class AS5 extends NavSystem {
                 autopilot={this.apAnnunciationProvider}
                 airspeedData={this.airspeedProvider}
                 navData={this.navSourceProvider}
-                onHighlightApi={refs => (this.highlightRefs = refs)}
                 pageState={this.pageState}
                 menu={{
                     state: this.contextualMenuState,
