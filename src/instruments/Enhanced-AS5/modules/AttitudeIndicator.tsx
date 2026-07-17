@@ -467,8 +467,8 @@ class AircraftCursors extends DisplayComponent<AircraftCursorsProps> {
                     <path
                         class="cursor-left-lower"
                         d="M-170 0 l0 5 l40 0 l10 -5 Z"
-                        fill="#cccc00"
-                        stroke="#000000"
+                        fill={Colors.DARK_YELLOW}
+                        stroke={Colors.BLACK}
                         stroke-width="1"
                     />
                     <path
@@ -481,7 +481,7 @@ class AircraftCursors extends DisplayComponent<AircraftCursorsProps> {
                     <path
                         class="cursor-right-lower"
                         d="M170 0 l0 5 l-40 0 l-10 -5 Z"
-                        fill={Colors.CURSOR_YELLOW_DARK}
+                        fill={Colors.DARK_YELLOW}
                         stroke={Colors.BLACK}
                         stroke-width="1"
                     />
@@ -495,7 +495,7 @@ class AircraftCursors extends DisplayComponent<AircraftCursorsProps> {
                     <path
                         class="cursor-triangle-inner-left"
                         d="M-60 40 -38 40 L0 0 Z"
-                        fill={Colors.CURSOR_YELLOW_DARK}
+                        fill={Colors.DARK_YELLOW}
                         stroke={Colors.BLACK}
                         stroke-width="1"
                     />
@@ -509,7 +509,7 @@ class AircraftCursors extends DisplayComponent<AircraftCursorsProps> {
                     <path
                         class="cursor-triangle-inner-left"
                         d="M60 40 38 40 L0 0 Z"
-                        fill={Colors.CURSOR_YELLOW_DARK}
+                        fill={Colors.DARK_YELLOW}
                         stroke={Colors.BLACK}
                         stroke-width="1"
                     />

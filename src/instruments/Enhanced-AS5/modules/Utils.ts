@@ -30,6 +30,8 @@ export enum Colors {
     DARK_GREEN = 'green',
     /** @css `--yellow` */
     YELLOW = 'yellow',
+    /** @css `--dark-yellow` use e.g in aircraft symbol in attitude indicator */
+    DARK_YELLOW = '#BFB43A',
     /** @css `--amber` */
     AMBER = '#ffdc24',
     /** @css `--focus-blue` */
