@@ -7,11 +7,11 @@ import {
     Subscribable,
 } from '@microsoft/msfs-sdk'
 
-import { AltimeterSubjects } from './CommonPFD_MFD'
-import { G5CustomEvents } from './G5CustomPublisher'
-import { G5NavEvents } from './G5NavPublisher'
+import { VerticalDeviationMode } from '../common/VerticalDeviationIndicator'
+import { AltimeterSubjects } from '../pfd/AltimeterKnob'
+import { G5CustomEvents } from '../publishers/G5CustomPublisher'
+import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { G5NavdataEvents } from './GpsPhaseSource'
-import { VerticalDeviationMode } from './VerticalDeviationIndicator'
 
 export type NavSource = 'GPS' | 'NAV1' | 'NAV2'
 

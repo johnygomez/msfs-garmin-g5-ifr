@@ -10,17 +10,17 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import type { AS5 } from './AS5'
+import type { AS5 } from '../AS5'
 
-import { AltimeterSubjects } from './CommonPFD_MFD'
-import { ContextualMenuElementData } from './ContextualMenu'
-import { G5CustomEvents } from './G5CustomPublisher'
-import { G5NavEvents } from './G5NavPublisher'
+import { ContextualMenuElementData } from '../common/ContextualMenu'
+import { NavSystemElement, NavSystemElementGroup, NavSystemPage } from '../common/NavSystem'
+import { formatDegrees3 } from '../common/Utils'
+import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
+import { AltimeterSubjects } from '../pfd/AltimeterKnob'
+import { NavSource } from '../providers/NavSourceDataProvider'
+import { G5CustomEvents } from '../publishers/G5CustomPublisher'
+import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent, HSIndicatorDisplayType } from './HSIndicator'
-import { NavSource } from './NavSourceDataProvider'
-import { NavSystemElement, NavSystemElementGroup, NavSystemPage } from './NavSystem'
-import { formatDegrees3 } from './Utils'
-import { VerticalDeviationIndicatorComponent } from './VerticalDeviationIndicator'
 
 interface SelectedHeadingInfoProps extends ComponentProps {
     bus: EventBus

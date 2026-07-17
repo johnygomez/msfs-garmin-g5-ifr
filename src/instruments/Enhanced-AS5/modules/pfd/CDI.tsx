@@ -7,7 +7,7 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { Colors } from './Utils'
+import { Colors } from '../common/Utils'
 
 type IndicatorShape = 'diamond' | 'triangle'
 

@@ -15,10 +15,10 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { G5CustomEvents } from './G5CustomPublisher'
-import { G5NavEvents } from './G5NavPublisher'
-import { G5NavdataEvents } from './GpsPhaseSource'
-import { Colors } from './Utils'
+import { Colors } from '../common/Utils'
+import { G5NavdataEvents } from '../providers/GpsPhaseSource'
+import { G5CustomEvents } from '../publishers/G5CustomPublisher'
+import { G5NavEvents } from '../publishers/G5NavPublisher'
 
 export enum HSIndicatorDisplayType {
     GlassCockpit = 0,

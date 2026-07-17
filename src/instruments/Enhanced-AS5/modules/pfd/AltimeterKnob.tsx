@@ -1,7 +1,7 @@
 import { Subscribable } from '@microsoft/msfs-sdk'
 
-import { NavSystemElement } from './NavSystem'
-import { VerticalDeviationMode } from './VerticalDeviationIndicator'
+import { NavSystemElement } from '../common/NavSystem'
+import { VerticalDeviationMode } from '../common/VerticalDeviationIndicator'
 
 /**
  * Vertical-deviation guidance shown beside the altimeter. Altitude/baro/vertical-speed

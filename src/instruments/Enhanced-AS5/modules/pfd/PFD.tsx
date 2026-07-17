@@ -9,21 +9,21 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import type { AS5 } from './AS5'
+import type { AS5 } from '../AS5'
 
-import { AirspeedSubjects } from './AirspeedDataProvider'
+import { ContextualMenuElementData } from '../common/ContextualMenu'
+import { NavSystemElementGroup, NavSystemPage } from '../common/NavSystem'
+import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
+import { AirspeedSubjects } from '../providers/AirspeedDataProvider'
+import { CDISubjects } from '../providers/NavSourceDataProvider'
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 import { AltimeterComponent } from './Altimeter'
+import { AltimeterSubjects, PFD_Altimeter, PFD_Attitude } from './AltimeterKnob'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
 import { AttitudeIndicatorComponent } from './AttitudeIndicator'
 import { CDIComponent } from './CDI'
-import { AltimeterSubjects, PFD_Altimeter, PFD_Attitude } from './CommonPFD_MFD'
-import { ContextualMenuElementData } from './ContextualMenu'
 import { HorizontalCompassComponent } from './HorizontalCompass'
-import { CDISubjects } from './NavSourceDataProvider'
-import { NavSystemElementGroup, NavSystemPage } from './NavSystem'
 import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSlipIndicator'
-import { VerticalDeviationIndicatorComponent } from './VerticalDeviationIndicator'
 
 export interface PfdContentProps extends ComponentProps {
     bus: EventBus

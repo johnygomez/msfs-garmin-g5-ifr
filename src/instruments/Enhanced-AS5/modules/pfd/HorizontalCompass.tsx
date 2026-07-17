@@ -11,8 +11,8 @@ import {
     NavMath,
 } from '@microsoft/msfs-sdk'
 
-import { G5CustomEvents } from './G5CustomPublisher'
-import { Colors } from './Utils'
+import { Colors } from '../common/Utils'
+import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
 // The ribbon spans ±80° around the current heading, with a labelled mark every
 // 10° and a tick every 1°.

@@ -24,7 +24,7 @@ import {
     Subscription,
 } from '@microsoft/msfs-sdk'
 
-import { G5NavEvents } from './G5NavPublisher'
+import { G5NavEvents } from '../publishers/G5NavPublisher'
 import {
     deriveCdiScaleLabelFromSimVars,
     G5NavdataEvents,

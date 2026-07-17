@@ -11,8 +11,8 @@ import {
     MappedSubject,
 } from '@microsoft/msfs-sdk'
 
-import { G5CustomEvents } from './G5CustomPublisher'
-import { Colors } from './Utils'
+import { Colors } from '../common/Utils'
+import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
 const GF_FONT = 'OpenSans-Bold'
 

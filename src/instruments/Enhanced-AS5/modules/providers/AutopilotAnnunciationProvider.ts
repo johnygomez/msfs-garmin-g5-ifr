@@ -1,6 +1,6 @@
 import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
 
-import { APInfoBarSubjects } from './APInfoBar'
+import { APInfoBarSubjects } from '../pfd/APInfoBar'
 
 /**
  * Computes the Garmin-style autopilot mode-annunciation strings (status, lateral,

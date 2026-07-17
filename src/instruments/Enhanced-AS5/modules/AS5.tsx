@@ -13,23 +13,23 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { AirspeedDataProvider } from './AirspeedDataProvider'
-import { AutopilotAnnunciationProvider } from './AutopilotAnnunciationProvider'
-import { ContextualMenuComponent } from './ContextualMenu'
-import { G5CustomEvents, G5CustomPublisher } from './G5CustomPublisher'
-import { G5NavPublisher } from './G5NavPublisher'
-import { HighlightComponent, HighlightElementRefs } from './Highlight'
-import { AS5_MFD, MfdContent } from './MFD'
-import { NavdataStack } from './NavdataStack'
-import { NavSourceDataProvider } from './NavSourceDataProvider'
+import { ContextualMenuComponent } from './common/ContextualMenu'
+import { HighlightComponent, HighlightElementRefs } from './common/Highlight'
 import {
     NavSystem,
     NavSystemElement,
     NavSystemElementContainer,
     NavSystemPageGroup,
-} from './NavSystem'
-import { AS5_PFD, PfdContent } from './PFD'
-import { formatDegrees3 } from './Utils'
+} from './common/NavSystem'
+import { formatDegrees3 } from './common/Utils'
+import { AS5_MFD, MfdContent } from './mfd/MFD'
+import { AS5_PFD, PfdContent } from './pfd/PFD'
+import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
+import { AutopilotAnnunciationProvider } from './providers/AutopilotAnnunciationProvider'
+import { NavdataStack } from './providers/NavdataStack'
+import { NavSourceDataProvider } from './providers/NavSourceDataProvider'
+import { G5CustomEvents, G5CustomPublisher } from './publishers/G5CustomPublisher'
+import { G5NavPublisher } from './publishers/G5NavPublisher'
 
 interface AS5InstrumentProps extends ComponentProps {
     bus: EventBus

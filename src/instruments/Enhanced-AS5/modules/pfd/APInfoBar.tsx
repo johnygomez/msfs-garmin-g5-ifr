@@ -7,7 +7,7 @@ import {
     Subscription,
 } from '@microsoft/msfs-sdk'
 
-import { Colors } from './Utils'
+import { Colors } from '../common/Utils'
 
 export type APDisplayMode = 'RedFlash' | 'YellowFlash' | 'Red' | 'Yellow' | ''
 
