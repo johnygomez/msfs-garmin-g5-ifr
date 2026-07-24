@@ -1,14 +1,12 @@
 import {
-    AdcEvents,
     AdcPublisher,
     AhrsPublisher,
     ComponentProps,
-    ConsumerSubject,
     DisplayComponent,
     EventBus,
     FSComponent,
-    InputAcceleration,
     NavComSimVarPublisher,
+    NodeReference,
     SimVarValueType,
     Subject,
     Subscribable,
@@ -16,105 +14,83 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { ContextualMenuComponent, ContextualMenuSettings } from './common/ContextualMenu'
-import { NavSystem, NavSystemPageGroup } from './common/NavSystem'
-import {
-    KnobValueUnit,
-    SelectionValueContext,
-    SelectionValueElement,
-    SelectionValueSubjects,
-    SelectionValueWindowComponent,
-} from './common/SelectionValueWindow'
-import { formatDegrees3, normalizeDegrees360 } from './common/Utils'
-import { AS5_MFD, MfdContent } from './mfd/MFD'
-import { AS5_PFD, PfdContent } from './pfd/PFD'
+import { AvionicsInteractionManager } from './common/AvionicsInteractionManager'
+import { AvionicsPage, PageId } from './common/AvionicsPage'
+import { MfdContent } from './mfd/MFD'
+import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
 import { AutopilotAnnunciationProvider } from './providers/AutopilotAnnunciationProvider'
 import { NavdataStack } from './providers/NavdataStack'
 import { NavSourceDataProvider } from './providers/NavSourceDataProvider'
-import { G5CustomEvents, G5CustomPublisher } from './publishers/G5CustomPublisher'
+import { G5CustomPublisher } from './publishers/G5CustomPublisher'
 import { G5NavPublisher } from './publishers/G5NavPublisher'
-
-const HEADING_KNOB_RESET_MS = 600
 
 interface AS5InstrumentProps extends ComponentProps {
     bus: EventBus
-    mfd: AS5_MFD
+    manager: AvionicsInteractionManager
+    switchPage: (id: PageId) => void
+    pageState: Subscribable<string>
+    pfdRef: NodeReference<PfdContent>
+    mfdRef: NodeReference<MfdContent>
     autopilot: AutopilotAnnunciationProvider
     airspeedData: AirspeedDataProvider
     navData: NavSourceDataProvider
-    pageState: Subscribable<string>
-    menu: ContextualMenuSettings
-    selectionValue: SelectionValueSubjects
 }
 
 class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
     render(): VNode {
+        const {
+            bus,
+            manager,
+            switchPage,
+            pageState,
+            pfdRef,
+            mfdRef,
+            autopilot,
+            airspeedData,
+            navData,
+        } = this.props
         return (
-            <>
-                <div id="PageContainer" state={this.props.pageState}>
-                    <div id="PFD">
-                        <PfdContent
-                            bus={this.props.bus}
-                            autopilot={this.props.autopilot.subjects}
-                            airspeed={this.props.airspeedData.subjects}
-                            altimeter={this.props.navData.altimeterSubjects}
-                            cdi={this.props.navData.cdiSubjects}
-                        />
-                    </div>
-                    <div id="MFD">
-                        <MfdContent
-                            bus={this.props.bus}
-                            altimeter={this.props.navData.altimeterSubjects}
-                            navSource={this.props.navData.activeSource}
-                            hsiComponent={this.props.mfd.hsi.hsiComponentSub}
-                        />
-                    </div>
+            <div id="PageContainer" state={pageState}>
+                <div id="PFD">
+                    <PfdContent
+                        ref={pfdRef}
+                        bus={bus}
+                        manager={manager}
+                        switchPage={switchPage}
+                        autopilot={autopilot.subjects}
+                        airspeed={airspeedData.subjects}
+                        altimeter={navData.altimeterSubjects}
+                        cdi={navData.cdiSubjects}
+                    />
                 </div>
-                <ContextualMenuComponent {...this.props.menu} />
-                <SelectionValueWindowComponent {...this.props.selectionValue} />
-            </>
+                <div id="MFD">
+                    <MfdContent
+                        ref={mfdRef}
+                        bus={bus}
+                        manager={manager}
+                        switchPage={switchPage}
+                        altimeter={navData.altimeterSubjects}
+                        navSource={navData.activeSource}
+                    />
+                </div>
+            </div>
         )
     }
 }
 
-export class AS5 extends NavSystem {
+export class AS5 extends BaseInstrument {
+    DecomposeEventFromPrefix!: (args: string[]) => string | undefined
+
     readonly bus = new EventBus()
+    private readonly manager = new AvionicsInteractionManager(this.bus)
 
-    private readonly knobSub = this.bus.getSubscriber<G5CustomEvents & AdcEvents>()
-    private readonly apHeadingSelected = ConsumerSubject.create(
-        this.knobSub.on('ap_heading_selected'),
-        0
-    )
-    private readonly apAltitudeSelected = ConsumerSubject.create(
-        this.knobSub.on('ap_altitude_selected'),
-        0
-    )
-    private readonly nav1Obs = ConsumerSubject.create(this.knobSub.on('nav1_obs'), 0)
-    private readonly baroSettingInHg = ConsumerSubject.create(
-        this.knobSub.on('altimeter_baro_setting_inhg'),
-        29.92
-    )
+    private readonly pfdRef = FSComponent.createRef<PfdContent>()
+    private readonly mfdRef = FSComponent.createRef<MfdContent>()
+    private readonly pageOrder: PageId[] = ['PFD', 'MFD']
+    private readonly activePageId = Subject.create<PageId>('PFD')
 
-    private readonly selectedHeadingDegrees = this.apHeadingSelected.map(normalizeDegrees360)
-    private readonly selectedCourseDegrees = this.nav1Obs.map(normalizeDegrees360)
-
-    readonly menuHeadingTextSub = this.selectedHeadingDegrees.map(formatDegrees3)
-    readonly menuAltitudeTextSub = this.apAltitudeSelected.map(
-        altitude => fastToFixed(altitude, 0) + 'ft'
-    )
-    readonly menuCourseTextSub = this.selectedCourseDegrees.map(formatDegrees3)
-
-    private readonly knobValue = Subject.create(0)
-    private readonly knobUnit = Subject.create<KnobValueUnit>(KnobValueUnit.Degrees)
-    private knobValuePipe?: Subscription
-
-    pageGroups: NavSystemPageGroup[]
-
-    private readonly pfdPage = new AS5_PFD()
-    private readonly mfdPage = new AS5_MFD()
-
-    private readonly selectionValueElement = new SelectionValueElement()
+    private readonly switchPage = (id: PageId): void => this.setActivePage(id)
 
     private adcPublisher?: AdcPublisher
     private ahrsPublisher?: AhrsPublisher
@@ -126,28 +102,23 @@ export class AS5 extends NavSystem {
     private navdataStack?: NavdataStack
     private apAnnunciationProvider?: AutopilotAnnunciationProvider
 
-    private readonly headingKnobAccel = new InputAcceleration({ increment: 1 })
-    private lastHeadingKnobTime = 0
-    private lastHeadingKnobSign = 0
-    private headingKnobTarget = 0
+    private knobValueSub?: Subscription
+    private knobUnitSub?: Subscription
 
-    constructor() {
-        super()
-        this.pageGroups = [new NavSystemPageGroup('Main', this, [this.pfdPage, this.mfdPage])]
-    }
-
-    get templateID() {
+    get templateID(): string {
         return 'AS5'
     }
 
     private get isMfdInstrument(): boolean {
-        return this.instrumentIndex == 2
+        return this.instrumentIndex === 2
     }
 
-    connectedCallback() {
+    private get activePage(): AvionicsPage {
+        return this.activePageId.get() === 'PFD' ? this.pfdRef.instance : this.mfdRef.instance
+    }
+
+    connectedCallback(): void {
         super.connectedCallback()
-        this.menuMaxElems = 4
-        this.registerOverlayElement(this.selectionValueElement)
 
         this.navSourceProvider = new NavSourceDataProvider(this.bus)
         this.navSourceProvider.resume()
@@ -169,203 +140,101 @@ export class AS5 extends NavSystem {
         this.customPublisher.startPublish()
         this.navPublisher.startPublish()
 
-        this.bindKnobTooltip()
-
         FSComponent.render(
             <AS5Instrument
                 bus={this.bus}
-                mfd={this.mfdPage}
+                manager={this.manager}
+                switchPage={this.switchPage}
+                pageState={this.activePageId}
+                pfdRef={this.pfdRef}
+                mfdRef={this.mfdRef}
                 autopilot={this.apAnnunciationProvider}
                 airspeedData={this.airspeedProvider}
                 navData={this.navSourceProvider}
-                pageState={this.pageState}
-                menu={{
-                    state: this.contextualMenuState,
-                    elements: this.menuElementsSub,
-                    cursorIndex: this.menuCursorIndexSub,
-                    displayBeginIndex: this.menuDisplayBeginIndexSub,
-                    maxVisibleElements: this.menuMaxElems,
-                }}
-                selectionValue={this.selectionValueElement.subjects}
             />,
             this.getChildById('Electricity')
         )
+
+        this.bindKnobTooltip()
     }
 
-    onUpdate(_deltaTime: number) {
+    protected Update(): void {
+        super.Update()
         this.adcPublisher?.onUpdate()
         this.ahrsPublisher?.onUpdate()
         this.navComPublisher?.onUpdate()
         this.customPublisher?.onUpdate()
         this.navPublisher?.onUpdate()
         this.navdataStack?.onUpdate()
-        this.airspeedProvider?.onUpdate(_deltaTime)
+        this.airspeedProvider?.onUpdate(this.deltaTime)
         this.apAnnunciationProvider?.onUpdate()
     }
 
-    computeEvent(_event: string) {
-        const popUpWasOpen = this.activeOverlay != null
-        super.computeEvent(_event)
-        this.apAnnunciationProvider?.onEvent(_event)
-        switch (_event) {
-            case 'Knob_Inc':
-                if (this.currentInteractionState == 2) {
-                    this.computeEvent('NavigationSmallInc')
-                } else if (this.isMfdInstrument && !popUpWasOpen) {
-                    this.incrementHeading()
-                } else if (!popUpWasOpen) {
-                    this.computeEvent('BARO_INC')
-                }
-                break
-            case 'Knob_Dec':
-                if (this.currentInteractionState == 2) {
-                    this.computeEvent('NavigationSmallDec')
-                } else if (this.isMfdInstrument && !popUpWasOpen) {
-                    this.decrementHeading()
-                } else if (!popUpWasOpen) {
-                    this.computeEvent('BARO_DEC')
-                }
-                break
-            case 'Knob_Push':
-                if (this.currentInteractionState == 2) this.computeEvent('ENT_Push')
-                else if (!popUpWasOpen) this.computeEvent('MENU_Push')
-                break
-            case 'Knob_Long_Push':
-                if (this.currentInteractionState == 0 && this.isMfdInstrument && !popUpWasOpen) {
-                    this.syncHeading()
-                }
-                break
+    onInteractionEvent(args: string[]): void {
+        if (!this.isElectricityAvailable()) return
+
+        const event = this.DecomposeEventFromPrefix(args)
+        if (event === 'ElementSetAttribute' && args.length >= 4) {
+            this.getChildById(args[1])?.setAttribute(args[2], args[3])
+        } else if (event) {
+            this.dispatch(event)
+        } else if (args[0].startsWith('NavSystem_')) {
+            this.dispatch(args[0].slice('NavSystem_'.length))
         }
     }
 
-    onPowerOn() {
+    onPowerOn(): void {
         super.onPowerOn()
-        if (this.isMfdInstrument) this.SwitchToPageName('Main', 'MFD')
-        else this.SwitchToPageName('Main', 'PFD')
+        this.setActivePage(this.isMfdInstrument ? 'MFD' : 'PFD')
     }
 
-    menuHeadingEnter() {
-        this.openSelectionValueWindow({
-            title: 'Select Heading',
-            displayValue: this.menuHeadingTextSub,
-            knobValue: this.selectedHeadingDegrees,
-            knobUnit: KnobValueUnit.Degrees,
-            onIncrement: () => this.incrementHeading(),
-            onDecrement: () => this.decrementHeading(),
-            onSync: () => this.syncHeading(),
-        })
-    }
+    private dispatch(event: string): void {
+        if (!this.isBootProcedureComplete()) return
 
-    menuCrsEnter() {
-        this.openSelectionValueWindow({
-            title: 'Select Course',
-            displayValue: this.menuCourseTextSub,
-            knobValue: this.selectedCourseDegrees,
-            knobUnit: KnobValueUnit.Degrees,
-            onIncrement: () => this.incrementCourse(),
-            onDecrement: () => this.decrementCourse(),
-        })
-    }
+        this.apAnnunciationProvider?.onEvent(event)
 
-    menuAltitudeEnter() {
-        this.openSelectionValueWindow({
-            title: 'Select Altitude',
-            displayValue: this.menuAltitudeTextSub,
-            knobValue: this.apAltitudeSelected,
-            knobUnit: KnobValueUnit.Feet,
-            onIncrement: () => this.incrementAltitude(),
-            onDecrement: () => this.decrementAltitude(),
-            onSync: () => this.syncAltitude(),
-        })
-    }
+        const page = this.activePage
+        page.onEvent(event)
 
-    private openSelectionValueWindow(context: SelectionValueContext) {
-        this.openOverlay(this.selectionValueElement.createOverlay(context))
-    }
-
-    private bindKnobTooltip() {
-        this.selectionValueElement.activeContext.sub(
-            context => this.rebindKnobValueSource(context),
-            true
-        )
-        this.knobValue.sub(value => this.setKnobSimVar('Knob_Value', value), true)
-        this.knobUnit.sub(unit => this.setKnobSimVar('Knob_Unit', unit), true)
-    }
-
-    private rebindKnobValueSource(context: SelectionValueContext | null) {
-        this.knobValuePipe?.destroy()
-        if (context) {
-            this.knobUnit.set(context.knobUnit)
-            this.knobValuePipe = context.knobValue.pipe(this.knobValue)
-        } else if (this.isMfdInstrument) {
-            this.knobUnit.set(KnobValueUnit.Degrees)
-            this.knobValuePipe = this.selectedHeadingDegrees.pipe(this.knobValue)
-        } else {
-            this.knobUnit.set(KnobValueUnit.InHg)
-            this.knobValuePipe = this.baroSettingInHg.pipe(this.knobValue)
+        if (!page.isModalOpen) {
+            switch (event) {
+                case 'NavigationSmallInc':
+                    this.cyclePage(1)
+                    break
+                case 'NavigationSmallDec':
+                    this.cyclePage(-1)
+                    break
+            }
         }
     }
 
-    private setKnobSimVar(name: string, value: number) {
+    private setActivePage(id: PageId): void {
+        if (id === this.activePageId.get()) return
+        this.activePage.closeModals()
+        this.activePageId.set(id)
+    }
+
+    private cyclePage(direction: 1 | -1): void {
+        const count = this.pageOrder.length
+        const index = this.pageOrder.indexOf(this.activePageId.get())
+        this.setActivePage(this.pageOrder[(index + direction + count) % count])
+    }
+
+    private bindKnobTooltip(): void {
+        this.activePageId.sub(() => {
+            const page = this.activePage
+            this.knobValueSub?.destroy()
+            this.knobUnitSub?.destroy()
+            this.knobValueSub = page.knobValue.sub(v => this.setKnobSimVar('Knob_Value', v), true)
+            this.knobUnitSub = page.knobUnit.sub(u => this.setKnobSimVar('Knob_Unit', u), true)
+        }, true)
+    }
+
+    private setKnobSimVar(name: string, value: number): void {
         SimVar.SetSimVarValue(
             `L:AS5_${this.instrumentIndex}_${name}`,
             SimVarValueType.Number,
             value
-        )
-    }
-
-    private changeHeading(sign: number) {
-        const now = Date.now()
-        const elapsed = now - this.lastHeadingKnobTime
-        if (elapsed > HEADING_KNOB_RESET_MS || sign != this.lastHeadingKnobSign) {
-            this.headingKnobTarget = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
-            this.headingKnobAccel.resume()
-        }
-        this.lastHeadingKnobTime = now
-        this.lastHeadingKnobSign = sign
-        const step = this.headingKnobAccel.doStep()
-        this.headingKnobTarget = (((this.headingKnobTarget + sign * step) % 360) + 360) % 360
-        SimVar.SetSimVarValue('K:HEADING_BUG_SET', SimVarValueType.Number, this.headingKnobTarget)
-    }
-
-    private incrementHeading() {
-        this.changeHeading(1)
-    }
-
-    private decrementHeading() {
-        this.changeHeading(-1)
-    }
-
-    private syncHeading() {
-        if (!this.isMfdInstrument) return
-        SimVar.SetSimVarValue(
-            'K:HEADING_BUG_SET',
-            SimVarValueType.Number,
-            Math.round(Simplane.getHeadingMagnetic())
-        )
-    }
-
-    private incrementCourse() {
-        SimVar.SetSimVarValue('K:VOR1_OBI_INC', SimVarValueType.Number, 0)
-    }
-
-    private decrementCourse() {
-        SimVar.SetSimVarValue('K:VOR1_OBI_DEC', SimVarValueType.Number, 0)
-    }
-
-    private incrementAltitude() {
-        SimVar.SetSimVarValue('K:AP_ALT_VAR_INC', SimVarValueType.Number, 100)
-    }
-
-    private decrementAltitude() {
-        SimVar.SetSimVarValue('K:AP_ALT_VAR_DEC', SimVarValueType.Number, 100)
-    }
-
-    private syncAltitude() {
-        SimVar.SetSimVarValue(
-            'K:AP_ALT_VAR_SET_ENGLISH',
-            SimVarValueType.Number,
-            Math.round(Simplane.getAltitude() / 100) * 100
         )
     }
 }

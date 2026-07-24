@@ -10,17 +10,20 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import type { AS5 } from '../AS5'
-
-import { ContextualMenuElementData } from '../common/ContextualMenu'
-import { NavSystemElement, NavSystemElementGroup, NavSystemPage } from '../common/NavSystem'
+import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager'
+import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
+import { Menu } from '../common/Menu'
 import { formatDegrees3 } from '../common/Utils'
+import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
-import { AltimeterSubjects } from '../pfd/AltimeterKnob'
-import { NavSource } from '../providers/NavSourceDataProvider'
+import { AltimeterSubjects, NavSource } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
+
+const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
+
+type MfdOverlay = 'heading' | 'course'
 
 interface SelectedHeadingInfoProps extends ComponentProps {
     bus: EventBus
@@ -163,14 +166,106 @@ class WaypointDistanceInfo extends DisplayComponent<WaypointDistanceInfoProps> {
 
 export interface MfdContentProps extends ComponentProps {
     bus: EventBus
+    manager: AvionicsInteractionManager
+    switchPage: (id: PageId) => void
     altimeter: AltimeterSubjects
     navSource: Subscribable<NavSource>
-    hsiComponent: Subject<HSIComponent | null>
 }
 
-export class MfdContent extends DisplayComponent<MfdContentProps> {
+export class MfdContent extends DisplayComponent<MfdContentProps> implements AvionicsPage {
+    private readonly menu = FSComponent.createRef<Menu>()
+    private readonly hsi = Subject.create<HSIComponent | null>(null)
+
+    private readonly activeOverlay = Subject.create<MfdOverlay | null>(null)
+
+    readonly knobUnit = Subject.create(KnobValueUnit.Degrees)
+
+    readonly knobValue = MappedSubject.create(
+        ([overlay, heading, course]) => (overlay === 'course' ? course : heading),
+        this.activeOverlay,
+        this.props.manager.selectedHeading,
+        this.props.manager.selectedCourse
+    )
+
+    private readonly headingActive = this.activeOverlay.map(overlay => overlay === 'heading')
+    private readonly courseActive = this.activeOverlay.map(overlay => overlay === 'course')
+
+    private readonly setHsi = (instance: HSIComponent | null): void => this.hsi.set(instance)
+    private readonly closeMenu = (): void => this.menu.instance.close()
+    private readonly openHeading = (): void => this.openOverlay('heading')
+    private readonly openCourse = (): void => this.openOverlay('course')
+    private readonly openPfd = (): void => this.props.switchPage('PFD')
+
+    get isModalOpen(): boolean {
+        return (
+            this.activeOverlay.get() !== null || (this.menu.getOrDefault()?.isOpen.get() ?? false)
+        )
+    }
+
+    onEvent(event: string): void {
+        this.hsi.get()?.onEvent(event)
+
+        if (this.activeOverlay.get() !== null) {
+            this.onOverlayEvent(event)
+        } else if (this.menu.instance.isOpen.get()) {
+            this.menu.instance.onEvent(event)
+        } else {
+            this.onIdleEvent(event)
+        }
+    }
+
+    closeModals(): void {
+        this.menu.instance.close()
+        this.activeOverlay.set(null)
+    }
+
+    private onIdleEvent(event: string): void {
+        const { manager } = this.props
+        switch (event) {
+            case 'Knob_Inc':
+                manager.incrementHeading()
+                break
+            case 'Knob_Dec':
+                manager.decrementHeading()
+                break
+            case 'Knob_Long_Push':
+                manager.syncHeading()
+                break
+            case 'Knob_Push':
+            case 'MENU_Push':
+                this.menu.instance.open()
+                break
+        }
+    }
+
+    private onOverlayEvent(event: string): void {
+        const { manager } = this.props
+        const heading = this.activeOverlay.get() === 'heading'
+        switch (event) {
+            case 'Knob_Inc':
+                if (heading) manager.incrementHeading()
+                else manager.incrementCourse()
+                break
+            case 'Knob_Dec':
+                if (heading) manager.decrementHeading()
+                else manager.decrementCourse()
+                break
+            case 'Knob_Long_Push':
+                if (heading) manager.syncHeading()
+                break
+            case 'Knob_Push':
+                this.activeOverlay.set(null)
+                break
+        }
+    }
+
+    private openOverlay(overlay: MfdOverlay): void {
+        this.menu.instance.close()
+        this.activeOverlay.set(overlay)
+    }
+
     render(): VNode {
-        const { bus, altimeter, navSource, hsiComponent } = this.props
+        const { bus, manager, altimeter, navSource } = this.props
         return (
             <>
                 <div id="HSICompass">
@@ -179,7 +274,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> {
                         noCenterText={false}
                         noBackground={false}
                         noAffectSimRadioNav={false}
-                        onApi={instance => hsiComponent.set(instance)}
+                        onApi={this.setHsi}
                     />
                 </div>
                 <div id="Infos">
@@ -193,72 +288,37 @@ export class MfdContent extends DisplayComponent<MfdContentProps> {
                         deviation={altimeter.verticalDeviationValue}
                     />
                 </div>
+
+                <Menu ref={this.menu}>
+                    <Menu.Item
+                        title="Back"
+                        icon={`${IMAGES}/BACK_ARROW.png`}
+                        onSelect={this.closeMenu}
+                    />
+                    <Menu.Item
+                        title="Heading"
+                        value={manager.headingText}
+                        onSelect={this.openHeading}
+                    />
+                    <Menu.Item
+                        title="Course"
+                        value={manager.courseText}
+                        onSelect={this.openCourse}
+                    />
+                    <Menu.Item title="PFD" icon={`${IMAGES}/PFD.png`} onSelect={this.openPfd} />
+                </Menu>
+
+                <ValueSelectOverlay
+                    title="Select Heading"
+                    value={manager.headingText}
+                    active={this.headingActive}
+                />
+                <ValueSelectOverlay
+                    title="Select Course"
+                    value={manager.courseText}
+                    active={this.courseActive}
+                />
             </>
         )
-    }
-}
-
-export class AS5_MFD_HSI extends NavSystemElement {
-    readonly hsiComponentSub = Subject.create<HSIComponent | null>(null)
-
-    init(_root: HTMLElement): void {}
-    onEnter(): void {}
-    onExit(): void {}
-    onUpdate(_deltaTime: number): void {}
-
-    onEvent(_event: string): void {
-        this.hsiComponentSub.get()?.onEvent(_event)
-    }
-}
-
-export class AS5_MFD extends NavSystemPage {
-    declare gps: AS5
-
-    readonly hsi = new AS5_MFD_HSI()
-
-    constructor() {
-        super('MFD', 'MFD', null)
-        this.element = new NavSystemElementGroup([this.hsi])
-    }
-
-    init(): void {
-        super.init()
-        this.defaultMenu = this.buildDefaultMenu()
-    }
-
-    private buildDefaultMenu(): ContextualMenuElementData[] {
-        const gps = this.gps
-        return [
-            {
-                name: 'Back',
-                callback: () => gps.SwitchToInteractionState(0),
-                isInactive: () => false,
-                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/BACK_ARROW.png',
-            },
-            {
-                name: 'Heading',
-                callback: () => gps.menuHeadingEnter(),
-                isInactive: () => false,
-                value: gps.menuHeadingTextSub,
-            },
-            {
-                name: 'Course',
-                callback: () => gps.menuCrsEnter(),
-                isInactive: () => false,
-                value: gps.menuCourseTextSub,
-            },
-            {
-                name: 'PFD',
-                callback: () => gps.SwitchToPageName('Main', 'PFD'),
-                isInactive: () => false,
-                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/PFD.png',
-            },
-            {
-                name: 'Setup',
-                callback: () => gps.SwitchToPageName('Main', 'Setup'),
-                isInactive: () => false,
-                imageSrc: '/Pages/VCockpit/Instruments/NavSystems/AS5/Images/SETUP.png',
-            },
-        ]
     }
 }

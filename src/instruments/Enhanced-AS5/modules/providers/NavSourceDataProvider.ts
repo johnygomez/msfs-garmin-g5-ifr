@@ -8,7 +8,6 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { VerticalDeviationMode } from '../common/VerticalDeviationIndicator'
-import { AltimeterSubjects } from '../pfd/AltimeterKnob'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { G5NavdataEvents } from './GpsPhaseSource'
@@ -19,6 +18,16 @@ export interface CDISubjects {
     cdiSource: Subscribable<number>
     cdiDeviation: Subscribable<number>
     cdiVisible: Subscribable<boolean>
+}
+
+/**
+ * Vertical-deviation guidance shown beside the altimeter. Altitude/baro/vertical-speed
+ * are consumed directly from the EventBus by `AltimeterComponent`; only the vertical
+ * deviation is threaded through as props.
+ */
+export interface AltimeterSubjects {
+    verticalDeviationMode: Subscribable<VerticalDeviationMode>
+    verticalDeviationValue: Subscribable<number>
 }
 
 interface VerticalGuidance {

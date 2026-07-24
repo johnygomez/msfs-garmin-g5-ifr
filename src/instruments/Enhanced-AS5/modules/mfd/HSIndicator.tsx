@@ -851,7 +851,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         super.destroy()
     }
 
-    /** Handles the CRS/BRG/CDI/DME hardware knobs and softkeys routed by the NavSystem. */
+    /** Handles the CRS/BRG/CDI/DME hardware knobs and softkeys routed by the MFD page. */
     onEvent(event: string): void {
         if (this.props.noAffectSimRadioNav) return
 
