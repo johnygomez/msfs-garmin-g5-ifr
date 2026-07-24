@@ -64,7 +64,6 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
 
     private readonly headingActive = this.activeOverlay.map(overlay => overlay === 'heading')
     private readonly altitudeActive = this.activeOverlay.map(overlay => overlay === 'altitude')
-    private readonly pitchValue = Subject.create('-----°')
 
     private readonly closeMenu = (): void => this.menu.instance.close()
     private readonly openHeading = (): void => this.openOverlay('heading')
@@ -236,7 +235,6 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                         value={manager.altitudeText}
                         onSelect={this.openAltitude}
                     />
-                    <Menu.Item title="Pitch" value={this.pitchValue} inactive />
                     <Menu.Item title="MFD" icon={`${IMAGES}/MFD.png`} onSelect={this.openMfd} />
                 </Menu>
 

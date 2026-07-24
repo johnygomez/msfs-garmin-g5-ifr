@@ -5,7 +5,6 @@ import {
     GarminPrimaryFlightPlanRouteLoader,
     GarminPrimaryFlightPlanRouteProvider,
     LNavDataEvents,
-    NavdataComputer,
 } from '@microsoft/msfs-garminsdk'
 import {
     ConsumerSubject,
@@ -57,7 +56,6 @@ export class NavdataStack {
     private readonly planner: FlightPlanner
     private readonly fms: Fms
     private readonly lnav: LNavComputer
-    private readonly navdata: NavdataComputer
     private readonly routeSync = new GarminFlightPlanRouteSyncManager()
     private readonly publisher: Publisher<G5NavdataEvents>
     private readonly navdataLabel: ConsumerValue<CDIScaleLabel>
@@ -81,7 +79,6 @@ export class NavdataStack {
         this.planner = FlightPlanner.getPlanner(bus, this.calculator)
         this.fms = new Fms(true, bus, this.planner, undefined, { facLoader: this.facLoader })
         this.lnav = new LNavComputer(0, bus, this.planner, undefined, {})
-        this.navdata = new NavdataComputer(bus, this.planner, this.facLoader)
         this.navdataLabel = ConsumerValue.create(
             bus.getSubscriber<LNavDataEvents>().on('lnavdata_cdi_scale_label'),
             CDIScaleLabel.Oceanic

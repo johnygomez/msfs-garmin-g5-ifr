@@ -19,12 +19,13 @@
     "typescript/ban-ts-comment": "error",
     "typescript/explicit-function-return-type": "off",
     "typescript/explicit-module-boundary-types": "off",
+    "no-unused-private-class-members": "error",
     "eslint/no-unused-vars": [
-      "warn",
+      "error",
       {
         "argsIgnorePattern": "^_",
         "caughtErrorsIgnorePattern": "^_",
-        "varsIgnorePattern": "^FSComponent$"
+        "varsIgnorePattern": "^(FSComponent$|_)"
       }
     ]
   },
