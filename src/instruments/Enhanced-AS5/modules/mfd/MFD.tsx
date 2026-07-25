@@ -4,6 +4,7 @@ import {
     DisplayComponent,
     EventBus,
     FSComponent,
+    MappedSubscribable,
     MappedSubject,
     Subject,
     Subscribable,
@@ -109,14 +110,16 @@ class WaypointDistanceInfo extends DisplayComponent<WaypointDistanceInfoProps> {
     private readonly nav2HasDme = ConsumerSubject.create(this.nav.on('nav2_has_dme'), false).pause()
     private readonly nav2Dme = ConsumerSubject.create(this.nav.on('nav2_dme'), 0).pause()
 
-    private readonly mode = this.props.navSource.map(source => (source === 'GPS' ? 'GPS' : 'VOR'))
+    private readonly mode = this.props.navSource.map(source =>
+        source === NavSource.GPS ? NavSource.GPS : 'VOR'
+    )
 
     private readonly distanceText = MappedSubject.create(
         ([source, gpsActive, gpsDistance, nav1HasDme, nav1Dme, nav2HasDme, nav2Dme]) => {
             switch (source) {
-                case 'NAV1':
+                case NavSource.Nav1:
                     return nav1HasDme ? fastToFixed(nav1Dme, 1) : '---'
-                case 'NAV2':
+                case NavSource.Nav2:
                     return nav2HasDme ? fastToFixed(nav2Dme, 1) : '---'
                 default:
                     return gpsActive ? fastToFixed(gpsDistance, 1) : '---'
@@ -170,6 +173,7 @@ export interface MfdContentProps extends ComponentProps {
     switchPage: (id: PageId) => void
     altimeter: AltimeterSubjects
     navSource: Subscribable<NavSource>
+    cdiVisible: Subscribable<boolean>
 }
 
 export class MfdContent extends DisplayComponent<MfdContentProps> implements AvionicsPage {
@@ -180,15 +184,36 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
 
     readonly knobUnit = Subject.create(KnobValueUnit.Degrees)
 
-    readonly knobValue = MappedSubject.create(
-        ([overlay, heading, course]) => (overlay === 'course' ? course : heading),
-        this.activeOverlay,
-        this.props.manager.selectedHeading,
-        this.props.manager.selectedCourse
-    )
+    readonly knobValue: MappedSubject<[MfdOverlay | null, number, number], number>
+    private readonly headingActive: MappedSubscribable<boolean>
+    private readonly courseActive: MappedSubscribable<boolean>
 
-    private readonly headingActive = this.activeOverlay.map(overlay => overlay === 'heading')
-    private readonly courseActive = this.activeOverlay.map(overlay => overlay === 'course')
+    constructor(props: MfdContentProps) {
+        super(props)
+
+        this.knobValue = MappedSubject.create(
+            ([overlay, heading, course]) => (overlay === 'course' ? course : heading),
+            this.activeOverlay,
+            this.props.manager.selectedHeading,
+            this.props.manager.selectedCourse
+        ).pause()
+
+        this.headingActive = this.activeOverlay.map(overlay => overlay === 'heading').pause()
+        this.courseActive = this.activeOverlay.map(overlay => overlay === 'course').pause()
+    }
+
+    onAfterRender(): void {
+        this.knobValue.resume()
+        this.headingActive.resume()
+        this.courseActive.resume()
+    }
+
+    destroy(): void {
+        this.knobValue.destroy()
+        this.headingActive.destroy()
+        this.courseActive.destroy()
+        super.destroy()
+    }
 
     private readonly setHsi = (instance: HSIComponent | null): void => this.hsi.set(instance)
     private readonly closeMenu = (): void => this.menu.instance.close()
@@ -265,12 +290,15 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     }
 
     render(): VNode {
-        const { bus, manager, altimeter, navSource } = this.props
+        const { bus, manager, altimeter, navSource, cdiVisible } = this.props
+
         return (
             <>
                 <div id="HSICompass">
                     <HSIComponent
                         bus={bus}
+                        activeSource={navSource}
+                        cdiVisible={cdiVisible}
                         noCenterText={false}
                         noBackground={false}
                         noAffectSimRadioNav={false}
@@ -304,6 +332,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                         title="Course"
                         value={manager.courseText}
                         onSelect={this.openCourse}
+                        hidden={navSource.map(source => source === NavSource.GPS)}
                     />
                     <Menu.Item title="PFD" icon={`${IMAGES}/PFD.png`} onSelect={this.openPfd} />
                 </Menu>

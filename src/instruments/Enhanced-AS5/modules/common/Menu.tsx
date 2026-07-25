@@ -2,6 +2,8 @@ import {
     ComponentProps,
     DisplayComponent,
     FSComponent,
+    MappedSubject,
+    MappedSubscribable,
     Subject,
     Subscribable,
     VNode,
@@ -13,19 +15,41 @@ export interface MenuItemProps extends ComponentProps {
     icon?: string
     value?: Subscribable<string>
     inactive?: boolean
+    hidden?: Subscribable<boolean>
 }
 
 /** A single menu entry. Renders its own row; its selected/visible state is driven by the parent {@link Menu}. */
 export class MenuItem extends DisplayComponent<MenuItemProps> {
     readonly inactive = this.props.inactive === true
+    readonly hidden = this.props.hidden ?? Subject.create(false)
 
     private readonly selected = Subject.create(false)
     private readonly visible = Subject.create(true)
 
-    private readonly state = this.selected.map(sel =>
-        this.inactive ? 'Inactive' : sel ? 'Selected' : 'Unselected'
-    )
-    private readonly style = this.visible.map(visible => (visible ? '' : 'display: none;'))
+    private readonly state: MappedSubscribable<string>
+    private readonly style: MappedSubject<[boolean, boolean], string>
+
+    constructor(props: MenuItemProps) {
+        super(props)
+
+        this.state = this.selected
+            .map(sel => (this.inactive ? 'Inactive' : sel ? 'Selected' : 'Unselected'))
+            .pause()
+
+        this.style = MappedSubject.create(
+            ([visible, hidden]) => {
+                if (hidden) return 'display: none;'
+                return visible ? '' : 'display: none;'
+            },
+            this.visible,
+            this.hidden
+        ).pause()
+    }
+
+    onAfterRender(): void {
+        this.state.resume()
+        this.style.resume()
+    }
 
     setSelected(selected: boolean): void {
         this.selected.set(selected)
@@ -73,19 +97,34 @@ export class Menu extends DisplayComponent<MenuProps> {
 
     private readonly cursorIndex = Subject.create(0)
     private readonly displayBeginIndex = Subject.create(0)
-    private readonly state = this.isOpen.map(open => (open ? 'Active' : 'Inactive'))
+    private readonly state: MappedSubscribable<string>
 
     private readonly maxVisible = this.props.maxVisible ?? 4
     private readonly itemNodes = this.collectItemNodes()
     private readonly items = this.itemNodes.map(node => node.instance as MenuItem)
 
-    private readonly sliderCursorStyle = this.displayBeginIndex.map(begin => {
-        const denom = this.items.length - this.maxVisible
-        if (denom <= 0) return ''
-        const heightPercent = (this.maxVisible * 100) / this.items.length
-        const scrollRatio = Math.min(begin / denom, 1)
-        return `height: ${heightPercent}%; top: ${scrollRatio * (100 - heightPercent)}%;`
-    })
+    private readonly sliderCursorStyle: MappedSubscribable<string>
+
+    constructor(props: MenuProps) {
+        super(props)
+
+        this.state = this.isOpen.map(open => (open ? 'Active' : 'Inactive')).pause()
+
+        this.sliderCursorStyle = this.displayBeginIndex
+            .map(begin => {
+                const denom = this.items.length - this.maxVisible
+                if (denom <= 0) return ''
+                const heightPercent = (this.maxVisible * 100) / this.items.length
+                const scrollRatio = Math.min(begin / denom, 1)
+                return `height: ${heightPercent}%; top: ${scrollRatio * (100 - heightPercent)}%;`
+            })
+            .pause()
+    }
+
+    onAfterRender(): void {
+        this.state.resume()
+        this.sliderCursorStyle.resume()
+    }
 
     open(): void {
         this.cursorIndex.set(0)
@@ -149,7 +188,7 @@ export class Menu extends DisplayComponent<MenuProps> {
         do {
             index = (index + direction + count) % count
             steps++
-        } while (this.items[index].inactive && steps < count)
+        } while ((this.items[index].inactive || this.items[index].hidden) && steps < count)
 
         this.cursorIndex.set(index)
         this.scrollToCursor(index)
