@@ -16,6 +16,18 @@
     "jsxFragmentFactory": "FSComponent.Fragment",
     "lib": ["DOM", "DOM.Iterable", "ES2017"],
     "baseUrl": ".",
+    "types": [
+      "@microsoft/msfs-types/pages/vcockpit/instruments/shared/baseinstrument",
+      "@microsoft/msfs-types/pages/vcockpit/instruments/shared/utils/xmllogic",
+      "@microsoft/msfs-types/pages/vcockpit/instruments/shared/flightelements/flightplanmanager",
+      "@microsoft/msfs-types/js/simvar",
+      "@microsoft/msfs-types/js/simplane",
+      "@microsoft/msfs-types/js/avionics",
+      "@microsoft/msfs-types/js/common",
+      "@microsoft/msfs-types/js/netbingmap",
+      "@microsoft/msfs-types/js/types",
+      "@microsoft/msfs-types/pages/vcockpit/core/vcockpit"
+    ],
     "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*"],
