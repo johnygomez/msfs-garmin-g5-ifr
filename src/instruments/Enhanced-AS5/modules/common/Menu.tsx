@@ -24,10 +24,9 @@ export class MenuItem extends DisplayComponent<MenuItemProps> {
     readonly hidden = this.props.hidden ?? Subject.create(false)
 
     private readonly selected = Subject.create(false)
-    private readonly visible = Subject.create(true)
 
     private readonly state: MappedSubscribable<string>
-    private readonly style: MappedSubject<[boolean, boolean], string>
+    private readonly style: MappedSubject<[boolean], string>
 
     constructor(props: MenuItemProps) {
         super(props)
@@ -37,11 +36,7 @@ export class MenuItem extends DisplayComponent<MenuItemProps> {
             .pause()
 
         this.style = MappedSubject.create(
-            ([visible, hidden]) => {
-                if (hidden) return 'display: none;'
-                return visible ? '' : 'display: none;'
-            },
-            this.visible,
+            ([hidden]) => (hidden ? 'display: none;' : ''),
             this.hidden
         ).pause()
     }
@@ -53,10 +48,6 @@ export class MenuItem extends DisplayComponent<MenuItemProps> {
 
     setSelected(selected: boolean): void {
         this.selected.set(selected)
-    }
-
-    setVisible(visible: boolean): void {
-        this.visible.set(visible)
     }
 
     destroy(): void {
@@ -95,13 +86,17 @@ export class Menu extends DisplayComponent<MenuProps> {
 
     readonly isOpen = Subject.create(false)
 
-    private readonly cursorIndex = Subject.create(0)
-    private readonly displayBeginIndex = Subject.create(0)
-    private readonly state: MappedSubscribable<string>
-
     private readonly maxVisible = this.props.maxVisible ?? 4
+    private readonly cursorMin = Subject.create(0)
+    private readonly cursorMax = Subject.create(this.maxVisible - 1)
+    private readonly cursorIndex = Subject.create(0)
+    private readonly state: MappedSubscribable<string>
+    private readonly scrollTransform = Subject.create('')
+    private readonly activeSlider: MappedSubscribable<'Active' | 'Inactive'>
+
     private readonly itemNodes = this.collectItemNodes()
     private readonly items = this.itemNodes.map(node => node.instance as MenuItem)
+    private readonly visibleItems: MappedSubject<[boolean[]], MenuItem[]>
 
     private readonly sliderCursorStyle: MappedSubscribable<string>
 
@@ -109,35 +104,62 @@ export class Menu extends DisplayComponent<MenuProps> {
         super(props)
 
         this.state = this.isOpen.map(open => (open ? 'Active' : 'Inactive')).pause()
+        this.visibleItems = MappedSubject.create(
+            ([...hidden]) => this.items.filter((_, id) => !hidden[id]),
+            ...this.items.map(item => item.hidden)
+        ).pause()
 
-        this.sliderCursorStyle = this.displayBeginIndex
-            .map(begin => {
-                const denom = this.items.length - this.maxVisible
+        this.sliderCursorStyle = MappedSubject.create(
+            ([begin, visibleItems]) => {
+                const denom = visibleItems.length - this.maxVisible
                 if (denom <= 0) return ''
-                const heightPercent = (this.maxVisible * 100) / this.items.length
-                const scrollRatio = Math.min(begin / denom, 1)
-                return `height: ${heightPercent}%; top: ${scrollRatio * (100 - heightPercent)}%;`
-            })
-            .pause()
+                const thumbWidthPercent = (this.maxVisible * 100) / visibleItems.length
+                const scrollFraction = Math.min(begin / denom, 1)
+                const leftPercent = scrollFraction * (100 - thumbWidthPercent)
+                return `width: ${thumbWidthPercent}%; left: ${leftPercent}%;`
+            },
+            this.cursorMin,
+            this.visibleItems
+        ).pause()
+
+        this.activeSlider = MappedSubject.create(
+            ([visibleItems]) => (visibleItems.length > this.maxVisible ? 'Active' : 'Inactive'),
+            this.visibleItems
+        ).pause()
+
+        this.visibleItems.sub(_ => {
+            this.reset()
+        })
     }
 
     onAfterRender(): void {
         this.state.resume()
         this.sliderCursorStyle.resume()
+        this.visibleItems.resume()
+        this.activeSlider.resume()
     }
 
     open(): void {
-        this.cursorIndex.set(0)
-        this.displayBeginIndex.set(0)
+        this.reset()
         this.isOpen.set(true)
-        if (this.items[0]?.inactive) this.moveCursor(1)
-        this.syncItemStates()
     }
 
     destroy(): void {
         this.state.destroy()
         this.sliderCursorStyle.destroy()
+        this.visibleItems.destroy()
+        this.activeSlider.destroy()
         super.destroy()
+    }
+
+    reset(): void {
+        this.cursorIndex.set(0)
+        this.cursorMin.set(0)
+        this.cursorMax.set(this.maxVisible - 1)
+        this.scrollTransform.set('')
+        if (this.items[0]?.inactive) this.moveCursor(1)
+        this.syncItemStates()
+        this.scrollToCursor(this.cursorIndex.get())
     }
 
     close(): void {
@@ -156,7 +178,7 @@ export class Menu extends DisplayComponent<MenuProps> {
                 break
             case 'Knob_Push':
             case 'ENT_Push':
-                this.items[this.cursorIndex.get()]?.select()
+                this.visibleItems.get()[this.cursorIndex.get()]?.select()
                 break
             case 'MENU_Push':
                 this.close()
@@ -180,15 +202,15 @@ export class Menu extends DisplayComponent<MenuProps> {
     }
 
     private moveCursor(direction: 1 | -1): void {
-        const count = this.items.length
+        const visibleItems = this.visibleItems.get()
+        const count = visibleItems.length
         if (count === 0) return
+        if (visibleItems.every(item => item.inactive)) return
 
         let index = this.cursorIndex.get()
-        let steps = 0
         do {
-            index = (index + direction + count) % count
-            steps++
-        } while ((this.items[index].inactive || this.items[index].hidden) && steps < count)
+            index = Math.max(0, Math.min(index + direction, count - 1))
+        } while (visibleItems[index].inactive && index > 0 && index < count - 1)
 
         this.cursorIndex.set(index)
         this.scrollToCursor(index)
@@ -196,27 +218,31 @@ export class Menu extends DisplayComponent<MenuProps> {
     }
 
     private scrollToCursor(index: number): void {
-        let begin = this.displayBeginIndex.get()
-        if (index < begin) begin = index
-        else if (index > begin + this.maxVisible - 1) begin = index - this.maxVisible + 1
-        this.displayBeginIndex.set(begin)
+        if (index < this.cursorMin.get()) {
+            this.cursorMin.set(index)
+            this.cursorMax.set(index + this.maxVisible - 1)
+        } else if (index > this.cursorMax.get()) {
+            this.cursorMax.set(index)
+            this.cursorMin.set(index - this.maxVisible + 1)
+        }
+        const translatePercent = this.cursorMin.get() * (-100 / this.maxVisible)
+        this.scrollTransform.set(`transform: translateX(${translatePercent}%)`)
     }
 
     private syncItemStates(): void {
         const cursor = this.cursorIndex.get()
-        const begin = this.displayBeginIndex.get()
-        this.items.forEach((item, index) => {
+        this.visibleItems.get().forEach((item, index) => {
             item.setSelected(index === cursor)
-            item.setVisible(index >= begin && index < begin + this.maxVisible)
         })
     }
 
     render(): VNode {
-        const hasSlider = this.items.length > this.maxVisible
         return (
             <div id="ContextualMenu" state={this.state}>
-                <div id="ContextualMenuElements">{this.itemNodes}</div>
-                <div id="SliderMenu" state={hasSlider ? 'Active' : 'Inactive'}>
+                <div id="ContextualMenuElements" style={this.scrollTransform}>
+                    {this.itemNodes}
+                </div>
+                <div id="SliderMenu" state={this.activeSlider}>
                     <div id="SliderMenuBackground" />
                     <div id="SliderMenuCursor" style={this.sliderCursorStyle} />
                 </div>

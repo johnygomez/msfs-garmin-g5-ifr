@@ -335,6 +335,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                         hidden={navSource.map(source => source === NavSource.GPS)}
                     />
                     <Menu.Item title="PFD" icon={`${IMAGES}/PFD.png`} onSelect={this.openPfd} />
+                    <Menu.Item title="Setup" icon={`${IMAGES}/SETUP.png`} onSelect={() => {}} />
                 </Menu>
 
                 <ValueSelectOverlay

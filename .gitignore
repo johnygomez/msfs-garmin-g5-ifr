@@ -16,5 +16,6 @@ garmin-g5-enhanced/garmin-g5-enhanced.xml.user
 
 # Agentic AI
 .claude
+.opencode
 .specs/
 AGENTS.md
