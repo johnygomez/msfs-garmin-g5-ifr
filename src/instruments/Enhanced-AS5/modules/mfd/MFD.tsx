@@ -14,6 +14,7 @@ import {
 import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager'
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
 import { Menu } from '../common/Menu'
+import { SubmenuOverlay } from '../common/SubmenuOverlay'
 import { formatDegrees3 } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
@@ -24,7 +25,7 @@ import { HSIComponent } from './HSIndicator'
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
-type MfdOverlay = 'heading' | 'course'
+type MfdOverlay = 'heading' | 'course' | 'setup'
 
 interface SelectedHeadingInfoProps extends ComponentProps {
     bus: EventBus
@@ -178,6 +179,7 @@ export interface MfdContentProps extends ComponentProps {
 
 export class MfdContent extends DisplayComponent<MfdContentProps> implements AvionicsPage {
     private readonly menu = FSComponent.createRef<Menu>()
+    private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
     private readonly hsi = Subject.create<HSIComponent | null>(null)
 
     private readonly activeOverlay = Subject.create<MfdOverlay | null>(null)
@@ -187,6 +189,10 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     readonly knobValue: MappedSubject<[MfdOverlay | null, number, number], number>
     private readonly headingActive: MappedSubscribable<boolean>
     private readonly courseActive: MappedSubscribable<boolean>
+    private readonly setupActive: MappedSubscribable<boolean>
+
+    private readonly bearingPointer1 = Subject.create<NavSource>(NavSource.GPS)
+    private readonly bearingPointer2 = Subject.create<NavSource>(NavSource.Nav1)
 
     constructor(props: MfdContentProps) {
         super(props)
@@ -200,18 +206,21 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
 
         this.headingActive = this.activeOverlay.map(overlay => overlay === 'heading').pause()
         this.courseActive = this.activeOverlay.map(overlay => overlay === 'course').pause()
+        this.setupActive = this.activeOverlay.map(overlay => overlay === 'setup').pause()
     }
 
     onAfterRender(): void {
         this.knobValue.resume()
         this.headingActive.resume()
         this.courseActive.resume()
+        this.setupActive.resume()
     }
 
     destroy(): void {
         this.knobValue.destroy()
         this.headingActive.destroy()
         this.courseActive.destroy()
+        this.setupActive.destroy()
         super.destroy()
     }
 
@@ -220,6 +229,11 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly openHeading = (): void => this.openOverlay('heading')
     private readonly openCourse = (): void => this.openOverlay('course')
     private readonly openPfd = (): void => this.props.switchPage('PFD')
+    private readonly openSetup = (): void => this.openOverlay('setup')
+    private readonly closeOverlay = (): void => {
+        this.menu.instance.close()
+        this.activeOverlay.set(null)
+    }
 
     get isModalOpen(): boolean {
         return (
@@ -231,7 +245,11 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.hsi.get()?.onEvent(event)
 
         if (this.activeOverlay.get() !== null) {
-            this.onOverlayEvent(event)
+            if (this.setupActive.get()) {
+                this.setupSubmenu.instance.onEvent(event)
+            } else {
+                this.onOverlayEvent(event)
+            }
         } else if (this.menu.instance.isOpen.get()) {
             this.menu.instance.onEvent(event)
         } else {
@@ -317,7 +335,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     />
                 </div>
 
-                <Menu ref={this.menu}>
+                <Menu ref={this.menu} onLongPush={this.closeOverlay}>
                     <Menu.Item
                         title="Back"
                         icon={`${IMAGES}/BACK_ARROW.png`}
@@ -335,7 +353,11 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                         hidden={navSource.map(source => source === NavSource.GPS)}
                     />
                     <Menu.Item title="PFD" icon={`${IMAGES}/PFD.png`} onSelect={this.openPfd} />
-                    <Menu.Item title="Setup" icon={`${IMAGES}/SETUP.png`} onSelect={() => {}} />
+                    <Menu.Item
+                        title="Setup"
+                        icon={`${IMAGES}/SETUP.png`}
+                        onSelect={this.openSetup}
+                    />
                 </Menu>
 
                 <ValueSelectOverlay
@@ -348,6 +370,24 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     value={manager.courseText}
                     active={this.courseActive}
                 />
+
+                <SubmenuOverlay
+                    title="Setup"
+                    active={this.setupActive}
+                    ref={this.setupSubmenu}
+                    onLongPush={this.closeOverlay}
+                >
+                    <SubmenuOverlay.item
+                        title="Bearing Pointer 1"
+                        onSelect={() => {}}
+                        value={this.bearingPointer1}
+                    />
+                    <SubmenuOverlay.item
+                        title="Bearing Pointer 2"
+                        onSelect={() => {}}
+                        value={this.bearingPointer2}
+                    />
+                </SubmenuOverlay>
             </>
         )
     }

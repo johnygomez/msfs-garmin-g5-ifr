@@ -79,6 +79,7 @@ export class MenuItem extends DisplayComponent<MenuItemProps> {
 
 interface MenuProps extends ComponentProps {
     maxVisible?: number
+    onLongPush?: () => void
 }
 
 export class Menu extends DisplayComponent<MenuProps> {
@@ -182,6 +183,9 @@ export class Menu extends DisplayComponent<MenuProps> {
                 break
             case 'MENU_Push':
                 this.close()
+                break
+            case 'Knob_Long_Push':
+                this.props.onLongPush?.()
                 break
         }
     }
