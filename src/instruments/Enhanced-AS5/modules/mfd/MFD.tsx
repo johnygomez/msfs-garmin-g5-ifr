@@ -13,6 +13,7 @@ import {
 
 import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager'
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
+import { DropdownOverlay } from '../common/DropdownOverlay'
 import { Menu } from '../common/Menu'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
 import { formatDegrees3 } from '../common/Utils'
@@ -25,7 +26,10 @@ import { HSIComponent } from './HSIndicator'
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
-type MfdOverlay = 'heading' | 'course' | 'setup'
+type MfdOverlay = 'heading' | 'course' | 'setup' | 'bp-1' | 'bp-2'
+
+const BEARING_POINTERS = ['NONE', 'GPS', 'VLOC1', 'VLOC2']
+type BearingPointerValue = (typeof BEARING_POINTERS)[number]
 
 interface SelectedHeadingInfoProps extends ComponentProps {
     bus: EventBus
@@ -180,6 +184,8 @@ export interface MfdContentProps extends ComponentProps {
 export class MfdContent extends DisplayComponent<MfdContentProps> implements AvionicsPage {
     private readonly menu = FSComponent.createRef<Menu>()
     private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
+    private readonly bp1Selector = FSComponent.createRef<DropdownOverlay<BearingPointerValue>>()
+    private readonly bp2Selector = FSComponent.createRef<DropdownOverlay<BearingPointerValue>>()
     private readonly hsi = Subject.create<HSIComponent | null>(null)
 
     private readonly activeOverlay = Subject.create<MfdOverlay | null>(null)
@@ -190,9 +196,11 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly headingActive: MappedSubscribable<boolean>
     private readonly courseActive: MappedSubscribable<boolean>
     private readonly setupActive: MappedSubscribable<boolean>
+    private readonly bearingPointerSelector1Active: MappedSubscribable<boolean>
+    private readonly bearingPointerSelector2Active: MappedSubscribable<boolean>
 
-    private readonly bearingPointer1 = Subject.create<NavSource>(NavSource.GPS)
-    private readonly bearingPointer2 = Subject.create<NavSource>(NavSource.Nav1)
+    private readonly bearingPointer1 = Subject.create<BearingPointerValue>('NONE')
+    private readonly bearingPointer2 = Subject.create<BearingPointerValue>('GPS')
 
     constructor(props: MfdContentProps) {
         super(props)
@@ -207,6 +215,12 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.headingActive = this.activeOverlay.map(overlay => overlay === 'heading').pause()
         this.courseActive = this.activeOverlay.map(overlay => overlay === 'course').pause()
         this.setupActive = this.activeOverlay.map(overlay => overlay === 'setup').pause()
+        this.bearingPointerSelector1Active = this.activeOverlay
+            .map(overlay => overlay === 'bp-1')
+            .pause()
+        this.bearingPointerSelector2Active = this.activeOverlay
+            .map(overlay => overlay === 'bp-2')
+            .pause()
     }
 
     onAfterRender(): void {
@@ -214,6 +228,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.headingActive.resume()
         this.courseActive.resume()
         this.setupActive.resume()
+        this.bearingPointerSelector1Active.resume()
+        this.bearingPointerSelector2Active.resume()
     }
 
     destroy(): void {
@@ -221,6 +237,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.headingActive.destroy()
         this.courseActive.destroy()
         this.setupActive.destroy()
+        this.bearingPointerSelector1Active.destroy()
+        this.bearingPointerSelector2Active.destroy()
         super.destroy()
     }
 
@@ -230,9 +248,20 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly openCourse = (): void => this.openOverlay('course')
     private readonly openPfd = (): void => this.props.switchPage('PFD')
     private readonly openSetup = (): void => this.openOverlay('setup')
-    private readonly closeOverlay = (): void => {
-        this.menu.instance.close()
-        this.activeOverlay.set(null)
+    private readonly openBP1 = (): void => this.openOverlay('bp-1')
+    private readonly openBP2 = (): void => this.openOverlay('bp-2')
+    private readonly closeOverlays = (): void => this.closeModals()
+    private readonly onBearing1Selected = (source?: BearingPointerValue) => {
+        if (source !== undefined && source !== null) {
+            this.bearingPointer1.set(source)
+        }
+        this.closeModals()
+    }
+    private readonly onBearing2Selected = (source?: BearingPointerValue) => {
+        if (source !== undefined && source !== null) {
+            this.bearingPointer2.set(source)
+        }
+        this.closeModals()
     }
 
     get isModalOpen(): boolean {
@@ -241,25 +270,35 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         )
     }
 
+    closeModals(): void {
+        this.menu.instance.close()
+        this.activeOverlay.set(null)
+    }
+
     onEvent(event: string): void {
         this.hsi.get()?.onEvent(event)
 
         if (this.activeOverlay.get() !== null) {
-            if (this.setupActive.get()) {
-                this.setupSubmenu.instance.onEvent(event)
-            } else {
-                this.onOverlayEvent(event)
+            switch (this.activeOverlay.get()) {
+                case 'heading':
+                case 'course':
+                    this.onOverlayEvent(event)
+                    break
+                case 'setup':
+                    this.setupSubmenu.instance.onEvent(event)
+                    break
+                case 'bp-1':
+                    this.bp1Selector.instance.onEvent(event)
+                    break
+                case 'bp-2':
+                    this.bp2Selector.instance.onEvent(event)
+                    break
             }
         } else if (this.menu.instance.isOpen.get()) {
             this.menu.instance.onEvent(event)
         } else {
             this.onIdleEvent(event)
         }
-    }
-
-    closeModals(): void {
-        this.menu.instance.close()
-        this.activeOverlay.set(null)
     }
 
     private onIdleEvent(event: string): void {
@@ -335,7 +374,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     />
                 </div>
 
-                <Menu ref={this.menu} onLongPush={this.closeOverlay}>
+                <Menu ref={this.menu} onLongPush={this.closeOverlays}>
                     <Menu.Item
                         title="Back"
                         icon={`${IMAGES}/BACK_ARROW.png`}
@@ -375,19 +414,39 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     title="Setup"
                     active={this.setupActive}
                     ref={this.setupSubmenu}
-                    onLongPush={this.closeOverlay}
+                    onLongPush={this.closeOverlays}
                 >
                     <SubmenuOverlay.item
                         title="Bearing Pointer 1"
-                        onSelect={() => {}}
+                        onSelect={this.openBP1}
                         value={this.bearingPointer1}
                     />
                     <SubmenuOverlay.item
                         title="Bearing Pointer 2"
-                        onSelect={() => {}}
+                        onSelect={this.openBP2}
                         value={this.bearingPointer2}
                     />
                 </SubmenuOverlay>
+
+                <DropdownOverlay
+                    ref={this.bp1Selector}
+                    title="Bearing Pointer 1"
+                    selected={this.bearingPointer1}
+                    options={BEARING_POINTERS}
+                    active={this.bearingPointerSelector1Active}
+                    onSelected={this.onBearing1Selected}
+                    onLongPush={this.closeOverlays}
+                />
+
+                <DropdownOverlay
+                    ref={this.bp2Selector}
+                    title="Bearing Pointer 2"
+                    selected={this.bearingPointer2}
+                    options={BEARING_POINTERS}
+                    active={this.bearingPointerSelector2Active}
+                    onSelected={this.onBearing2Selected}
+                    onLongPush={this.closeOverlays}
+                />
             </>
         )
     }

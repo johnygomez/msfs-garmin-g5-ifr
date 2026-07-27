@@ -666,6 +666,57 @@ as5-element #SubmenuOverlay #SubmenuOverlayItems .SubmenuItem .SubmenuItemValue 
 }
 as5-element #SubmenuOverlay #SubmenuOverlayItems .SubmenuItem[state='Selected'] .SubmenuItemValue {
     border-color: var(--cyan);
+    border-width: 2px;
+}
+as5-element .DropdownOverlay {
+    position: absolute;
+    top: 30%;
+    left: 25%;
+    width: 50%;
+    height: auto;
+    border: 2px solid var(--light-grey);
+    border-radius: 4px;
+    background-color: var(--black);
+    color: var(--white);
+    font-family: 'OpenSans-Bold';
+    z-index: 20;
+    font-size: 1em;
+}
+as5-element .DropdownOverlay[state='Inactive'] {
+    visibility: hidden;
+}
+as5-element .DropdownOverlay .DropdownTitle {
+    font-size: 1.2em;
+    text-align: center;
+    height: 1.5em;
+    background: linear-gradient(to bottom, var(--dark-grey), var(--black) 30%);
+}
+as5-element .DropdownOverlay .DropdownOptionsContainer {
+    height: 6em;
+    width: 95%;
+    overflow: hidden;
+    margin: 3%;
+}
+as5-element .DropdownOverlay .DropdownOptions {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    font-size: 1.5em;
+}
+as5-element .DropdownOverlay .DropdownOptions .DropdownOption {
+    height: 2em;
+    width: 100%;
+    padding: 0 0.5em;
+    font-size: 1em;
+    line-height: 2em;
+    text-align: left;
+    border: 1px solid var(--light-grey);
+    border-collapse: collapse;
+}
+as5-element .DropdownOverlay .DropdownOptions .DropdownOption[state='Selected'] {
+    border-color: var(--cyan);
+    border-width: 2px;
 }
 
 /* PFD Altimeter styles */
