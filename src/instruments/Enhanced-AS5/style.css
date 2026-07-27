@@ -445,7 +445,7 @@ as5-element #PageContainer #MFD #Infos #WaypointDistance {
     font-size: 20px;
 }
 as5-element #PageContainer #MFD #Infos #WaypointDistance #WaypointDistanceValue {
-    font-size: 30px;
+    font-size: 25px;
     line-height: 1;
     color: magenta;
 }

@@ -15,20 +15,12 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
+import { BearingPointerValue } from '../common/Nav'
 import { Colors } from '../common/Utils'
 import { G5NavdataEvents } from '../providers/GpsPhaseSource'
 import { NavSource } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
-
-/** Bearing-pointer source selection (cycled by the BRG knob). */
-enum BearingSource {
-    Off = 0,
-    Nav1 = 1,
-    Nav2 = 2,
-    Gps = 3,
-    Adf = 4,
-}
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, min), max)
@@ -64,7 +56,7 @@ interface BearingState extends BearingReadout {
     source: string
 }
 
-const NO_BEARING: BearingState = { visible: true, source: '', ident: '', dist: '', angle: NaN }
+const NO_BEARING: BearingState = { visible: false, source: '', ident: '', dist: '', angle: NaN }
 
 /** Static compass card: background disc, graduation ticks, and cardinal labels. */
 class CompassCard extends DisplayComponent<{ noBackground: boolean }> {
@@ -236,13 +228,14 @@ class TrackIndicator extends DisplayComponent<TrackIndicatorProps> {
 }
 
 const BEARING_POINTER_PATH: Record<1 | 2, string> = {
-    1: 'M50 96 L50 80 M50 4 L50 20 M50 8 L57 15 M50 8 L43 15',
-    2: 'M50 96 L50 92 M47 80 L47 90 Q50 96 53 90 L53 80 M50 4 L50 8 L57 15 M50 8 L43 15 M47 11 L47 20 M53 11 L53 20',
+    1: 'M50 90 L50 80 M50 10 L50 20 M50 12 L54 17 M50 12 L46 17',
+    2: 'M50 90 L50 86 M48 80 L48 84 Q50 88 52 84 L52 80 M50 10 L50 13 L54 17 M50 13 L46 17 M48 15 L48 20 M52 15 L52 20',
 }
 
 interface BearingPointerProps extends ComponentProps {
     state: Subscribable<BearingState>
     variant: 1 | 2
+    id?: string
 }
 
 /** The rotating bearing pointer that overlays the compass rose. */
@@ -252,7 +245,7 @@ class BearingPointer extends DisplayComponent<BearingPointerProps> {
 
     public render(): VNode {
         return (
-            <g display={this.display} transform={this.transform}>
+            <g display={this.display} transform={this.transform} id={this.props.id ?? ''}>
                 <path
                     d={BEARING_POINTER_PATH[this.props.variant]}
                     stroke={Colors.CYAN}
@@ -453,6 +446,8 @@ export interface HSIComponentProps extends ComponentProps {
     noCenterText: boolean
     noBackground: boolean
     noAffectSimRadioNav: boolean
+    bearing1Source: Subscribable<BearingPointerValue>
+    bearing2Source: Subscribable<BearingPointerValue>
     heading?: Subscribable<number>
     onApi?: (instance: HSIComponent) => void
 }
@@ -488,8 +483,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     private readonly cdiNeedle = this.c(this.nav.on('hsi_cdi_needle'), 0)
 
-    private readonly brg1Source = this.c(this.nav.on('brg1_source'), 0)
-    private readonly brg2Source = this.c(this.nav.on('brg2_source'), 0)
     private readonly dmeSource = this.c(this.nav.on('dme_source'), 1)
     private readonly dmeDisplayed = this.c(this.nav.on('dme_displayed'), false)
 
@@ -624,8 +617,8 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             this.magneticHeading
         )
     )
-    private readonly bearing1 = this.bearingState(this.brg1Source)
-    private readonly bearing2 = this.bearingState(this.brg2Source)
+    private readonly bearing1 = this.bearingState(this.props.bearing1Source)
+    private readonly bearing2 = this.bearingState(this.props.bearing2Source)
 
     private readonly innerCircleVisible = this.track(
         MappedSubject.create(
@@ -775,18 +768,20 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         )
     }
 
-    private bearingState(source: Subscribable<number>): MappedSubscribable<BearingState> {
+    private bearingState(
+        source: Subscribable<BearingPointerValue>
+    ): MappedSubscribable<BearingState> {
         return this.track(
             MappedSubject.create(
                 ([src, n1, n2, gps, adf]): BearingState => {
                     switch (src) {
-                        case BearingSource.Nav1:
+                        case 'VLOC1':
                             return { visible: true, source: NavSource.Nav1, ...n1 }
-                        case BearingSource.Nav2:
+                        case 'VLOC2':
                             return { visible: true, source: NavSource.Nav2, ...n2 }
-                        case BearingSource.Gps:
+                        case 'GPS':
                             return { visible: true, source: NavSource.GPS, ...gps }
-                        case BearingSource.Adf:
+                        case 'ADF':
                             return { visible: true, source: 'ADF', ...adf }
                         default:
                             return NO_BEARING
@@ -814,7 +809,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         super.destroy()
     }
 
-    /** Handles the CRS/BRG/CDI/DME hardware knobs and softkeys routed by the MFD page. */
+    /** Handles the CRS/CDI/DME hardware knobs and softkeys routed by the MFD page. */
     onEvent(event: string): void {
         if (this.props.noAffectSimRadioNav) return
 
@@ -834,14 +829,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                     SimVarValueType.Number,
                     this.dmeDisplayed.get() ? 0 : 1
                 )
-                break
-            case 'SoftKeys_PFD_BRG1':
-            case 'BRG1Switch':
-                this.cycleBearing('L:PFD_BRG1_Source', this.brg1Source.get())
-                break
-            case 'SoftKeys_PFD_BRG2':
-            case 'BRG2Switch':
-                this.cycleBearing('L:PFD_BRG2_Source', this.brg2Source.get())
                 break
             case 'SoftKey_CDI':
             case 'NavSourceSwitch':
@@ -888,10 +875,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 (180 + this.nav2.radial.get()) % 360
             )
         }
-    }
-
-    private cycleBearing(lvar: string, current: number): void {
-        SimVar.SetSimVarValue(lvar, SimVarValueType.Number, (current + 1) % 5)
     }
 
     private cycleCdiSource(): void {
@@ -945,8 +928,16 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                     {
                         <>
                             <TrackIndicator trackAngle={this.trackAngle} />
-                            <BearingPointer state={this.bearing1} variant={1} />
-                            <BearingPointer state={this.bearing2} variant={2} />
+                            <BearingPointer
+                                state={this.bearing1}
+                                variant={1}
+                                id="BearingPointer1"
+                            />
+                            <BearingPointer
+                                state={this.bearing2}
+                                variant={2}
+                                id="BearingPointer2"
+                            />
                             <CoursePointer
                                 transform={this.courseTransform}
                                 fill={this.navFill}

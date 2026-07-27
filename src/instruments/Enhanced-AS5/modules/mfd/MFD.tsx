@@ -15,6 +15,7 @@ import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
 import { DropdownOverlay } from '../common/DropdownOverlay'
 import { Menu } from '../common/Menu'
+import { BEARING_POINTERS, BearingPointerValue } from '../common/Nav'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
 import { formatDegrees3 } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
@@ -27,9 +28,6 @@ import { HSIComponent } from './HSIndicator'
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
 type MfdOverlay = 'heading' | 'course' | 'setup' | 'bp-1' | 'bp-2'
-
-const BEARING_POINTERS = ['NONE', 'GPS', 'VLOC1', 'VLOC2']
-type BearingPointerValue = (typeof BEARING_POINTERS)[number]
 
 interface SelectedHeadingInfoProps extends ComponentProps {
     bus: EventBus
@@ -200,7 +198,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly bearingPointerSelector2Active: MappedSubscribable<boolean>
 
     private readonly bearingPointer1 = Subject.create<BearingPointerValue>('NONE')
-    private readonly bearingPointer2 = Subject.create<BearingPointerValue>('GPS')
+    private readonly bearingPointer2 = Subject.create<BearingPointerValue>('VLOC2')
 
     constructor(props: MfdContentProps) {
         super(props)
@@ -355,6 +353,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     <HSIComponent
                         bus={bus}
                         activeSource={navSource}
+                        bearing1Source={this.bearingPointer1}
+                        bearing2Source={this.bearingPointer2}
                         cdiVisible={cdiVisible}
                         noCenterText={false}
                         noBackground={false}

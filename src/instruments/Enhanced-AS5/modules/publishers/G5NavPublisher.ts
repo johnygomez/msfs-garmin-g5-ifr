@@ -81,10 +81,6 @@ export interface G5NavEvents {
     ap_appr_hold: boolean
     ap_approach_type: number
 
-    // ---- Bearing sources (L: vars) ----
-    brg1_source: number
-    brg2_source: number
-
     // ---- DME (L: vars) ----
     dme_source: number
     dme_displayed: boolean
@@ -162,10 +158,6 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     // Autopilot
     ['ap_appr_hold', { name: 'AUTOPILOT APPROACH HOLD', type: SimVarValueType.Bool }],
     ['ap_approach_type', { name: 'AUTOPILOT APPROACH TYPE', type: SimVarValueType.Number }],
-
-    // Bearing sources
-    ['brg1_source', { name: 'L:PFD_BRG1_Source', type: SimVarValueType.Number }],
-    ['brg2_source', { name: 'L:PFD_BRG2_Source', type: SimVarValueType.Number }],
 
     // DME
     ['dme_source', { name: 'L:Glasscockpit_DmeSource', type: SimVarValueType.Number }],
