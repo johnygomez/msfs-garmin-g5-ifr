@@ -452,6 +452,29 @@ as5-element #PageContainer #MFD #Infos #WaypointDistance #WaypointDistanceValue 
 as5-element #PageContainer #MFD #Infos #WaypointDistance #WaypointDistanceValue[mode='VOR'] {
     color: lime;
 }
+as5-element #PageContainer #MFD #Infos #DTK {
+    position: absolute;
+    width: 20%;
+    height: 32px;
+    left: -1px;
+    bottom: 0px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border: solid 2px var(--light-grey);
+    font-family: 'OpenSans-Bold';
+}
+as5-element #PageContainer #MFD #Infos #DTK #DTKLabel {
+    font-size: 16px;
+    color: var(--white);
+    align-self: center;
+}
+as5-element #PageContainer #MFD #Infos #DTK #DTKValue {
+    font-size: 26px;
+    color: var(--magenta);
+    align-self: center;
+}
 as5-element #ContextualMenu {
     position: absolute;
     bottom: 0;

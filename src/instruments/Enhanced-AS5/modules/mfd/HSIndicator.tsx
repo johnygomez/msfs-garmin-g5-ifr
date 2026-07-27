@@ -266,6 +266,7 @@ class BearingPointer extends DisplayComponent<BearingPointerProps> {
 interface BearingInfoPanelProps extends ComponentProps {
     state: Subscribable<BearingState>
     side: 'left' | 'right'
+    id?: string
 }
 
 /** The fixed corner panel listing a bearing pointer's source, ident, and distance. */
@@ -281,7 +282,7 @@ class BearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
 
     private renderLeft(): VNode {
         return (
-            <g display={this.display}>
+            <g display={this.display} id={this.props.id ?? ''}>
                 <path d={textZonePath(-0.6, -1.1, -28)} fill={Colors.PFD_BOX_BG} />
                 <text fill={Colors.WHITE} x="-27" y="88" font-size="6" text-anchor="start">
                     {this.dist}
@@ -981,8 +982,16 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                             ident={this.dmeIdent}
                             dist={this.dmeDist}
                         />
-                        <BearingInfoPanel state={this.bearing1} side="left" />
-                        <BearingInfoPanel state={this.bearing2} side="right" />
+                        <BearingInfoPanel
+                            state={this.bearing1}
+                            side="left"
+                            id="BearingInfoPanel1"
+                        />
+                        <BearingInfoPanel
+                            state={this.bearing2}
+                            side="right"
+                            id="BearingInfoPanel2"
+                        />
                     </>
                 }
             </svg>

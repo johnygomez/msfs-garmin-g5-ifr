@@ -24,6 +24,7 @@ import { AltimeterSubjects, NavSource } from '../providers/NavSourceDataProvider
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
+import { LeftInfoPanel } from './InfoPanel'
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
@@ -58,38 +59,6 @@ class SelectedHeadingInfo extends DisplayComponent<SelectedHeadingInfoProps> {
                     <path d="M0,0 h50 v30 l-30,20 l30,20 v30 h-50 Z" fill="aqua" />
                 </svg>
                 <div id="SelectedHeadingValue">{this.headingText}</div>
-            </div>
-        )
-    }
-}
-
-interface GroundSpeedInfoProps extends ComponentProps {
-    bus: EventBus
-}
-
-class GroundSpeedInfo extends DisplayComponent<GroundSpeedInfoProps> {
-    private readonly groundSpeed = ConsumerSubject.create(
-        this.props.bus.getSubscriber<G5CustomEvents>().on('ground_speed'),
-        0
-    ).pause()
-
-    private readonly groundSpeedText = this.groundSpeed.map(speed => fastToFixed(speed, 0))
-
-    onAfterRender(): void {
-        this.groundSpeed.resume()
-    }
-
-    destroy(): void {
-        this.groundSpeedText.destroy()
-        this.groundSpeed.destroy()
-        super.destroy()
-    }
-
-    render(): VNode {
-        return (
-            <div id="GroundSpeed">
-                <div>GS KT</div>
-                <div id="GroundSpeedValue">{this.groundSpeedText}</div>
             </div>
         )
     }
@@ -364,7 +333,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                 </div>
                 <div id="Infos">
                     <SelectedHeadingInfo bus={bus} />
-                    <GroundSpeedInfo bus={bus} />
+                    <LeftInfoPanel bus={bus} navSource={navSource} />
                     <WaypointDistanceInfo bus={bus} navSource={navSource} />
                 </div>
                 <div id="VerticalDeviation">
