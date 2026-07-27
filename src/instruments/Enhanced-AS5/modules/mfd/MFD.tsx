@@ -197,8 +197,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly bearingPointerSelector1Active: MappedSubscribable<boolean>
     private readonly bearingPointerSelector2Active: MappedSubscribable<boolean>
 
-    private readonly bearingPointer1 = Subject.create<BearingPointerValue>('NONE')
-    private readonly bearingPointer2 = Subject.create<BearingPointerValue>('VLOC2')
+    private readonly bearingPointer1 = Subject.create<BearingPointerValue>('VLOC1')
+    private readonly bearingPointer2 = Subject.create<BearingPointerValue>('NONE')
 
     constructor(props: MfdContentProps) {
         super(props)

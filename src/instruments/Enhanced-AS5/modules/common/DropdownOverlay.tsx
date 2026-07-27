@@ -49,7 +49,7 @@ interface DropdownOverlayProps<T> extends ComponentProps {
     id?: string
     title: string
     selected: Subscribable<T>
-    options: T[]
+    options: readonly T[]
     active: Subscribable<boolean>
     onSelected: (value?: T) => void
     onLongPush?: () => void
