@@ -36,6 +36,11 @@ export enum Colors {
     AMBER = '#ffdc24',
     /** @css `--focus-blue` */
     FOCUS_BLUE = '#37c0ef',
+    /** @css `--light-grey` */
+    LIGHT_GREY = '#a6a6a6',
+    /** @css `--dark-grey` */
+    DARK_GREY = '#444444',
+    /** @css `--dark-blue` */
 
     // -- Glass-cockpit panel background --
     /** Dark glass-cockpit panel fill. */

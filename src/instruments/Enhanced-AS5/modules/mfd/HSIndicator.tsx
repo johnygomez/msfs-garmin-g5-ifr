@@ -283,13 +283,12 @@ class BearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
     private renderLeft(): VNode {
         return (
             <g display={this.display} id={this.props.id ?? ''}>
-                <path d={textZonePath(-0.6, -1.1, -28)} fill={Colors.PFD_BOX_BG} />
-                <text fill={Colors.WHITE} x="-27" y="88" font-size="6" text-anchor="start">
-                    {this.dist}
-                </text>
-                <text fill={Colors.CYAN} x="-27" y="94" font-size="6" text-anchor="start">
-                    {this.ident}
-                </text>
+                <path
+                    d={textZonePath(-0.6, -1.1, -28)}
+                    fill={Colors.BLACK}
+                    stroke={Colors.LIGHT_GREY}
+                    stroke-width="0.5"
+                />
                 <text fill={Colors.WHITE} x="-27" y="100" font-size="6" text-anchor="start">
                     {this.source}
                 </text>
@@ -319,14 +318,10 @@ class BearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
             <g display={this.display}>
                 <path
                     d={textZonePath(Math.PI + 0.6, Math.PI + 1.1, 128, true)}
-                    fill={Colors.PFD_BOX_BG}
+                    fill={Colors.BLACK}
+                    stroke={Colors.LIGHT_GREY}
+                    stroke-width="0.5"
                 />
-                <text fill={Colors.WHITE} x="127" y="88" font-size="6" text-anchor="end">
-                    {this.dist}
-                </text>
-                <text fill={Colors.CYAN} x="127" y="94" font-size="6" text-anchor="end">
-                    {this.ident}
-                </text>
                 <text fill={Colors.WHITE} x="127" y="100" font-size="6" text-anchor="end">
                     {this.source}
                 </text>
