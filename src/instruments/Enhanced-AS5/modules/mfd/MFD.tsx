@@ -147,6 +147,7 @@ export interface MfdContentProps extends ComponentProps {
     altimeter: AltimeterSubjects
     navSource: Subscribable<NavSource>
     navSourceLabel: Subscribable<NavSourceLabel>
+    selectedCourse: Subscribable<number>
     cdiVisible: Subscribable<boolean>
 }
 
@@ -327,7 +328,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     }
 
     render(): VNode {
-        const { bus, manager, altimeter, navSource, navSourceLabel, cdiVisible } = this.props
+        const { bus, manager, altimeter, navSource, navSourceLabel, selectedCourse, cdiVisible } =
+            this.props
 
         return (
             <>
@@ -350,6 +352,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     <LeftInfoPanel
                         bus={bus}
                         navSource={navSource}
+                        course={selectedCourse}
                         bearing1State={this.bearingPointerProvider.bearing1}
                     />
                     <WaypointDistanceInfo bus={bus} navSource={navSource} />

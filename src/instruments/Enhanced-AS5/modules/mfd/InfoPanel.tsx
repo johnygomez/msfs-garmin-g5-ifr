@@ -1,8 +1,5 @@
 import {
     ComponentProps,
-    Consumer,
-    ConsumerSubject,
-    DisplayComponent,
     EventBus,
     FSComponent,
     MappedSubject,
@@ -12,64 +9,47 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { NavSource, resolveNavSourceLabel } from '../common/Nav'
-import { Colors } from '../common/Utils'
+import { ReactiveComponent } from '../common/Reactive'
+import { Colors, formatDegrees3 } from '../common/Utils'
 import { BearingState } from '../providers/BearingPointerDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 
-const NO_COURSE = '---'
+const NO_COURSE = '---°'
 
-const formatCourse = (course: number): string => fastToFixed(course, 0).padStart(3, '0')
+const formatCourse = (course: number): string =>
+    isNaN(course) ? NO_COURSE : formatDegrees3(course)
+
+const displayStyle = (visible: Subscribable<boolean>): MappedSubscribable<string> =>
+    visible.map(shown => (shown ? '' : 'display: none;'))
 
 interface BearingInfoPanelProps extends ComponentProps {
     bus: EventBus
     state: Subscribable<BearingState>
 }
 
-class LeftBearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
-    private readonly navSourceLabel: MappedSubscribable<string>
-    private readonly nav1loc: ConsumerSubject<boolean>
-    private readonly nav2loc: ConsumerSubject<boolean>
-    private readonly style: MappedSubscribable<string>
+class LeftBearingInfoPanel extends ReactiveComponent<BearingInfoPanelProps> {
+    private readonly nav = this.props.bus.getSubscriber<G5NavEvents>()
 
-    constructor(props: BearingInfoPanelProps) {
-        super(props)
+    private readonly nav1HasLoc = this.consume(this.nav.on('nav1_has_loc'), false)
+    private readonly nav2HasLoc = this.consume(this.nav.on('nav2_has_loc'), false)
 
-        const nav = this.props.bus.getSubscriber<G5NavEvents>()
-        this.nav1loc = ConsumerSubject.create(nav.on('nav1_has_loc'), false).pause()
-        this.nav2loc = ConsumerSubject.create(nav.on('nav2_has_loc'), false).pause()
-        // NOTE: TACAN is not supported for the bearing state
-        this.navSourceLabel = MappedSubject.create(
-            ([state, loc1, loc2]) => resolveNavSourceLabel(state.source, false, loc1, loc2),
-            this.props.state,
-            this.nav1loc,
-            this.nav2loc
-        ).pause()
+    private readonly source = this.track(this.props.state.map(state => state.source))
+    private readonly style = this.track(displayStyle(this.props.state.map(state => state.visible)))
 
-        this.style = MappedSubject.create(
-            ([state]) => (state.visible ? '' : 'display: none;'),
-            this.props.state
-        ).pause()
-    }
-
-    onAfterRender(): void {
-        this.nav1loc.resume()
-        this.nav2loc.resume()
-        this.navSourceLabel.resume()
-        this.style.resume()
-    }
-
-    destroy(): void {
-        this.nav1loc.destroy()
-        this.nav2loc.destroy()
-        this.navSourceLabel.destroy()
-        this.style.destroy()
-        super.destroy()
-    }
+    // A bearing pointer is never TACAN-driven, so the label resolves to VOR/LOC or ADF.
+    private readonly sourceLabel = this.track(
+        MappedSubject.create(
+            ([source, hasLoc1, hasLoc2]) => resolveNavSourceLabel(source, false, hasLoc1, hasLoc2),
+            this.source,
+            this.nav1HasLoc,
+            this.nav2HasLoc
+        )
+    )
 
     render(): VNode {
         return (
-            <div id="BearingInfoPanel" style={this.style ?? ''}>
+            <div id="BearingInfoPanel" style={this.style}>
                 <svg class="LeftBearingInfo-shape" viewBox="0 0 120 60">
                     <path
                         d="M 1 1 H 85 Q 98 30 119 45 V 59 H 1 Z"
@@ -93,7 +73,7 @@ class LeftBearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
                             />
                         </svg>
                     </div>
-                    <div id="BearingSource">{this.navSourceLabel}</div>
+                    <div id="BearingSource">{this.sourceLabel}</div>
                 </div>
             </div>
         )
@@ -101,38 +81,15 @@ class LeftBearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
 }
 
 interface DTKInfoProps extends ComponentProps {
-    bus: EventBus
     active: Subscribable<boolean>
+    desiredTrack: Subscribable<number>
 }
 
-class DTKInfo extends DisplayComponent<DTKInfoProps> {
-    private readonly dtkValue: ConsumerSubject<number>
-    private readonly dtkText: MappedSubscribable<string>
-    private readonly style: MappedSubscribable<string>
-
-    constructor(props: DTKInfoProps) {
-        super(props)
-
-        this.dtkValue = ConsumerSubject.create(
-            this.props.bus.getSubscriber<G5NavEvents>().on('gps_wp_desired_track'),
-            0
-        ).pause()
-        this.dtkText = this.dtkValue.map(value => fastToFixed(value, 0))
-        this.style = this.props.active.map(active => (active ? '' : 'display: none;')).pause()
-    }
-
-    onAfterRender(): void {
-        this.dtkValue.resume()
-        this.dtkText.resume()
-        this.style.resume()
-    }
-
-    destroy(): void {
-        this.dtkValue.destroy()
-        this.dtkText.destroy()
-        this.style.destroy()
-        super.destroy()
-    }
+class DTKInfo extends ReactiveComponent<DTKInfoProps> {
+    private readonly dtkText = this.track(
+        this.props.desiredTrack.map(track => fastToFixed(track, 0))
+    )
+    private readonly style = this.track(displayStyle(this.props.active))
 
     render(): VNode {
         return (
@@ -145,104 +102,21 @@ class DTKInfo extends DisplayComponent<DTKInfoProps> {
 }
 
 interface CRSInfoProps extends ComponentProps {
-    bus: EventBus
     active: Subscribable<boolean>
-    navSource: Subscribable<NavSource>
+    course: Subscribable<number>
 }
 
-class CRSInfo extends DisplayComponent<CRSInfoProps> {
-    private readonly consumers: ConsumerSubject<any>[] = []
-    private readonly derived: MappedSubscribable<any>[] = []
-
-    private readonly tacanDriven: ConsumerSubject<boolean>
-    private readonly crsText: MappedSubscribable<string>
-    private readonly style: MappedSubscribable<string>
-
-    constructor(props: CRSInfoProps) {
-        super(props)
-
-        const nav = this.props.bus.getSubscriber<G5NavEvents>()
-
-        this.tacanDriven = this.consume(nav.on('tacan_drives_nav1'), false)
-
-        this.crsText = this.track(
-            MappedSubject.create(
-                ([source, nav1Course, nav2Course]) => {
-                    switch (source) {
-                        case NavSource.Nav1:
-                            return nav1Course
-                        case NavSource.Nav2:
-                            return nav2Course
-                        default:
-                            return NO_COURSE
-                    }
-                },
-                this.props.navSource,
-                this.navCourseText(1),
-                this.navCourseText(2)
-            )
-        )
-
-        this.style = this.track(this.props.active.map(active => (active ? '' : 'display: none;')))
-    }
-
-    onAfterRender(): void {
-        for (const consumer of this.consumers) {
-            consumer.resume()
-        }
-        for (const subject of this.derived) {
-            subject.resume()
-        }
-    }
-
-    destroy(): void {
-        for (const consumer of this.consumers) {
-            consumer.destroy()
-        }
-        for (const subject of this.derived) {
-            subject.destroy()
-        }
-        super.destroy()
-    }
+class CRSInfo extends ReactiveComponent<CRSInfoProps> {
+    private readonly crsText = this.track(this.props.course.map(formatCourse))
+    private readonly style = this.track(displayStyle(this.props.active))
 
     render(): VNode {
         return (
             <div id="CRS" style={this.style}>
                 <div id="CRSLabel">CRS</div>
-                <div id="CRSValue">{this.crsText}°</div>
+                <div id="CRSValue">{this.crsText}</div>
             </div>
         )
-    }
-
-    /** Resolves a radio's selected course the same way the HSI course pointer does. */
-    private navCourseText(index: 1 | 2): MappedSubscribable<string> {
-        const nav = this.props.bus.getSubscriber<G5NavEvents>()
-        const on = <T,>(topic: keyof G5NavEvents, init: T) =>
-            this.consume(nav.on(topic) as unknown as Consumer<T>, init)
-
-        return this.track(
-            MappedSubject.create(
-                ([tacan, hasNav, hasLoc, localizer, obs, tacanObs]) =>
-                    hasNav ? formatCourse(tacan ? tacanObs : hasLoc ? localizer : obs) : NO_COURSE,
-                this.tacanDriven,
-                on<boolean>(`nav${index}_has_nav`, false),
-                on<boolean>(`nav${index}_has_loc`, false),
-                on<number>(`nav${index}_localizer`, 0),
-                on<number>(`nav${index}_obs`, 0),
-                on<number>(`nav${index}_tacan_obs`, 0)
-            )
-        )
-    }
-
-    private consume<T>(consumer: Consumer<T>, initial: T): ConsumerSubject<T> {
-        const subject = ConsumerSubject.create(consumer, initial).pause()
-        this.consumers.push(subject)
-        return subject
-    }
-
-    private track<T extends MappedSubscribable<any>>(subscribable: T): T {
-        this.derived.push(subscribable.pause())
-        return subscribable
     }
 }
 
@@ -251,34 +125,16 @@ interface GroundSpeedInfoProps extends ComponentProps {
     active: Subscribable<boolean>
 }
 
-class GroundSpeedInfo extends DisplayComponent<GroundSpeedInfoProps> {
-    private readonly groundSpeed: ConsumerSubject<number>
-    private readonly groundSpeedText: MappedSubscribable<string>
-    private readonly style: MappedSubscribable<string>
+class GroundSpeedInfo extends ReactiveComponent<GroundSpeedInfoProps> {
+    private readonly groundSpeed = this.consume(
+        this.props.bus.getSubscriber<G5CustomEvents>().on('ground_speed'),
+        0
+    )
 
-    constructor(props: GroundSpeedInfoProps) {
-        super(props)
-
-        this.groundSpeed = ConsumerSubject.create(
-            this.props.bus.getSubscriber<G5CustomEvents>().on('ground_speed'),
-            0
-        ).pause()
-        this.groundSpeedText = this.groundSpeed.map(speed => fastToFixed(speed, 0)).pause()
-        this.style = this.props.active.map(active => (active ? '' : 'display: none;')).pause()
-    }
-
-    onAfterRender(): void {
-        this.groundSpeed.resume()
-        this.groundSpeedText.resume()
-        this.style.resume()
-    }
-
-    destroy(): void {
-        this.groundSpeed.destroy()
-        this.groundSpeedText.destroy()
-        this.style.destroy()
-        super.destroy()
-    }
+    private readonly groundSpeedText = this.track(
+        this.groundSpeed.map(speed => fastToFixed(speed, 0))
+    )
+    private readonly style = this.track(displayStyle(this.props.active))
 
     render(): VNode {
         return (
@@ -292,74 +148,49 @@ class GroundSpeedInfo extends DisplayComponent<GroundSpeedInfoProps> {
 
 type LeftInfoPanelMode = 'GS' | 'DTK' | 'CRS'
 
-export interface LeftInfoPanelProps extends ComponentProps {
-    navSource: Subscribable<NavSource>
-    bearing1State: Subscribable<BearingState>
-    bus: EventBus
+function resolveMode(source: NavSource, desiredTrack: number): LeftInfoPanelMode {
+    switch (source) {
+        case NavSource.Nav1:
+        case NavSource.Nav2:
+            return 'CRS'
+        case NavSource.GPS:
+            return isNaN(desiredTrack) ? 'GS' : 'DTK'
+        default:
+            return 'GS'
+    }
 }
 
-export class LeftInfoPanel extends DisplayComponent<LeftInfoPanelProps> {
-    private readonly mode: MappedSubscribable<LeftInfoPanelMode>
-    private readonly dtk: ConsumerSubject<number>
+export interface LeftInfoPanelProps extends ComponentProps {
+    bus: EventBus
+    navSource: Subscribable<NavSource>
+    course: Subscribable<number>
+    bearing1State: Subscribable<BearingState>
+}
 
-    private readonly dtkActive: MappedSubscribable<boolean>
-    private readonly crsActive: MappedSubscribable<boolean>
-    private readonly gsActive: MappedSubscribable<boolean>
+export class LeftInfoPanel extends ReactiveComponent<LeftInfoPanelProps> {
+    private readonly desiredTrack = this.consume(
+        this.props.bus.getSubscriber<G5NavEvents>().on('gps_wp_desired_track'),
+        0
+    )
 
-    constructor(props: LeftInfoPanelProps) {
-        super(props)
-
-        const nav = this.props.bus.getSubscriber<G5NavEvents>()
-        this.dtk = ConsumerSubject.create(nav.on('gps_wp_desired_track'), 0).pause()
-        this.mode = MappedSubject.create(
-            ([navSource, dtk]) => this.resolveMode(navSource, dtk),
+    private readonly mode = this.track(
+        MappedSubject.create(
+            params => resolveMode(...params),
             this.props.navSource,
-            this.dtk
-        ).pause()
-        this.dtkActive = this.mode.map(mode => mode === 'DTK').pause()
-        this.crsActive = this.mode.map(mode => mode === 'CRS').pause()
-        this.gsActive = this.mode.map(mode => mode === 'GS').pause()
-    }
+            this.desiredTrack
+        )
+    )
 
-    onAfterRender(): void {
-        this.mode.resume()
-        this.dtk.resume()
-        this.dtkActive.resume()
-        this.crsActive.resume()
-        this.gsActive.resume()
-    }
-
-    destroy(): void {
-        this.mode.destroy()
-        this.dtkActive.destroy()
-        this.crsActive.destroy()
-        this.gsActive.destroy()
-        this.dtk.destroy()
-        super.destroy()
-    }
-
-    private resolveMode(navSrc: NavSource, dtk?: number): LeftInfoPanelMode {
-        switch (navSrc) {
-            case NavSource.Nav1:
-            case NavSource.Nav2:
-                return 'CRS'
-            case NavSource.GPS:
-                return !isNaN(dtk) ? 'DTK' : 'GS'
-            default:
-                return 'GS'
-        }
-    }
+    private readonly dtkActive = this.track(this.mode.map(mode => mode === 'DTK'))
+    private readonly crsActive = this.track(this.mode.map(mode => mode === 'CRS'))
+    private readonly gsActive = this.track(this.mode.map(mode => mode === 'GS'))
 
     render(): VNode {
         return (
             <div id="LeftInfoPanel">
                 <LeftBearingInfoPanel bus={this.props.bus} state={this.props.bearing1State} />
-                <DTKInfo bus={this.props.bus} active={this.dtkActive} />
-                <CRSInfo
-                    bus={this.props.bus}
-                    active={this.crsActive}
-                    navSource={this.props.navSource}
-                />
+                <DTKInfo active={this.dtkActive} desiredTrack={this.desiredTrack} />
+                <CRSInfo active={this.crsActive} course={this.props.course} />
                 <GroundSpeedInfo bus={this.props.bus} active={this.gsActive} />
             </div>
         )

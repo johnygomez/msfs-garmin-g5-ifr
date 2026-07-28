@@ -2,8 +2,6 @@ import { CDIScaleLabel, CdiScaleFormatter } from '@microsoft/msfs-garminsdk'
 import {
     AhrsEvents,
     ComponentProps,
-    Consumer,
-    ConsumerSubject,
     DisplayComponent,
     EventBus,
     FSComponent,
@@ -11,12 +9,12 @@ import {
     MappedSubscribable,
     SimVarValueType,
     Subscribable,
-    Subscription,
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { NavSource, NavSourceLabel } from '../common/Nav'
-import { Colors } from '../common/Utils'
+import { NavRadioIndex, NavSource, NavSourceLabel, resolveNavCourse } from '../common/Nav'
+import { ReactiveComponent } from '../common/Reactive'
+import { Colors, formatDegrees3 } from '../common/Utils'
 import { BearingState } from '../providers/BearingPointerDataProvider'
 import { G5NavdataEvents } from '../providers/GpsPhaseSource'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
@@ -37,13 +35,6 @@ const ASPECT_TRANSFORM = `scale(${SCREEN_ASPECT_CORRECTION}, 1)`
 
 /** The `-28 -15 156 116` design space, widened to hold the pre-stretched geometry. */
 const VIEWBOX = `${-28 * SCREEN_ASPECT_CORRECTION} -15 ${156 * SCREEN_ASPECT_CORRECTION} 116`
-
-/** Formats a heading in degrees as a zero-padded `NNN°` string. */
-function formatHeading(deg: number): string {
-    const rounded = Math.round(deg)
-    const value = rounded === 0 ? 360 : rounded
-    return value.toString().padStart(3, '0') + '°'
-}
 
 /** Boundary of the external text zone drawn behind the corner DME/bearing panels. */
 function textZonePath(beginAngle: number, endAngle: number, xEnd: number, reverse = false): string {
@@ -187,26 +178,10 @@ interface TrackIndicatorProps extends ComponentProps {
     trackAngle: Subscribable<number>
 }
 
-class TrackIndicator extends DisplayComponent<TrackIndicatorProps> {
-    private readonly trackTransform: MappedSubject<[number], string>
-
-    constructor(props: TrackIndicatorProps) {
-        super(props)
-
-        this.trackTransform = MappedSubject.create(
-            ([angle]) => `rotate(${angle}, 50, 50)`,
-            this.props.trackAngle
-        ).pause()
-    }
-
-    public onAfterRender(): void {
-        this.trackTransform.resume()
-    }
-
-    public destroy(): void {
-        this.trackTransform.destroy()
-        super.destroy()
-    }
+class TrackIndicator extends ReactiveComponent<TrackIndicatorProps> {
+    private readonly trackTransform = this.track(
+        this.props.trackAngle.map(angle => `rotate(${angle}, 50, 50)`)
+    )
 
     public render(): VNode {
         return (
@@ -239,9 +214,13 @@ interface BearingPointerProps extends ComponentProps {
 }
 
 /** The rotating bearing pointer that overlays the compass rose. */
-class BearingPointer extends DisplayComponent<BearingPointerProps> {
-    private readonly display = this.props.state.map(s => (s.visible ? 'inherit' : 'none'))
-    private readonly transform = this.props.state.map(s => `rotate(${s.angle}, 50, 50)`)
+class BearingPointer extends ReactiveComponent<BearingPointerProps> {
+    private readonly display = this.track(
+        this.props.state.map(state => (state.visible ? 'inherit' : 'none'))
+    )
+    private readonly transform = this.track(
+        this.props.state.map(state => `rotate(${state.angle}, 50, 50)`)
+    )
 
     public render(): VNode {
         return (
@@ -255,94 +234,7 @@ class BearingPointer extends DisplayComponent<BearingPointerProps> {
             </g>
         )
     }
-
-    public destroy(): void {
-        this.display.destroy()
-        this.transform.destroy()
-        super.destroy()
-    }
 }
-
-// interface BearingInfoPanelProps extends ComponentProps {
-//     state: Subscribable<BearingState>
-//     side: 'left' | 'right'
-//     id?: string
-// }
-
-// /** The fixed corner panel listing a bearing pointer's source, ident, and distance. */
-// class BearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
-//     private readonly display = this.props.state.map(s => (s.visible ? 'inherit' : 'none'))
-//     private readonly dist = this.props.state.map(s => s.dist)
-//     private readonly ident = this.props.state.map(s => s.ident)
-//     private readonly source = this.props.state.map(s => s.source)
-
-//     public render(): VNode {
-//         return this.props.side === 'left' ? this.renderLeft() : this.renderRight()
-//     }
-
-//     private renderLeft(): VNode {
-//         return (
-//             <g display={this.display} id={this.props.id ?? ''}>
-//                 <path
-//                     d={textZonePath(-0.6, -1.1, -28)}
-//                     fill={Colors.BLACK}
-//                     stroke={Colors.LIGHT_GREY}
-//                     stroke-width="0.5"
-//                 />
-//                 <text fill={Colors.WHITE} x="-27" y="100" font-size="6" text-anchor="start">
-//                     {this.source}
-//                 </text>
-//                 <rect x="-5" y="96.875" width="15" height="0.25" fill={Colors.CYAN} />
-//                 <rect
-//                     x="-3"
-//                     y="96.875"
-//                     width="4"
-//                     height="0.25"
-//                     transform="rotate(-45 -3 97)"
-//                     fill={Colors.CYAN}
-//                 />
-//                 <rect
-//                     x="-3"
-//                     y="96.875"
-//                     width="4"
-//                     height="0.25"
-//                     transform="rotate(45 -3 97)"
-//                     fill={Colors.CYAN}
-//                 />
-//             </g>
-//         )
-//     }
-
-//     private renderRight(): VNode {
-//         return (
-//             <g display={this.display}>
-//                 <path
-//                     d={textZonePath(Math.PI + 0.6, Math.PI + 1.1, 128, true)}
-//                     fill={Colors.BLACK}
-//                     stroke={Colors.LIGHT_GREY}
-//                     stroke-width="0.5"
-//                 />
-//                 <text fill={Colors.WHITE} x="127" y="100" font-size="6" text-anchor="end">
-//                     {this.source}
-//                 </text>
-//                 <path
-//                     d="M90 97 L92 97 M105 97 L103 97 L100 100 M103 97 L100 94 M101.5 98.5 L93 98.5 Q90 97 93 95.5 L101.5 95.5"
-//                     stroke={Colors.CYAN}
-//                     stroke-width="0.5"
-//                     fill-opacity="0"
-//                 />
-//             </g>
-//         )
-//     }
-
-//     public destroy(): void {
-//         this.display.destroy()
-//         this.dist.destroy()
-//         this.ident.destroy()
-//         this.source.destroy()
-//         super.destroy()
-//     }
-// }
 
 interface DmePanelProps extends ComponentProps {
     display: Subscribable<string>
@@ -449,38 +341,40 @@ export interface HSIComponentProps extends ComponentProps {
     onApi?: (instance: HSIComponent) => void
 }
 
-export class HSIComponent extends DisplayComponent<HSIComponentProps> {
-    private readonly consumers: ConsumerSubject<any>[] = []
-    private readonly derived: MappedSubscribable<any>[] = []
-    private readonly effects: Subscription[] = []
-
+export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
     private readonly formatPhase = CdiScaleFormatter.create(false)
 
     private readonly nav = this.props.bus.getSubscriber<AhrsEvents & G5CustomEvents & G5NavEvents>()
 
-    private readonly magneticHeading = this.c(this.nav.on('actual_hdg_deg').withPrecision(1), 0)
-    private readonly trackAngle = this.c(this.nav.on('track_angle_magnetic').withPrecision(1), 0)
+    private readonly magneticHeading = this.consume(
+        this.nav.on('actual_hdg_deg').withPrecision(1),
+        0
+    )
+    private readonly trackAngle = this.consume(
+        this.nav.on('track_angle_magnetic').withPrecision(1),
+        0
+    )
     private readonly headingSource: Subscribable<number> =
-        this.props.heading ?? this.c(this.nav.on('ap_heading_selected').withPrecision(1), 0)
+        this.props.heading ?? this.consume(this.nav.on('ap_heading_selected').withPrecision(1), 0)
 
-    private readonly gpsDrivesNav1 = this.c(this.nav.on('gps_drives_nav1'), true)
-    private readonly apprHold = this.c(this.nav.on('ap_appr_hold'), false)
-    private readonly approachType = this.c(this.nav.on('ap_approach_type'), 0)
-    private readonly tacanDriven = this.c(this.nav.on('tacan_drives_nav1'), false)
-    private readonly nav2Available = this.c(this.nav.on('nav2_available'), false)
+    private readonly gpsDrivesNav1 = this.consume(this.nav.on('gps_drives_nav1'), true)
+    private readonly apprHold = this.consume(this.nav.on('ap_appr_hold'), false)
+    private readonly approachType = this.consume(this.nav.on('ap_approach_type'), 0)
+    private readonly tacanDriven = this.consume(this.nav.on('tacan_drives_nav1'), false)
+    private readonly nav2Available = this.consume(this.nav.on('nav2_available'), false)
 
-    private readonly gpsActive = this.c(this.nav.on('gps_active_waypoint'), false)
-    private readonly gpsDesiredTrack = this.c(this.nav.on('gps_wp_desired_track'), 0)
-    private readonly gpsCrossTrack = this.c(this.nav.on('gps_wp_cross_track'), 0)
-    private readonly gpsCdiScaling = this.c(this.nav.on('gps_cdi_scaling'), 0)
-    private readonly gpsObsActive = this.c(this.nav.on('gps_obs_active'), false)
+    private readonly gpsActive = this.consume(this.nav.on('gps_active_waypoint'), false)
+    private readonly gpsDesiredTrack = this.consume(this.nav.on('gps_wp_desired_track'), 0)
+    private readonly gpsCrossTrack = this.consume(this.nav.on('gps_wp_cross_track'), 0)
+    private readonly gpsCdiScaling = this.consume(this.nav.on('gps_cdi_scaling'), 0)
+    private readonly gpsObsActive = this.consume(this.nav.on('gps_obs_active'), false)
 
-    private readonly cdiNeedle = this.c(this.nav.on('hsi_cdi_needle'), 0)
+    private readonly cdiNeedle = this.consume(this.nav.on('hsi_cdi_needle'), 0)
 
-    private readonly dmeSource = this.c(this.nav.on('dme_source'), 1)
-    private readonly dmeDisplayed = this.c(this.nav.on('dme_displayed'), false)
+    private readonly dmeSource = this.consume(this.nav.on('dme_source'), 1)
+    private readonly dmeDisplayed = this.consume(this.nav.on('dme_displayed'), false)
 
-    private readonly cdiScaleLabel = this.c(
+    private readonly cdiScaleLabel = this.consume(
         this.props.bus.getSubscriber<G5NavdataEvents>().on('g5_cdi_scale_label'),
         CDIScaleLabel.Enroute
     )
@@ -521,7 +415,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     private readonly headingBugTransform = this.track(
         this.headingSource.map(h => `rotate(${h}, 50, 50)`)
     )
-    private readonly headingText = this.track(this.magneticHeading.map(formatHeading))
+    private readonly headingText = this.track(this.magneticHeading.map(formatDegrees3))
     private readonly courseTransform = this.track(
         this.displayedCourse.map(c => `rotate(${c}, 50, 50)`)
     )
@@ -603,7 +497,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         super(props)
 
         // Drop GPS coupling when a non-RNAV approach becomes active, so the ILS/VOR drives the CDI.
-        this.effects.push(
+        this.live(
             this.apprHold.sub(hold => {
                 if (
                     !this.props.noAffectSimRadioNav &&
@@ -615,7 +509,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 }
             })
         )
-        this.effects.push(
+        this.live(
             this.dmeSource.sub(src => {
                 if (src === 0 && !this.props.noAffectSimRadioNav) {
                     SimVar.SetSimVarValue('L:Glasscockpit_DmeSource', SimVarValueType.Number, 1)
@@ -624,41 +518,28 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         )
     }
 
-    private c<T>(consumer: Consumer<T>, initial: T): ConsumerSubject<T> {
-        const subject = ConsumerSubject.create(consumer, initial).pause()
-        this.consumers.push(subject)
-        return subject
-    }
-
-    private track<T extends MappedSubscribable<any>>(subscribable: T): T {
-        this.derived.push(subscribable.pause())
-        return subscribable
-    }
-
-    private subscribeNav(index: 1 | 2) {
-        const s = this.props.bus.getSubscriber<G5NavEvents>()
-        const on = <T,>(topic: keyof G5NavEvents, init: T) =>
-            this.c(s.on(topic) as unknown as Consumer<T>, init)
+    private subscribeNav(index: NavRadioIndex) {
+        const nav = this.props.bus.getSubscriber<G5NavEvents>()
         return {
-            hasLoc: on<boolean>(`nav${index}_has_loc`, false),
-            localizer: on<number>(`nav${index}_localizer`, 0),
-            obs: on<number>(`nav${index}_obs`, 0),
-            toFrom: on<number>(`nav${index}_to_from`, 0),
-            hasTacan: on<boolean>(`nav${index}_has_tacan`, false),
-            tacanObs: on<number>(`nav${index}_tacan_obs`, 0),
-            tacanToFrom: on<number>(`nav${index}_tacan_to_from`, 0),
-            signal: on<number>(`nav${index}_signal`, 0),
-            hasDme: on<boolean>(`nav${index}_has_dme`, false),
-            dme: on<number>(`nav${index}_dme`, 0),
-            radial: on<number>(`nav${index}_radial`, 0),
-            actFreq: on<number>(`nav${index}_act_freq`, 0),
+            hasLoc: this.consume(nav.on(`nav${index}_has_loc`), false),
+            localizer: this.consume(nav.on(`nav${index}_localizer`), 0),
+            obs: this.consume(nav.on(`nav${index}_obs`), 0),
+            toFrom: this.consume(nav.on(`nav${index}_to_from`), 0),
+            hasTacan: this.consume(nav.on(`nav${index}_has_tacan`), false),
+            tacanObs: this.consume(nav.on(`nav${index}_tacan_obs`), 0),
+            tacanToFrom: this.consume(nav.on(`nav${index}_tacan_to_from`), 0),
+            signal: this.consume(nav.on(`nav${index}_signal`), 0),
+            hasDme: this.consume(nav.on(`nav${index}_has_dme`), false),
+            dme: this.consume(nav.on(`nav${index}_dme`), 0),
+            radial: this.consume(nav.on(`nav${index}_radial`), 0),
+            actFreq: this.consume(nav.on(`nav${index}_act_freq`), 0),
         }
     }
 
     private navCourse(nav: NavConsumers): MappedSubscribable<number> {
         return this.track(
             MappedSubject.create(
-                ([tacan, hasLoc, loc, obs, tObs]) => (tacan ? tObs : hasLoc ? loc : obs),
+                params => resolveNavCourse(...params),
                 this.tacanDriven,
                 nav.hasLoc,
                 nav.localizer,
@@ -695,16 +576,8 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     }
 
     onAfterRender(): void {
-        this.consumers.forEach(c => c.resume())
-        this.derived.forEach(d => d.resume())
+        super.onAfterRender()
         this.props.onApi?.(this)
-    }
-
-    destroy(): void {
-        this.effects.forEach(e => e.destroy())
-        this.derived.forEach(d => d.destroy())
-        this.consumers.forEach(c => c.destroy())
-        super.destroy()
     }
 
     /** Handles the CRS/CDI/DME hardware knobs and softkeys routed by the MFD page. */
