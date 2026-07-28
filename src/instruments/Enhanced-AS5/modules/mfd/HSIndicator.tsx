@@ -18,7 +18,7 @@ import {
 import { Colors } from '../common/Utils'
 import { BearingState } from '../providers/BearingPointerDataProvider'
 import { G5NavdataEvents } from '../providers/GpsPhaseSource'
-import { NavSource } from '../providers/NavSourceDataProvider'
+import { NavSource, NavSourceLabel } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 
@@ -438,6 +438,7 @@ type NavConsumers = ReturnType<HSIComponent['subscribeNav']>
 export interface HSIComponentProps extends ComponentProps {
     bus: EventBus
     activeSource: Subscribable<NavSource>
+    navSourceLabel: Subscribable<NavSourceLabel>
     cdiVisible: Subscribable<boolean>
     noCenterText: boolean
     noBackground: boolean
@@ -490,23 +491,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     // ---- Resolved active nav source (consumed from NavSourceDataProvider) ----
     private readonly cdiSource = this.props.activeSource
 
-    private readonly navSource = this.track(
-        MappedSubject.create(
-            ([src, tacan, loc1, loc2]) => {
-                if (src === NavSource.GPS) return NavSource.GPS
-                if (tacan) return 'TCN' + (src === NavSource.Nav1 ? '1' : '2')
-                return (
-                    ((src === NavSource.Nav1 ? loc1 : loc2) ? 'LOC' : 'VOR') +
-                    (src === NavSource.Nav1 ? '1' : '2')
-                )
-            },
-            this.cdiSource,
-            this.tacanDriven,
-            this.nav1.hasLoc,
-            this.nav2.hasLoc
-        )
-    )
-
     private readonly displayedCourse = this.track(
         MappedSubject.create(
             ([src, active, gpsTrk, course1, course2]) => {
@@ -550,13 +534,13 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     // ---- Nav-source styling (NAV2 renders as a hollow lime pointer) ----
     private readonly navFill = this.track(
-        this.navSource.map(s => (s === NavSource.GPS ? Colors.MAGENTA : Colors.GREEN))
+        this.props.navSourceLabel.map(s => (s === 'GPS' ? Colors.MAGENTA : Colors.GREEN))
     )
     private readonly navFillOpacity = this.track(
-        this.navSource.map(s => (s.endsWith('2') ? '0' : '1'))
+        this.props.navSourceLabel.map(s => (s.endsWith('2') ? '0' : '1'))
     )
     private readonly navStroke = this.track(
-        this.navSource.map(s => (s.endsWith('2') ? Colors.GREEN : ''))
+        this.props.navSourceLabel.map(s => (s.endsWith('2') ? Colors.GREEN : ''))
     )
 
     // ---- GPS-only annunciations ----
@@ -883,7 +867,7 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                             {!this.props.noCenterText && (
                                 <CenterText
                                     navFill={this.navFill}
-                                    navSource={this.navSource}
+                                    navSource={this.props.navSourceLabel}
                                     phaseText={this.phaseText}
                                     phaseVisible={this.phaseVisible}
                                     xtkText={this.xtkText}

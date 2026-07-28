@@ -72,6 +72,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         switchPage={switchPage}
                         altimeter={navData.altimeterSubjects}
                         navSource={navData.activeSource}
+                        navSourceLabel={navData.navSourceLabel}
                         cdiVisible={navData.cdiSubjects.cdiVisible}
                     />
                 </div>

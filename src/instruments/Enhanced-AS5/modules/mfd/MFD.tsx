@@ -21,7 +21,7 @@ import { formatDegrees3 } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
-import { AltimeterSubjects, NavSource } from '../providers/NavSourceDataProvider'
+import { AltimeterSubjects, NavSource, NavSourceLabel } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
@@ -146,6 +146,7 @@ export interface MfdContentProps extends ComponentProps {
     switchPage: (id: PageId) => void
     altimeter: AltimeterSubjects
     navSource: Subscribable<NavSource>
+    navSourceLabel: Subscribable<NavSourceLabel>
     cdiVisible: Subscribable<boolean>
 }
 
@@ -326,7 +327,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     }
 
     render(): VNode {
-        const { bus, manager, altimeter, navSource, cdiVisible } = this.props
+        const { bus, manager, altimeter, navSource, navSourceLabel, cdiVisible } = this.props
 
         return (
             <>
@@ -334,6 +335,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     <HSIComponent
                         bus={bus}
                         activeSource={navSource}
+                        navSourceLabel={navSourceLabel}
                         bearing1State={this.bearingPointerProvider.bearing1}
                         bearing2State={this.bearingPointerProvider.bearing2}
                         cdiVisible={cdiVisible}
@@ -345,7 +347,11 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                 </div>
                 <div id="Infos">
                     <SelectedHeadingInfo bus={bus} />
-                    <LeftInfoPanel bus={bus} navSource={navSource} />
+                    <LeftInfoPanel
+                        bus={bus}
+                        navSource={navSource}
+                        // navSourceLabel={navSourceLabel}
+                    />
                     <WaypointDistanceInfo bus={bus} navSource={navSource} />
                 </div>
                 <div id="VerticalDeviation">

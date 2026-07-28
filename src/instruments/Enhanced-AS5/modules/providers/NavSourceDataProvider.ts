@@ -12,10 +12,23 @@ import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { G5NavdataEvents } from './GpsPhaseSource'
 
+export type NavSourceLabel = 'GPS' | 'VOR1' | 'LOC1' | 'TCN1' | 'VOR2' | 'LOC2' | 'TCN2'
+
 export enum NavSource {
     GPS = 'GPS',
     Nav1 = 'NAV1',
     Nav2 = 'NAV2',
+}
+
+function resolveNavSourceLabel(
+    source: NavSource,
+    tacan: boolean,
+    loc1: boolean,
+    loc2: boolean
+): NavSourceLabel {
+    if (source === NavSource.GPS) return 'GPS'
+    if (tacan) return source === NavSource.Nav1 ? 'TCN1' : 'TCN2'
+    return source === NavSource.Nav1 ? (loc1 ? 'LOC1' : 'VOR1') : loc2 ? 'LOC2' : 'VOR2'
 }
 
 export interface CDISubjects {
@@ -69,6 +82,12 @@ export class NavSourceDataProvider {
     private readonly nav1Gsi: ConsumerSubject<number>
     private readonly nav2Gsi: ConsumerSubject<number>
 
+    private readonly tacanDriven: ConsumerSubject<boolean>
+    private readonly nav1HasLoc: ConsumerSubject<boolean>
+    private readonly nav2HasLoc: ConsumerSubject<boolean>
+
+    readonly navSourceLabel: MappedSubject<[NavSource, boolean, boolean, boolean], NavSourceLabel>
+
     readonly activeSource: MappedSubject<[boolean, boolean, number, number], NavSource>
     readonly verticalDeviationMode: MappedSubscribable<VerticalDeviationMode>
     readonly verticalDeviationValue: MappedSubscribable<number>
@@ -118,6 +137,9 @@ export class NavSourceDataProvider {
         this.nav2HasGlideslope = ConsumerSubject.create(navSub.on('nav2_has_glideslope'), false)
         this.nav1Gsi = ConsumerSubject.create(navSub.on('nav1_gsi'), 0)
         this.nav2Gsi = ConsumerSubject.create(navSub.on('nav2_gsi'), 0)
+        this.tacanDriven = ConsumerSubject.create(navSub.on('tacan_drives_nav1'), false)
+        this.nav1HasLoc = ConsumerSubject.create(navSub.on('nav1_has_loc'), false)
+        this.nav2HasLoc = ConsumerSubject.create(navSub.on('nav2_has_loc'), false)
 
         const navdataSub = bus.getSubscriber<G5NavdataEvents>()
         this.cdiScaleLabel = ConsumerSubject.create(
@@ -231,6 +253,14 @@ export class NavSourceDataProvider {
 
         this.verticalDeviationMode = this.verticalGuidance.map(g => g.mode)
         this.verticalDeviationValue = this.verticalGuidance.map(g => g.deviation)
+
+        this.navSourceLabel = MappedSubject.create(
+            props => resolveNavSourceLabel(...props),
+            this.activeSource,
+            this.tacanDriven,
+            this.nav1HasLoc,
+            this.nav2HasLoc
+        ).pause()
     }
 
     resume(): void {
@@ -238,6 +268,7 @@ export class NavSourceDataProvider {
         this.cdiDeviation.resume()
         this.cdiVisible.resume()
         this.verticalGuidance.resume()
+        this.navSourceLabel.resume()
     }
 
     destroy(): void {
@@ -260,9 +291,13 @@ export class NavSourceDataProvider {
         this.nav2HasGlideslope.destroy()
         this.nav1Gsi.destroy()
         this.nav2Gsi.destroy()
+        this.tacanDriven.destroy()
+        this.nav1HasLoc.destroy()
+        this.nav2HasLoc.destroy()
         this.cdiSource.destroy()
         this.cdiDeviation.destroy()
         this.cdiVisible.destroy()
+        this.navSourceLabel.destroy()
         this.activeSource.destroy()
         this.verticalGuidance.destroy()
     }
