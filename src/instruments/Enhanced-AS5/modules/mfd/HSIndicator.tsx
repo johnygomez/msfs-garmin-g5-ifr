@@ -25,6 +25,19 @@ import { G5NavEvents } from '../publishers/G5NavPublisher'
 const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, min), max)
 
+/**
+ * The gauge renders into a 512 x 350 px panel texture, which the G5 model maps onto a
+ * 68.16 x 51.39 mm screen quad. The narrower quad squeezes the image horizontally, so
+ * geometry is pre-stretched along x to reach the eye undistorted.
+ */
+const SCREEN_ASPECT_CORRECTION = 512 / 350 / (68.16 / 51.39)
+
+/** Pre-stretches the compass along x, undone by the screen quad when displayed. */
+const ASPECT_TRANSFORM = `scale(${SCREEN_ASPECT_CORRECTION}, 1)`
+
+/** The `-28 -15 156 116` design space, widened to hold the pre-stretched geometry. */
+const VIEWBOX = `${-28 * SCREEN_ASPECT_CORRECTION} -15 ${156 * SCREEN_ASPECT_CORRECTION} 116`
+
 /** Formats a heading in degrees as a zero-padded `NNN°` string. */
 function formatHeading(deg: number): string {
     const rounded = Math.round(deg)
@@ -250,86 +263,86 @@ class BearingPointer extends DisplayComponent<BearingPointerProps> {
     }
 }
 
-interface BearingInfoPanelProps extends ComponentProps {
-    state: Subscribable<BearingState>
-    side: 'left' | 'right'
-    id?: string
-}
+// interface BearingInfoPanelProps extends ComponentProps {
+//     state: Subscribable<BearingState>
+//     side: 'left' | 'right'
+//     id?: string
+// }
 
-/** The fixed corner panel listing a bearing pointer's source, ident, and distance. */
-class BearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
-    private readonly display = this.props.state.map(s => (s.visible ? 'inherit' : 'none'))
-    private readonly dist = this.props.state.map(s => s.dist)
-    private readonly ident = this.props.state.map(s => s.ident)
-    private readonly source = this.props.state.map(s => s.source)
+// /** The fixed corner panel listing a bearing pointer's source, ident, and distance. */
+// class BearingInfoPanel extends DisplayComponent<BearingInfoPanelProps> {
+//     private readonly display = this.props.state.map(s => (s.visible ? 'inherit' : 'none'))
+//     private readonly dist = this.props.state.map(s => s.dist)
+//     private readonly ident = this.props.state.map(s => s.ident)
+//     private readonly source = this.props.state.map(s => s.source)
 
-    public render(): VNode {
-        return this.props.side === 'left' ? this.renderLeft() : this.renderRight()
-    }
+//     public render(): VNode {
+//         return this.props.side === 'left' ? this.renderLeft() : this.renderRight()
+//     }
 
-    private renderLeft(): VNode {
-        return (
-            <g display={this.display} id={this.props.id ?? ''}>
-                <path
-                    d={textZonePath(-0.6, -1.1, -28)}
-                    fill={Colors.BLACK}
-                    stroke={Colors.LIGHT_GREY}
-                    stroke-width="0.5"
-                />
-                <text fill={Colors.WHITE} x="-27" y="100" font-size="6" text-anchor="start">
-                    {this.source}
-                </text>
-                <rect x="-5" y="96.875" width="15" height="0.25" fill={Colors.CYAN} />
-                <rect
-                    x="-3"
-                    y="96.875"
-                    width="4"
-                    height="0.25"
-                    transform="rotate(-45 -3 97)"
-                    fill={Colors.CYAN}
-                />
-                <rect
-                    x="-3"
-                    y="96.875"
-                    width="4"
-                    height="0.25"
-                    transform="rotate(45 -3 97)"
-                    fill={Colors.CYAN}
-                />
-            </g>
-        )
-    }
+//     private renderLeft(): VNode {
+//         return (
+//             <g display={this.display} id={this.props.id ?? ''}>
+//                 <path
+//                     d={textZonePath(-0.6, -1.1, -28)}
+//                     fill={Colors.BLACK}
+//                     stroke={Colors.LIGHT_GREY}
+//                     stroke-width="0.5"
+//                 />
+//                 <text fill={Colors.WHITE} x="-27" y="100" font-size="6" text-anchor="start">
+//                     {this.source}
+//                 </text>
+//                 <rect x="-5" y="96.875" width="15" height="0.25" fill={Colors.CYAN} />
+//                 <rect
+//                     x="-3"
+//                     y="96.875"
+//                     width="4"
+//                     height="0.25"
+//                     transform="rotate(-45 -3 97)"
+//                     fill={Colors.CYAN}
+//                 />
+//                 <rect
+//                     x="-3"
+//                     y="96.875"
+//                     width="4"
+//                     height="0.25"
+//                     transform="rotate(45 -3 97)"
+//                     fill={Colors.CYAN}
+//                 />
+//             </g>
+//         )
+//     }
 
-    private renderRight(): VNode {
-        return (
-            <g display={this.display}>
-                <path
-                    d={textZonePath(Math.PI + 0.6, Math.PI + 1.1, 128, true)}
-                    fill={Colors.BLACK}
-                    stroke={Colors.LIGHT_GREY}
-                    stroke-width="0.5"
-                />
-                <text fill={Colors.WHITE} x="127" y="100" font-size="6" text-anchor="end">
-                    {this.source}
-                </text>
-                <path
-                    d="M90 97 L92 97 M105 97 L103 97 L100 100 M103 97 L100 94 M101.5 98.5 L93 98.5 Q90 97 93 95.5 L101.5 95.5"
-                    stroke={Colors.CYAN}
-                    stroke-width="0.5"
-                    fill-opacity="0"
-                />
-            </g>
-        )
-    }
+//     private renderRight(): VNode {
+//         return (
+//             <g display={this.display}>
+//                 <path
+//                     d={textZonePath(Math.PI + 0.6, Math.PI + 1.1, 128, true)}
+//                     fill={Colors.BLACK}
+//                     stroke={Colors.LIGHT_GREY}
+//                     stroke-width="0.5"
+//                 />
+//                 <text fill={Colors.WHITE} x="127" y="100" font-size="6" text-anchor="end">
+//                     {this.source}
+//                 </text>
+//                 <path
+//                     d="M90 97 L92 97 M105 97 L103 97 L100 100 M103 97 L100 94 M101.5 98.5 L93 98.5 Q90 97 93 95.5 L101.5 95.5"
+//                     stroke={Colors.CYAN}
+//                     stroke-width="0.5"
+//                     fill-opacity="0"
+//                 />
+//             </g>
+//         )
+//     }
 
-    public destroy(): void {
-        this.display.destroy()
-        this.dist.destroy()
-        this.ident.destroy()
-        this.source.destroy()
-        super.destroy()
-    }
-}
+//     public destroy(): void {
+//         this.display.destroy()
+//         this.dist.destroy()
+//         this.ident.destroy()
+//         this.source.destroy()
+//         super.destroy()
+//     }
+// }
 
 interface DmePanelProps extends ComponentProps {
     display: Subscribable<string>
@@ -796,104 +809,96 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
 
     render(): VNode {
         return (
-            <svg class="hsi" width="100%" height="100%" viewBox="-28 -15 156 116">
-                {[-135, -90, -45, 45, 90, 135].map(angle => (
-                    <rect
-                        x="49.5"
-                        y="-7"
-                        width="1"
-                        height="6"
-                        transform={`rotate(${angle} 50 50)`}
+            <svg class="hsi" width="100%" height="100%" viewBox={VIEWBOX}>
+                <g transform={ASPECT_TRANSFORM}>
+                    {[-135, -90, -45, 45, 90, 135].map(angle => (
+                        <rect
+                            x="49.5"
+                            y="-7"
+                            width="1"
+                            height="6"
+                            transform={`rotate(${angle} 50 50)`}
+                            fill={Colors.WHITE}
+                        />
+                    ))}
+
+                    <g transform={this.roseTransform}>
+                        <CompassCard noBackground={this.props.noBackground} />
+
+                        <polygon
+                            points="46,0 47,0 50,4 53,0 54,0 54,5 46,5"
+                            fill={Colors.CYAN}
+                            transform={this.headingBugTransform}
+                        />
+                        <circle
+                            cx="50"
+                            cy="50"
+                            r="30"
+                            stroke={Colors.WHITE}
+                            stroke-width="0.8"
+                            fill-opacity="0"
+                            display={this.innerCircleVisible}
+                        />
+
+                        {
+                            <>
+                                <TrackIndicator trackAngle={this.trackAngle} />
+                                <BearingPointer
+                                    state={this.props.bearing1State}
+                                    variant={1}
+                                    id="BearingPointer1"
+                                />
+                                <BearingPointer
+                                    state={this.props.bearing2State}
+                                    variant={2}
+                                    id="BearingPointer2"
+                                />
+                                <CoursePointer
+                                    transform={this.courseTransform}
+                                    fill={this.navFill}
+                                    fillOpacity={this.navFillOpacity}
+                                    stroke={this.navStroke}
+                                    cdiTransform={this.cdiTransform}
+                                    cdiDisplay={this.cdiDisplay}
+                                    toVisible={this.toVisible}
+                                    fromVisible={this.fromVisible}
+                                />
+                            </>
+                        }
+                    </g>
+
+                    <polygon points="46,-3 54,-3 50,3" fill={Colors.WHITE} stroke={Colors.BLACK} />
+                    <path
+                        d="M44 50 L49 50 L49 53 L48 54 L48 55 L52 55 L52 54 L51 53 L51 50 L56 50 L56 49 L51 48 L51 46 Q50 44 49 46 L49 48 L44 49 Z"
                         fill={Colors.WHITE}
                     />
-                ))}
 
-                <g transform={this.roseTransform}>
-                    <CompassCard noBackground={this.props.noBackground} />
-
-                    <polygon
-                        points="46,0 47,0 50,4 53,0 54,0 54,5 46,5"
-                        fill={Colors.CYAN}
-                        transform={this.headingBugTransform}
-                    />
-                    <circle
-                        cx="50"
-                        cy="50"
-                        r="30"
-                        stroke={Colors.WHITE}
-                        stroke-width="0.8"
-                        fill-opacity="0"
-                        display={this.innerCircleVisible}
-                    />
+                    <rect x="35" y="-15" height="12" width="30" fill={Colors.PFD_BOX_BG} />
+                    <text fill={Colors.WHITE} text-anchor="middle" x="50" y="-5" font-size="11">
+                        {this.headingText}
+                    </text>
 
                     {
                         <>
-                            <TrackIndicator trackAngle={this.trackAngle} />
-                            <BearingPointer
-                                state={this.props.bearing1State}
-                                variant={1}
-                                id="BearingPointer1"
-                            />
-                            <BearingPointer
-                                state={this.props.bearing2State}
-                                variant={2}
-                                id="BearingPointer2"
-                            />
-                            <CoursePointer
-                                transform={this.courseTransform}
-                                fill={this.navFill}
-                                fillOpacity={this.navFillOpacity}
-                                stroke={this.navStroke}
-                                cdiTransform={this.cdiTransform}
-                                cdiDisplay={this.cdiDisplay}
-                                toVisible={this.toVisible}
-                                fromVisible={this.fromVisible}
+                            {!this.props.noCenterText && (
+                                <CenterText
+                                    navFill={this.navFill}
+                                    navSource={this.navSource}
+                                    phaseText={this.phaseText}
+                                    phaseVisible={this.phaseVisible}
+                                    xtkText={this.xtkText}
+                                    xtkVisible={this.xtkVisible}
+                                />
+                            )}
+                            <DmePanel
+                                display={this.dmeDisplay}
+                                source={this.dmeSourceLabel}
+                                ident={this.dmeIdent}
+                                dist={this.dmeDist}
                             />
                         </>
                     }
                 </g>
-
-                <polygon points="46,-3 54,-3 50,3" fill={Colors.WHITE} stroke={Colors.BLACK} />
-                <path
-                    d="M44 50 L49 50 L49 53 L48 54 L48 55 L52 55 L52 54 L51 53 L51 50 L56 50 L56 49 L51 48 L51 46 Q50 44 49 46 L49 48 L44 49 Z"
-                    fill={Colors.WHITE}
-                />
-
-                <rect x="35" y="-15" height="12" width="30" fill={Colors.PFD_BOX_BG} />
-                <text fill={Colors.WHITE} text-anchor="middle" x="50" y="-5" font-size="11">
-                    {this.headingText}
-                </text>
-
-                {
-                    <>
-                        {!this.props.noCenterText && (
-                            <CenterText
-                                navFill={this.navFill}
-                                navSource={this.navSource}
-                                phaseText={this.phaseText}
-                                phaseVisible={this.phaseVisible}
-                                xtkText={this.xtkText}
-                                xtkVisible={this.xtkVisible}
-                            />
-                        )}
-                        <DmePanel
-                            display={this.dmeDisplay}
-                            source={this.dmeSourceLabel}
-                            ident={this.dmeIdent}
-                            dist={this.dmeDist}
-                        />
-                        <BearingInfoPanel
-                            state={this.props.bearing1State}
-                            side="left"
-                            id="BearingInfoPanel1"
-                        />
-                        <BearingInfoPanel
-                            state={this.props.bearing2State}
-                            side="right"
-                            id="BearingInfoPanel2"
-                        />
-                    </>
-                }
             </svg>
         )
     }
