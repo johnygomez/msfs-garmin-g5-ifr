@@ -26,6 +26,8 @@ export interface G5NavEvents {
     // ---- HSI ----
     hsi_cdi_needle: number
     hsi_cdi_needle_valid: boolean
+    hsi_bearing: number
+    hsi_bearing_valid: boolean
     hsi_gsi_needle: number
     nav1_gsi: number
     nav2_gsi: number
@@ -104,6 +106,8 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     // HSI
     ['hsi_cdi_needle', { name: 'HSI CDI NEEDLE', type: SimVarValueType.Number }],
     ['hsi_cdi_needle_valid', { name: 'HSI CDI NEEDLE VALID', type: SimVarValueType.Bool }],
+    ['hsi_bearing', { name: 'HSI BEARING', type: SimVarValueType.Degree }],
+    ['hsi_bearing_valid', { name: 'HSI BEARING VALID', type: SimVarValueType.Bool }],
     ['hsi_gsi_needle', { name: 'HSI GSI NEEDLE', type: SimVarValueType.Number }],
     ['nav1_gsi', { name: 'NAV GSI:1', type: SimVarValueType.Number }],
     ['nav2_gsi', { name: 'NAV GSI:2', type: SimVarValueType.Number }],

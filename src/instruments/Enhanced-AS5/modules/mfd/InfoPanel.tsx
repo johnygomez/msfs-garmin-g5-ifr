@@ -38,6 +38,7 @@ class DTKInfo extends DisplayComponent<DTKInfoProps> {
     onAfterRender(): void {
         this.dtkValue.resume()
         this.dtkText.resume()
+        this.style.resume()
     }
 
     destroy(): void {
@@ -54,6 +55,89 @@ class DTKInfo extends DisplayComponent<DTKInfoProps> {
                 <div id="DTKValue">{this.dtkText}°</div>
             </div>
         )
+    }
+}
+
+interface CRSInfoProps extends ComponentProps {
+    bus: EventBus
+    active: Subscribable<boolean>
+}
+
+class CRSInfo extends DisplayComponent<CRSInfoProps> {
+    private readonly hasLoc: ConsumerSubject<boolean>
+    private readonly crsValue: ConsumerSubject<number>
+    private readonly locValue: ConsumerSubject<number>
+    private readonly crsValid: MappedSubscribable<boolean>
+    private readonly crsText: MappedSubscribable<string>
+    private readonly style: MappedSubscribable<string>
+
+    constructor(props: CRSInfoProps) {
+        super(props)
+
+        this.hasLoc = ConsumerSubject.create(
+            this.props.bus.getSubscriber<G5NavEvents>().on('nav1_has_loc'),
+            false
+        ).pause()
+        this.locValue = ConsumerSubject.create(
+            this.props.bus.getSubscriber<G5NavEvents>().on('nav1_localizer'),
+            0
+        ).pause()
+        this.crsValue = ConsumerSubject.create(
+            this.props.bus.getSubscriber<G5NavEvents>().on('nav1_obs'),
+            0
+        ).pause()
+        this.crsValid = ConsumerSubject.create(
+            this.props.bus.getSubscriber<G5NavEvents>().on('nav1_has_nav'),
+            false
+        ).pause()
+        this.crsText = MappedSubject.create(
+            props => this.formatValue(...props),
+            this.hasLoc,
+            this.crsValue,
+            this.locValue,
+            this.crsValid
+        ).pause()
+        this.style = this.props.active.map(active => (active ? '' : 'display: none;')).pause()
+    }
+
+    onAfterRender(): void {
+        this.hasLoc.resume()
+        this.locValue.resume()
+        this.crsValue.resume()
+        this.crsValid.resume()
+        this.crsText.resume()
+        this.style.resume()
+    }
+
+    destroy(): void {
+        this.hasLoc.destroy()
+        this.locValue.destroy()
+        this.crsValue.destroy()
+        this.crsValid.destroy()
+        this.crsText.destroy()
+        this.style.destroy()
+        super.destroy()
+    }
+
+    render(): VNode {
+        return (
+            <div id="CRS" style={this.style}>
+                <div id="CRSLabel">CRS</div>
+                <div id="CRSValue">{this.crsText}°</div>
+            </div>
+        )
+    }
+
+    private formatValue(hasLoc: boolean, crs: number, loc: number, valid: boolean): string {
+        if (!valid) {
+            return '---'
+        }
+
+        if (hasLoc) {
+            return fastToFixed(loc, 0).padStart(3, '0')
+        }
+
+        return fastToFixed(crs, 0).padStart(3, '0')
     }
 }
 
@@ -164,6 +248,7 @@ export class LeftInfoPanel extends DisplayComponent<LeftInfoPanelProps> {
         return (
             <>
                 <DTKInfo bus={this.props.bus} active={this.dtkActive} />
+                <CRSInfo bus={this.props.bus} active={this.crsActive} />
                 <GroundSpeedInfo bus={this.props.bus} active={this.gsActive} />
             </>
         )

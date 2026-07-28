@@ -395,17 +395,17 @@ as5-element #PageContainer #MFD #Infos {
 }
 as5-element #PageContainer #MFD #Infos #SelectedHeading {
     position: absolute;
-    width: 25%;
-    height: 10%;
+    width: 120px;
+    height: 40px;
     right: 0%;
     bottom: 0%;
     border: solid 3px var(--cyan);
 }
 as5-element #PageContainer #MFD #Infos #SelectedHeading #SelectedHeadingSymbol {
     position: absolute;
-    width: 10%;
-    left: 5%;
-    top: 10%;
+    height: 30px;
+    width: 20px;
+    margin: 2px;
 }
 as5-element #PageContainer #MFD #Infos #SelectedHeading #SelectedHeadingValue {
     position: absolute;
@@ -454,8 +454,8 @@ as5-element #PageContainer #MFD #Infos #WaypointDistance #WaypointDistanceValue[
 }
 as5-element #PageContainer #MFD #Infos #DTK {
     position: absolute;
-    width: 20%;
-    height: 32px;
+    width: 120px;
+    height: 40px;
     left: -1px;
     bottom: 0px;
     display: flex;
@@ -466,13 +466,36 @@ as5-element #PageContainer #MFD #Infos #DTK {
     font-family: 'OpenSans-Bold';
 }
 as5-element #PageContainer #MFD #Infos #DTK #DTKLabel {
-    font-size: 16px;
+    font-size: 20px;
     color: var(--white);
     align-self: center;
 }
 as5-element #PageContainer #MFD #Infos #DTK #DTKValue {
-    font-size: 26px;
+    font-size: 30px;
     color: var(--magenta);
+    align-self: center;
+}
+as5-element #PageContainer #MFD #Infos #CRS {
+    position: absolute;
+    width: 120px;
+    height: 40px;
+    left: -1px;
+    bottom: 0px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border: solid 2px var(--light-grey);
+    font-family: 'OpenSans-Bold';
+}
+as5-element #PageContainer #MFD #Infos #CRS #CRSLabel {
+    font-size: 20px;
+    color: var(--white);
+    align-self: center;
+}
+as5-element #PageContainer #MFD #Infos #CRS #CRSValue {
+    font-size: 30px;
+    color: var(--green);
     align-self: center;
 }
 as5-element #ContextualMenu {
