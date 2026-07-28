@@ -20,6 +20,7 @@ import { SubmenuOverlay } from '../common/SubmenuOverlay'
 import { formatDegrees3 } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
+import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
 import { AltimeterSubjects, NavSource } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
@@ -169,8 +170,17 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly bearingPointer1 = Subject.create<BearingPointerValue>('VLOC1')
     private readonly bearingPointer2 = Subject.create<BearingPointerValue>('NONE')
 
+    private readonly bearingPointerProvider: BearingPointerDataProvider
+
     constructor(props: MfdContentProps) {
         super(props)
+
+        // NOTE: The bearing provider is owned by MFD, because MFD decides the bearing provider sources based on its settings.
+        this.bearingPointerProvider = new BearingPointerDataProvider(
+            this.props.bus,
+            this.bearingPointer1,
+            this.bearingPointer2
+        )
 
         this.knobValue = MappedSubject.create(
             ([overlay, heading, course]) => (overlay === 'course' ? course : heading),
@@ -197,6 +207,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.setupActive.resume()
         this.bearingPointerSelector1Active.resume()
         this.bearingPointerSelector2Active.resume()
+        this.bearingPointerProvider.resume()
     }
 
     destroy(): void {
@@ -206,6 +217,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.setupActive.destroy()
         this.bearingPointerSelector1Active.destroy()
         this.bearingPointerSelector2Active.destroy()
+        this.bearingPointerProvider.destroy()
         super.destroy()
     }
 
@@ -322,8 +334,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     <HSIComponent
                         bus={bus}
                         activeSource={navSource}
-                        bearing1Source={this.bearingPointer1}
-                        bearing2Source={this.bearingPointer2}
+                        bearing1State={this.bearingPointerProvider.bearing1}
+                        bearing2State={this.bearingPointerProvider.bearing2}
                         cdiVisible={cdiVisible}
                         noCenterText={false}
                         noBackground={false}

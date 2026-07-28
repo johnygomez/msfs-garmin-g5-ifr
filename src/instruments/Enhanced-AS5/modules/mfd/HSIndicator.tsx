@@ -15,8 +15,8 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { BearingPointerValue } from '../common/Nav'
 import { Colors } from '../common/Utils'
+import { BearingState } from '../providers/BearingPointerDataProvider'
 import { G5NavdataEvents } from '../providers/GpsPhaseSource'
 import { NavSource } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
@@ -44,19 +44,6 @@ function textZonePath(beginAngle: number, endAngle: number, xEnd: number, revers
         `A ${radius} ${radius} 0 0 ${reverse ? 0 : 1} ${bx} ${by}`
     )
 }
-
-interface BearingReadout {
-    ident: string
-    dist: string
-    angle: number
-}
-
-interface BearingState extends BearingReadout {
-    visible: boolean
-    source: string
-}
-
-const NO_BEARING: BearingState = { visible: false, source: '', ident: '', dist: '', angle: NaN }
 
 /** Static compass card: background disc, graduation ticks, and cardinal labels. */
 class CompassCard extends DisplayComponent<{ noBackground: boolean }> {
@@ -442,8 +429,8 @@ export interface HSIComponentProps extends ComponentProps {
     noCenterText: boolean
     noBackground: boolean
     noAffectSimRadioNav: boolean
-    bearing1Source: Subscribable<BearingPointerValue>
-    bearing2Source: Subscribable<BearingPointerValue>
+    bearing1State: Subscribable<BearingState>
+    bearing2State: Subscribable<BearingState>
     heading?: Subscribable<number>
     onApi?: (instance: HSIComponent) => void
 }
@@ -472,19 +459,12 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     private readonly gpsDesiredTrack = this.c(this.nav.on('gps_wp_desired_track'), 0)
     private readonly gpsCrossTrack = this.c(this.nav.on('gps_wp_cross_track'), 0)
     private readonly gpsCdiScaling = this.c(this.nav.on('gps_cdi_scaling'), 0)
-    private readonly gpsWpNextId = this.c(this.nav.on('gps_wp_next_id'), '')
-    private readonly gpsWpDistance = this.c(this.nav.on('gps_wp_distance'), 0)
-    private readonly gpsWpBearing = this.c(this.nav.on('gps_wp_bearing'), 0)
     private readonly gpsObsActive = this.c(this.nav.on('gps_obs_active'), false)
 
     private readonly cdiNeedle = this.c(this.nav.on('hsi_cdi_needle'), 0)
 
     private readonly dmeSource = this.c(this.nav.on('dme_source'), 1)
     private readonly dmeDisplayed = this.c(this.nav.on('dme_displayed'), false)
-
-    private readonly adf1Signal = this.c(this.nav.on('adf1_signal'), 0)
-    private readonly adf1ActFreq = this.c(this.nav.on('adf1_act_freq'), 0)
-    private readonly adf1Radial = this.c(this.nav.on('adf1_radial'), 0)
 
     private readonly cdiScaleLabel = this.c(
         this.props.bus.getSubscriber<G5NavdataEvents>().on('g5_cdi_scale_label'),
@@ -592,35 +572,11 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
     )
     private readonly xtkText = this.track(this.gpsCrossTrack.map(x => `XTK ${fastToFixed(x, 2)}NM`))
 
-    // ---- Bearing pointers ----
-    private readonly gpsBearing = this.track(
-        MappedSubject.create(
-            ([id, dist, brg]): BearingReadout => ({ ident: id, dist: String(dist), angle: brg }),
-            this.gpsWpNextId,
-            this.gpsWpDistance,
-            this.gpsWpBearing
-        )
-    )
-    private readonly adfBearing = this.track(
-        MappedSubject.create(
-            ([signal, freq, radial, hdg]): BearingReadout =>
-                signal > 0
-                    ? { ident: fastToFixed(freq, 1), dist: '', angle: (radial + hdg) % 360 }
-                    : { ident: 'NO DATA', dist: '', angle: NaN },
-            this.adf1Signal,
-            this.adf1ActFreq,
-            this.adf1Radial,
-            this.magneticHeading
-        )
-    )
-    private readonly bearing1 = this.bearingState(this.props.bearing1Source)
-    private readonly bearing2 = this.bearingState(this.props.bearing2Source)
-
     private readonly innerCircleVisible = this.track(
         MappedSubject.create(
             ([b1, b2]) => (b1.visible || b2.visible ? 'inherit' : 'none'),
-            this.bearing1,
-            this.bearing2
+            this.props.bearing1State,
+            this.props.bearing2State
         )
     )
 
@@ -687,7 +643,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         const on = <T,>(topic: keyof G5NavEvents, init: T) =>
             this.c(s.on(topic) as unknown as Consumer<T>, init)
         return {
-            hasNav: on<boolean>(`nav${index}_has_nav`, false),
             hasLoc: on<boolean>(`nav${index}_has_loc`, false),
             localizer: on<number>(`nav${index}_localizer`, 0),
             obs: on<number>(`nav${index}_obs`, 0),
@@ -696,7 +651,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
             tacanObs: on<number>(`nav${index}_tacan_obs`, 0),
             tacanToFrom: on<number>(`nav${index}_tacan_to_from`, 0),
             signal: on<number>(`nav${index}_signal`, 0),
-            ident: on<string>(`nav${index}_ident`, ''),
             hasDme: on<boolean>(`nav${index}_has_dme`, false),
             dme: on<number>(`nav${index}_dme`, 0),
             radial: on<number>(`nav${index}_radial`, 0),
@@ -728,27 +682,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
         )
     }
 
-    private navBearing(nav: NavConsumers): MappedSubscribable<BearingReadout> {
-        return this.track(
-            MappedSubject.create(
-                ([hasNav, signal, ident, hasDme, dme, radial]): BearingReadout =>
-                    hasNav
-                        ? {
-                              ident: signal > 0 ? ident : '',
-                              dist: hasDme ? String(dme) : '',
-                              angle: (180 + radial) % 360,
-                          }
-                        : { ident: 'NO DATA', dist: '', angle: NaN },
-                nav.hasNav,
-                nav.signal,
-                nav.ident,
-                nav.hasDme,
-                nav.dme,
-                nav.radial
-            )
-        )
-    }
-
     private navDme(nav: NavConsumers): MappedSubscribable<{ ident: string; dist: string }> {
         return this.track(
             MappedSubject.create(
@@ -760,34 +693,6 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                 nav.hasDme,
                 nav.actFreq,
                 nav.dme
-            )
-        )
-    }
-
-    private bearingState(
-        source: Subscribable<BearingPointerValue>
-    ): MappedSubscribable<BearingState> {
-        return this.track(
-            MappedSubject.create(
-                ([src, n1, n2, gps, adf]): BearingState => {
-                    switch (src) {
-                        case 'VLOC1':
-                            return { visible: true, source: NavSource.Nav1, ...n1 }
-                        case 'VLOC2':
-                            return { visible: true, source: NavSource.Nav2, ...n2 }
-                        case 'GPS':
-                            return { visible: true, source: NavSource.GPS, ...gps }
-                        case 'ADF':
-                            return { visible: true, source: 'ADF', ...adf }
-                        default:
-                            return NO_BEARING
-                    }
-                },
-                source,
-                this.navBearing(this.nav1),
-                this.navBearing(this.nav2),
-                this.gpsBearing,
-                this.adfBearing
             )
         )
     }
@@ -925,12 +830,12 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                         <>
                             <TrackIndicator trackAngle={this.trackAngle} />
                             <BearingPointer
-                                state={this.bearing1}
+                                state={this.props.bearing1State}
                                 variant={1}
                                 id="BearingPointer1"
                             />
                             <BearingPointer
-                                state={this.bearing2}
+                                state={this.props.bearing2State}
                                 variant={2}
                                 id="BearingPointer2"
                             />
@@ -978,12 +883,12 @@ export class HSIComponent extends DisplayComponent<HSIComponentProps> {
                             dist={this.dmeDist}
                         />
                         <BearingInfoPanel
-                            state={this.bearing1}
+                            state={this.props.bearing1State}
                             side="left"
                             id="BearingInfoPanel1"
                         />
                         <BearingInfoPanel
-                            state={this.bearing2}
+                            state={this.props.bearing2State}
                             side="right"
                             id="BearingInfoPanel2"
                         />

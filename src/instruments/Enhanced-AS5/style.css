@@ -381,10 +381,10 @@ as5-element #PageContainer #MFD {
 }
 as5-element #PageContainer #MFD #HSICompass {
     position: absolute;
-    left: 5%;
-    bottom: 5%;
-    width: 90%;
-    height: 90%;
+    top: 0;
+    left: 2.5%;
+    width: 95%;
+    height: 95%;
 }
 as5-element #PageContainer #MFD #Infos {
     position: absolute;
