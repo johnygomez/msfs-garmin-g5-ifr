@@ -7,9 +7,8 @@ import {
     Subscribable,
 } from '@microsoft/msfs-sdk'
 
-import { BearingPointerValue } from '../common/Nav'
+import { BearingPointerValue, NavSource } from '../common/Nav'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
-import { NavSource } from './NavSourceDataProvider'
 
 export interface BearingReadout {
     ident: string
@@ -19,12 +18,12 @@ export interface BearingReadout {
 
 export interface BearingState extends BearingReadout {
     visible: boolean
-    source: string
+    source: NavSource
 }
 
 export const NO_BEARING: BearingState = {
     visible: false,
-    source: '',
+    source: NavSource.None,
     ident: '',
     dist: '',
     angle: NaN,
@@ -227,7 +226,7 @@ export class BearingPointerDataProvider {
             case 'GPS':
                 return { visible: true, source: NavSource.GPS, ...gps }
             case 'ADF':
-                return { visible: true, source: 'ADF', ...adf }
+                return { visible: true, source: NavSource.Adf, ...adf }
             default:
                 return NO_BEARING
         }

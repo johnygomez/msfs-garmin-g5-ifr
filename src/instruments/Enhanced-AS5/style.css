@@ -416,19 +416,19 @@ as5-element #PageContainer #MFD #Infos #SelectedHeading #SelectedHeadingValue {
     font-family: 'OpenSans-Bold';
 }
 as5-element #PageContainer #MFD #Infos #GroundSpeed {
-    position: absolute;
-    width: 20%;
-    height: 15%;
+    position: relative;
+    width: 120px;
+    height: 60px;
     left: -1px;
     bottom: 0px;
     border: solid 2px grey;
     text-align: center;
     line-height: 1.1;
     font-family: 'OpenSans-Bold';
-    font-size: 20px;
+    font-size: 25px;
 }
 as5-element #PageContainer #MFD #Infos #GroundSpeed #GroundSpeedValue {
-    font-size: 30px;
+    font-size: 32px;
     color: magenta;
     line-height: 1;
 }
@@ -453,7 +453,7 @@ as5-element #PageContainer #MFD #Infos #WaypointDistance #WaypointDistanceValue[
     color: lime;
 }
 as5-element #PageContainer #MFD #Infos #DTK {
-    position: absolute;
+    position: relative;
     width: 120px;
     height: 40px;
     left: -1px;
@@ -464,6 +464,14 @@ as5-element #PageContainer #MFD #Infos #DTK {
     justify-content: space-between;
     border: solid 2px var(--light-grey);
     font-family: 'OpenSans-Bold';
+}
+
+as5-element #PageContainer #MFD #Infos #LeftInfoPanel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: auto;
+    width: auto;
 }
 as5-element #PageContainer #MFD #Infos #DTK #DTKLabel {
     font-size: 20px;
@@ -476,7 +484,7 @@ as5-element #PageContainer #MFD #Infos #DTK #DTKValue {
     align-self: center;
 }
 as5-element #PageContainer #MFD #Infos #CRS {
-    position: absolute;
+    position: relative;
     width: 120px;
     height: 40px;
     left: -1px;
@@ -497,6 +505,51 @@ as5-element #PageContainer #MFD #Infos #CRS #CRSValue {
     font-size: 30px;
     color: var(--green);
     align-self: center;
+}
+as5-element #PageContainer #MFD #Infos #BearingInfoPanel {
+    position: relative;
+    height: 60px;
+    width: 120px;
+    top: 0px;
+    left: -1px;
+}
+
+/* SVG shape styling */
+as5-element #PageContainer #MFD #Infos #BearingInfoPanel .LeftBearingInfo-shape {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+}
+
+as5-element #PageContainer #MFD #Infos #BearingInfoPanel .LeftBearingInfo-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    box-sizing: border-box;
+    padding: 4px 18px 4px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+as5-element #PageContainer #MFD #Infos #BearingInfoPanel #BearingSymbol {
+    height: 20px;
+    width: 80px;
+}
+as5-element #PageContainer #MFD #Infos #BearingInfoPanel #BearingSource {
+    height: 35px;
+    line-height: 35px;
+    font-size: 28px;
+    font-family: 'OpenSans-Bold';
+    color: var(--cyan);
 }
 as5-element #ContextualMenu {
     position: absolute;

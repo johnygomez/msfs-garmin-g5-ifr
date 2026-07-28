@@ -15,13 +15,13 @@ import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
 import { DropdownOverlay } from '../common/DropdownOverlay'
 import { Menu } from '../common/Menu'
-import { BEARING_POINTERS, BearingPointerValue } from '../common/Nav'
+import { BEARING_POINTERS, BearingPointerValue, NavSource, NavSourceLabel } from '../common/Nav'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
 import { formatDegrees3 } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
-import { AltimeterSubjects, NavSource, NavSourceLabel } from '../providers/NavSourceDataProvider'
+import { AltimeterSubjects } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
@@ -350,7 +350,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     <LeftInfoPanel
                         bus={bus}
                         navSource={navSource}
-                        // navSourceLabel={navSourceLabel}
+                        bearing1State={this.bearingPointerProvider.bearing1}
                     />
                     <WaypointDistanceInfo bus={bus} navSource={navSource} />
                 </div>

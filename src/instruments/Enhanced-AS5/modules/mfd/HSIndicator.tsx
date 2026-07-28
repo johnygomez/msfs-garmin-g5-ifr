@@ -15,10 +15,10 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
+import { NavSource, NavSourceLabel } from '../common/Nav'
 import { Colors } from '../common/Utils'
 import { BearingState } from '../providers/BearingPointerDataProvider'
 import { G5NavdataEvents } from '../providers/GpsPhaseSource'
-import { NavSource, NavSourceLabel } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 

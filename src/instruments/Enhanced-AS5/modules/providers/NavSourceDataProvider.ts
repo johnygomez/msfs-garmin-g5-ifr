@@ -7,29 +7,11 @@ import {
     Subscribable,
 } from '@microsoft/msfs-sdk'
 
+import { NavSource, NavSourceLabel, resolveNavSourceLabel } from '../common/Nav'
 import { VerticalDeviationMode } from '../common/VerticalDeviationIndicator'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { G5NavdataEvents } from './GpsPhaseSource'
-
-export type NavSourceLabel = 'GPS' | 'VOR1' | 'LOC1' | 'TCN1' | 'VOR2' | 'LOC2' | 'TCN2'
-
-export enum NavSource {
-    GPS = 'GPS',
-    Nav1 = 'NAV1',
-    Nav2 = 'NAV2',
-}
-
-function resolveNavSourceLabel(
-    source: NavSource,
-    tacan: boolean,
-    loc1: boolean,
-    loc2: boolean
-): NavSourceLabel {
-    if (source === NavSource.GPS) return 'GPS'
-    if (tacan) return source === NavSource.Nav1 ? 'TCN1' : 'TCN2'
-    return source === NavSource.Nav1 ? (loc1 ? 'LOC1' : 'VOR1') : loc2 ? 'LOC2' : 'VOR2'
-}
 
 export interface CDISubjects {
     cdiSource: Subscribable<number>
