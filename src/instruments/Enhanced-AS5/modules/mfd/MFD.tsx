@@ -17,53 +17,18 @@ import { DropdownOverlay } from '../common/DropdownOverlay'
 import { Menu } from '../common/Menu'
 import { BEARING_POINTERS, BearingPointerValue, NavSource, NavSourceLabel } from '../common/Nav'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
-import { formatDegrees3 } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
 import { AltimeterSubjects } from '../providers/NavSourceDataProvider'
-import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
-import { LeftInfoPanel } from './InfoPanel'
+import { LeftInfoPanel } from './LeftInfoPanel'
+import { RightInfoPanel } from './RightInfoPanel'
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
 type MfdOverlay = 'heading' | 'course' | 'setup' | 'bp-1' | 'bp-2'
-
-interface SelectedHeadingInfoProps extends ComponentProps {
-    bus: EventBus
-}
-
-class SelectedHeadingInfo extends DisplayComponent<SelectedHeadingInfoProps> {
-    private readonly heading = ConsumerSubject.create(
-        this.props.bus.getSubscriber<G5CustomEvents>().on('ap_heading_selected'),
-        0
-    ).pause()
-
-    private readonly headingText = this.heading.map(formatDegrees3)
-
-    onAfterRender(): void {
-        this.heading.resume()
-    }
-
-    destroy(): void {
-        this.headingText.destroy()
-        this.heading.destroy()
-        super.destroy()
-    }
-
-    render(): VNode {
-        return (
-            <div id="SelectedHeading">
-                <svg id="SelectedHeadingSymbol" viewBox="0 0 50 100">
-                    <path d="M0,0 h50 v30 l-30,20 l30,20 v30 h-50 Z" fill="aqua" />
-                </svg>
-                <div id="SelectedHeadingValue">{this.headingText}</div>
-            </div>
-        )
-    }
-}
 
 interface WaypointDistanceInfoProps extends ComponentProps {
     bus: EventBus
@@ -348,12 +313,15 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     />
                 </div>
                 <div id="Infos">
-                    <SelectedHeadingInfo bus={bus} />
                     <LeftInfoPanel
                         bus={bus}
                         navSource={navSource}
                         course={selectedCourse}
                         bearing1State={this.bearingPointerProvider.bearing1}
+                    />
+                    <RightInfoPanel
+                        bus={bus}
+                        bearing2State={this.bearingPointerProvider.bearing2}
                     />
                     <WaypointDistanceInfo bus={bus} navSource={navSource} />
                 </div>

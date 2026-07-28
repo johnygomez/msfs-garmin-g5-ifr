@@ -110,11 +110,11 @@ export class DropdownOverlay<T> extends DisplayComponent<DropdownOverlayProps<T>
         switch (event) {
             case 'Knob_Inc':
             case 'NavigationSmallInc':
-                this.moveCursor(1)
+                this.moveCursor(-1)
                 break
             case 'Knob_Dec':
             case 'NavigationSmallDec':
-                this.moveCursor(-1)
+                this.moveCursor(1)
                 break
             case 'Knob_Push':
             case 'ENT_Push':

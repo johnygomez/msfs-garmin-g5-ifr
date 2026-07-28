@@ -23,22 +23,24 @@ const formatCourse = (course: number): string =>
 const displayStyle = (visible: Subscribable<boolean>): MappedSubscribable<string> =>
     visible.map(shown => (shown ? '' : 'display: none;'))
 
-interface BearingInfoPanelProps extends ComponentProps {
+export interface BearingInfoPanelProps extends ComponentProps {
     bus: EventBus
     state: Subscribable<BearingState>
 }
 
-class LeftBearingInfoPanel extends ReactiveComponent<BearingInfoPanelProps> {
+export class LeftBearingInfoPanel extends ReactiveComponent<BearingInfoPanelProps> {
     private readonly nav = this.props.bus.getSubscriber<G5NavEvents>()
 
-    private readonly nav1HasLoc = this.consume(this.nav.on('nav1_has_loc'), false)
-    private readonly nav2HasLoc = this.consume(this.nav.on('nav2_has_loc'), false)
+    protected readonly nav1HasLoc = this.consume(this.nav.on('nav1_has_loc'), false)
+    protected readonly nav2HasLoc = this.consume(this.nav.on('nav2_has_loc'), false)
 
-    private readonly source = this.track(this.props.state.map(state => state.source))
-    private readonly style = this.track(displayStyle(this.props.state.map(state => state.visible)))
+    protected readonly source = this.track(this.props.state.map(state => state.source))
+    protected readonly style = this.track(
+        displayStyle(this.props.state.map(state => state.visible))
+    )
 
     // A bearing pointer is never TACAN-driven, so the label resolves to VOR/LOC or ADF.
-    private readonly sourceLabel = this.track(
+    protected readonly sourceLabel = this.track(
         MappedSubject.create(
             ([source, hasLoc1, hasLoc2]) => resolveNavSourceLabel(source, false, hasLoc1, hasLoc2),
             this.source,
@@ -49,7 +51,7 @@ class LeftBearingInfoPanel extends ReactiveComponent<BearingInfoPanelProps> {
 
     render(): VNode {
         return (
-            <div id="BearingInfoPanel" style={this.style}>
+            <div id="LeftBearingInfoPanel" style={this.style}>
                 <svg class="LeftBearingInfo-shape" viewBox="0 0 120 60">
                     <path
                         d="M 1 1 H 85 Q 98 30 119 45 V 59 H 1 Z"
@@ -59,7 +61,7 @@ class LeftBearingInfoPanel extends ReactiveComponent<BearingInfoPanelProps> {
                     />
                 </svg>
                 <div class="LeftBearingInfo-content">
-                    <div id="BearingSymbol">
+                    <div class="BearingSymbol">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 30 10"
@@ -73,7 +75,7 @@ class LeftBearingInfoPanel extends ReactiveComponent<BearingInfoPanelProps> {
                             />
                         </svg>
                     </div>
-                    <div id="BearingSource">{this.sourceLabel}</div>
+                    <div class="BearingSource">{this.sourceLabel}</div>
                 </div>
             </div>
         )
