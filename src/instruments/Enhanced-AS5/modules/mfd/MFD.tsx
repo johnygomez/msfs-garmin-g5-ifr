@@ -16,7 +16,9 @@ import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
 import { DropdownOverlay } from '../common/DropdownOverlay'
 import { Menu } from '../common/Menu'
 import { BEARING_POINTERS, BearingPointerValue, NavSource, NavSourceLabel } from '../common/Nav'
+import { ReactiveComponent } from '../common/Reactive'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
+import { Colors } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
@@ -28,7 +30,7 @@ import { RightInfoPanel } from './RightInfoPanel'
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
-type MfdOverlay = 'heading' | 'course' | 'setup' | 'bp-1' | 'bp-2'
+type MfdOverlay = 'heading' | 'course' | 'obs' | 'setup' | 'bp-1' | 'bp-2'
 
 interface WaypointDistanceInfoProps extends ComponentProps {
     bus: EventBus
@@ -116,7 +118,7 @@ export interface MfdContentProps extends ComponentProps {
     cdiVisible: Subscribable<boolean>
 }
 
-export class MfdContent extends DisplayComponent<MfdContentProps> implements AvionicsPage {
+export class MfdContent extends ReactiveComponent<MfdContentProps> implements AvionicsPage {
     private readonly menu = FSComponent.createRef<Menu>()
     private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
     private readonly bp1Selector = FSComponent.createRef<DropdownOverlay<BearingPointerValue>>()
@@ -131,8 +133,10 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly headingActive: MappedSubscribable<boolean>
     private readonly courseActive: MappedSubscribable<boolean>
     private readonly setupActive: MappedSubscribable<boolean>
+    private readonly obsOverlayActive: MappedSubscribable<boolean>
     private readonly bearingPointerSelector1Active: MappedSubscribable<boolean>
     private readonly bearingPointerSelector2Active: MappedSubscribable<boolean>
+    private readonly obsActive: MappedSubscribable<boolean>
 
     private readonly bearingPointer1 = Subject.create<BearingPointerValue>('VLOC1')
     private readonly bearingPointer2 = Subject.create<BearingPointerValue>('NONE')
@@ -165,6 +169,10 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.bearingPointerSelector2Active = this.activeOverlay
             .map(overlay => overlay === 'bp-2')
             .pause()
+
+        const nav = this.props.bus.getSubscriber<G5NavEvents>()
+        this.obsActive = ConsumerSubject.create(nav.on('gps_obs_active'), false).pause()
+        this.obsOverlayActive = this.activeOverlay.map(overlay => overlay === 'obs').pause()
     }
 
     onAfterRender(): void {
@@ -175,6 +183,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.bearingPointerSelector1Active.resume()
         this.bearingPointerSelector2Active.resume()
         this.bearingPointerProvider.resume()
+        this.obsActive.resume()
+        this.obsOverlayActive.resume()
     }
 
     destroy(): void {
@@ -185,6 +195,8 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
         this.bearingPointerSelector1Active.destroy()
         this.bearingPointerSelector2Active.destroy()
         this.bearingPointerProvider.destroy()
+        this.obsActive.destroy()
+        this.obsOverlayActive.destroy()
         super.destroy()
     }
 
@@ -192,6 +204,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private readonly closeMenu = (): void => this.menu.instance.close()
     private readonly openHeading = (): void => this.openOverlay('heading')
     private readonly openCourse = (): void => this.openOverlay('course')
+    private readonly openOBS = (): void => this.openOverlay('obs')
     private readonly openPfd = (): void => this.props.switchPage('PFD')
     private readonly openSetup = (): void => this.openOverlay('setup')
     private readonly openBP1 = (): void => this.openOverlay('bp-1')
@@ -228,6 +241,7 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
             switch (this.activeOverlay.get()) {
                 case 'heading':
                 case 'course':
+                case 'obs':
                     this.onOverlayEvent(event)
                     break
                 case 'setup':
@@ -269,14 +283,18 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
     private onOverlayEvent(event: string): void {
         const { manager } = this.props
         const heading = this.activeOverlay.get() === 'heading'
+        const course = this.activeOverlay.get() === 'course'
+        const obs = this.activeOverlay.get() === 'obs'
         switch (event) {
             case 'Knob_Inc':
                 if (heading) manager.incrementHeading()
-                else manager.incrementCourse()
+                else if (course) manager.incrementCourse()
+                else if (obs) manager.incrementOBS()
                 break
             case 'Knob_Dec':
                 if (heading) manager.decrementHeading()
-                else manager.decrementCourse()
+                else if (course) manager.decrementCourse()
+                else if (obs) manager.decrementOBS()
                 break
             case 'Knob_Long_Push':
                 if (heading) manager.syncHeading()
@@ -348,6 +366,14 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                         value={manager.courseText}
                         onSelect={this.openCourse}
                         hidden={navSource.map(source => source === NavSource.GPS)}
+                        color={Colors.GREEN}
+                    />
+                    <Menu.Item
+                        title="OBS"
+                        value={manager.obsText}
+                        onSelect={this.openOBS}
+                        hidden={this.obsActive.map(active => !active)}
+                        color={Colors.MAGENTA}
                     />
                     <Menu.Item title="PFD" icon={`${IMAGES}/PFD.png`} onSelect={this.openPfd} />
                     <Menu.Item
@@ -366,6 +392,11 @@ export class MfdContent extends DisplayComponent<MfdContentProps> implements Avi
                     title="Select Course"
                     value={manager.courseText}
                     active={this.courseActive}
+                />
+                <ValueSelectOverlay
+                    title="OBS Course"
+                    value={manager.obsText}
+                    active={this.obsOverlayActive}
                 />
 
                 <SubmenuOverlay

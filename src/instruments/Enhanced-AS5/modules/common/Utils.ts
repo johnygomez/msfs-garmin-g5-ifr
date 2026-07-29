@@ -104,3 +104,11 @@ export const formatCourse = (course: number): string =>
  */
 export const displayStyle = (visible: Subscribable<boolean>): MappedSubscribable<string> =>
     visible.map(shown => (shown ? '' : 'display: none;'))
+
+/**
+ * Returns a subscribable CSS/HTML/SVG `visibility` attribute value based on a reactive state of whether the component should be visible or not.
+ * @param visible reactive state of whether the component should be visible
+ * @returns CSS `visibility` attribute value
+ */
+export const visibilityAttribute = (visible: Subscribable<boolean>): MappedSubscribable<string> =>
+    visible.map(shown => (shown ? 'visible' : 'hidden'))

@@ -14,7 +14,7 @@ import {
 
 import { NavRadioIndex, NavSource, NavSourceLabel, resolveNavCourse } from '../common/Nav'
 import { ReactiveComponent } from '../common/Reactive'
-import { Colors, formatDegrees3 } from '../common/Utils'
+import { Colors, formatDegrees3, visibilityAttribute } from '../common/Utils'
 import { BearingState } from '../providers/BearingPointerDataProvider'
 import { G5NavdataEvents } from '../providers/GpsPhaseSource'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
@@ -272,27 +272,18 @@ interface CenterTextProps extends ComponentProps {
     navSource: Subscribable<string>
     phaseText: Subscribable<string>
     phaseVisible: Subscribable<string>
-    xtkText: Subscribable<string>
-    xtkVisible: Subscribable<string>
+    obsVisible: Subscribable<boolean>
 }
 
 /** The central nav-source label plus flight-phase and cross-track annunciations. */
-class CenterText extends DisplayComponent<CenterTextProps> {
+class CenterText extends ReactiveComponent<CenterTextProps> {
+    private readonly obsVisible = this.track(visibilityAttribute(this.props.obsVisible))
     public render(): VNode {
         return (
             <>
-                <rect fill={Colors.PFD_BOX_BG} x="27" y="34.5" height="7" width="16" />
                 <text fill={this.props.navFill} x="35" y="40" font-size="6" text-anchor="middle">
                     {this.props.navSource}
                 </text>
-                <rect
-                    fill={Colors.PFD_BOX_BG}
-                    x="56"
-                    y="34.5"
-                    height="7"
-                    width="18"
-                    visibility={this.props.phaseVisible}
-                />
                 <text
                     fill={Colors.MAGENTA}
                     x="65"
@@ -303,23 +294,15 @@ class CenterText extends DisplayComponent<CenterTextProps> {
                 >
                     {this.props.phaseText}
                 </text>
-                <rect
-                    fill={Colors.PFD_BOX_BG}
-                    x="29"
-                    y="60.5"
-                    height="7"
-                    width="40"
-                    visibility={this.props.xtkVisible}
-                />
                 <text
                     fill={Colors.MAGENTA}
-                    x="50"
+                    x="65"
                     y="66"
                     font-size="6"
                     text-anchor="middle"
-                    visibility={this.props.xtkVisible}
+                    visibility={this.obsVisible}
                 >
-                    {this.props.xtkText}
+                    OBS
                 </text>
             </>
         )
@@ -366,8 +349,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
 
     private readonly gpsActive = this.consume(this.nav.on('gps_active_waypoint'), false)
     private readonly gpsDesiredTrack = this.consume(this.nav.on('gps_wp_desired_track'), 0)
-    private readonly gpsCrossTrack = this.consume(this.nav.on('gps_wp_cross_track'), 0)
-    private readonly gpsCdiScaling = this.consume(this.nav.on('gps_cdi_scaling'), 0)
     private readonly gpsObsActive = this.consume(this.nav.on('gps_obs_active'), false)
 
     private readonly cdiNeedle = this.consume(this.nav.on('hsi_cdi_needle'), 0)
@@ -449,20 +430,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
             this.cdiScaleLabel
         )
     )
-    private readonly xtkVisible = this.track(
-        MappedSubject.create(
-            ([src, active, xtk, scaling]) => {
-                if (src !== NavSource.GPS) return 'hidden'
-                const fullError = scaling > 0 ? scaling : 2
-                return Math.abs(active ? xtk : 0) >= fullError ? 'visible' : 'hidden'
-            },
-            this.cdiSource,
-            this.gpsActive,
-            this.gpsCrossTrack,
-            this.gpsCdiScaling
-        )
-    )
-    private readonly xtkText = this.track(this.gpsCrossTrack.map(x => `XTK ${fastToFixed(x, 2)}NM`))
 
     private readonly innerCircleVisible = this.track(
         MappedSubject.create(
@@ -744,8 +711,7 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
                                     navSource={this.props.navSourceLabel}
                                     phaseText={this.phaseText}
                                     phaseVisible={this.phaseVisible}
-                                    xtkText={this.xtkText}
-                                    xtkVisible={this.xtkVisible}
+                                    obsVisible={this.gpsObsActive}
                                 />
                             )}
                             <DmePanel

@@ -21,16 +21,14 @@ interface DTKInfoProps extends ComponentProps {
 }
 
 class DTKInfo extends ReactiveComponent<DTKInfoProps> {
-    private readonly dtkText = this.track(
-        this.props.desiredTrack.map(track => fastToFixed(track, 0))
-    )
+    private readonly dtkText = this.track(this.props.desiredTrack.map(formatCourse))
     private readonly style = this.track(displayStyle(this.props.active))
 
     render(): VNode {
         return (
             <div id="DTK" style={this.style}>
                 <div id="DTKLabel">DTK</div>
-                <div id="DTKValue">{this.dtkText}°</div>
+                <div id="DTKValue">{this.dtkText}</div>
             </div>
         )
     }

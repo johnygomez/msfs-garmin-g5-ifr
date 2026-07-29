@@ -9,6 +9,7 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
+import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { formatDegrees3, normalizeDegrees360 } from './Utils'
 
 const KNOB_RESET_MS = 600
@@ -51,16 +52,19 @@ export class AvionicsInteractionManager {
 
     readonly headingText: MappedSubscribable<string>
     readonly courseText: MappedSubscribable<string>
+    readonly obsText: MappedSubscribable<string>
     readonly altitudeText: MappedSubscribable<string>
 
     private readonly headingAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
     private readonly courseAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
+    private readonly obsAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
 
     constructor(bus: EventBus) {
-        const sub = bus.getSubscriber<G5CustomEvents & AdcEvents>()
+        const sub = bus.getSubscriber<G5CustomEvents & G5NavEvents & AdcEvents>()
 
         const headingSelected = ConsumerSubject.create(sub.on('ap_heading_selected'), 0)
         const nav1Obs = ConsumerSubject.create(sub.on('nav1_obs'), 0)
+        const gpsObs = ConsumerSubject.create(sub.on('gps_obs'), 0)
         this.selectedAltitude = ConsumerSubject.create(sub.on('ap_altitude_selected'), 0)
         this.baroInHg = ConsumerSubject.create(sub.on('altimeter_baro_setting_inhg'), 29.92)
 
@@ -69,6 +73,7 @@ export class AvionicsInteractionManager {
 
         this.headingText = this.selectedHeading.map(formatDegrees3)
         this.courseText = this.selectedCourse.map(formatDegrees3)
+        this.obsText = gpsObs.map(formatDegrees3)
         this.altitudeText = this.selectedAltitude.map(altitude => fastToFixed(altitude, 0) + 'ft')
     }
 
@@ -90,6 +95,14 @@ export class AvionicsInteractionManager {
 
     decrementCourse(): void {
         this.changeCourse(-1)
+    }
+
+    incrementOBS(): void {
+        this.changeOBS(1)
+    }
+
+    decrementOBS(): void {
+        this.changeOBS(-1)
     }
 
     incrementAltitude(): void {
@@ -121,6 +134,13 @@ export class AvionicsInteractionManager {
     private changeCourse(sign: number): void {
         const currentObs = Math.round(SimVar.GetSimVarValue('A:NAV OBS:1', SimVarValueType.Degree))
         this.setSimVar('K:VOR1_SET', this.courseAccel.step(sign, currentObs))
+    }
+
+    private changeOBS(sign: number): void {
+        const currentObs = Math.round(
+            SimVar.GetSimVarValue('A:GPS OBS VALUE', SimVarValueType.Degree)
+        )
+        this.setSimVar('K:GPS_OBS_SET', this.obsAccel.step(sign, currentObs))
     }
 
     private changeBaro(direction: 1 | -1): void {

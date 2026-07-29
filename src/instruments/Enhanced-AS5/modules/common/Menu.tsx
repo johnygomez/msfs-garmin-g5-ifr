@@ -9,6 +9,9 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
+import { ReactiveComponent } from './Reactive'
+import { Colors } from './Utils'
+
 export interface MenuItemProps extends ComponentProps {
     title: string
     onSelect?: () => void
@@ -16,10 +19,11 @@ export interface MenuItemProps extends ComponentProps {
     value?: Subscribable<string>
     inactive?: boolean
     hidden?: Subscribable<boolean>
+    color?: Colors
 }
 
 /** A single menu entry. Renders its own row; its selected/visible state is driven by the parent {@link Menu}. */
-export class MenuItem extends DisplayComponent<MenuItemProps> {
+export class MenuItem extends ReactiveComponent<MenuItemProps> {
     readonly inactive = this.props.inactive === true
     readonly hidden = this.props.hidden ?? Subject.create(false)
 
@@ -27,6 +31,7 @@ export class MenuItem extends DisplayComponent<MenuItemProps> {
 
     private readonly state: MappedSubscribable<string>
     private readonly style: MappedSubject<[boolean], string>
+    private readonly valueStyle = this.props?.color ? `color: ${this.props.color};` : ''
 
     constructor(props: MenuItemProps) {
         super(props)
@@ -70,7 +75,9 @@ export class MenuItem extends DisplayComponent<MenuItemProps> {
                     </div>
                 ) : null}
                 {this.props.value ? (
-                    <div class="ContextualMenuElementValue">{this.props.value}</div>
+                    <div class="ContextualMenuElementValue" style={this.valueStyle}>
+                        {this.props.value}
+                    </div>
                 ) : null}
             </div>
         )

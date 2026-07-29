@@ -18,6 +18,7 @@ export interface G5NavEvents {
     gps_wp_distance: number
     gps_wp_bearing: number
     gps_obs_active: boolean
+    gps_obs: number
     gps_approach_active: boolean
     gps_has_glidepath: boolean
     gps_vertical_error: number
@@ -102,6 +103,7 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     ['gps_wp_distance', { name: 'GPS WP DISTANCE', type: SimVarValueType.NM }],
     ['gps_wp_bearing', { name: 'GPS WP BEARING', type: SimVarValueType.Degree }],
     ['gps_obs_active', { name: 'GPS OBS ACTIVE', type: SimVarValueType.Bool }],
+    ['gps_obs', { name: 'GPS OBS VALUE', type: SimVarValueType.Degree }],
 
     // HSI
     ['hsi_cdi_needle', { name: 'HSI CDI NEEDLE', type: SimVarValueType.Number }],
