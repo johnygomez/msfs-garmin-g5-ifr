@@ -216,8 +216,9 @@ interface BearingPointerProps extends ComponentProps {
 /** The rotating bearing pointer that overlays the compass rose. */
 class BearingPointer extends ReactiveComponent<BearingPointerProps> {
     private readonly display = this.track(
-        this.props.state.map(state => (state.visible ? 'inherit' : 'none'))
+        this.props.state.map(state => (state.visible && !isNaN(state.angle) ? 'inherit' : 'none'))
     )
+
     private readonly transform = this.track(
         this.props.state.map(state => `rotate(${state.angle}, 50, 50)`)
     )
