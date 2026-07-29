@@ -95,8 +95,10 @@ export class NavdataStack {
         if (this.isInitialized) return
         this.isInitialized = true
 
+        const primaryPlan = this.fms.initPrimaryFlightPlan()
+
         await this.facLoader.awaitInitialization()
-        await this.fms.initPrimaryFlightPlan()
+        await primaryPlan
 
         const routeManager = await FlightPlanRouteManager.getManager()
         this.routeSync.init(
@@ -118,7 +120,7 @@ export class NavdataStack {
         const label = this.resolveLabel()
         if (label !== this.publishedLabel) {
             this.publishedLabel = label
-            this.publisher.pub('g5_cdi_scale_label', label, false, true)
+            this.publisher.pub('g5_cdi_scale_label', label, true, true)
         }
     }
 

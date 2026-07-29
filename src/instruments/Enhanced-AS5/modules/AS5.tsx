@@ -116,8 +116,8 @@ export class AS5 extends BaseInstrument {
         return this.instrumentIndex === 2
     }
 
-    private get activePage(): AvionicsPage {
-        return this.activePageId.get() === 'PFD' ? this.pfdRef.instance : this.mfdRef.instance
+    private get activePage(): AvionicsPage | null {
+        return (this.activePageId.get() === 'PFD' ? this.pfdRef : this.mfdRef).getOrDefault()
     }
 
     connectedCallback(): void {
@@ -127,8 +127,10 @@ export class AS5 extends BaseInstrument {
         this.navSourceProvider.resume()
         this.airspeedProvider = new AirspeedDataProvider(this.bus)
         this.airspeedProvider.resume()
-        this.navdataStack = new NavdataStack(this.bus)
-        this.navdataStack.init().catch(e => console.error('NavdataStack init failed', e))
+        if (!this.isMfdInstrument) {
+            this.navdataStack = new NavdataStack(this.bus)
+            this.navdataStack.init().catch(e => console.error('NavdataStack init failed', e))
+        }
         this.apAnnunciationProvider = new AutopilotAnnunciationProvider()
 
         this.adcPublisher = new AdcPublisher(this.bus)
@@ -197,6 +199,7 @@ export class AS5 extends BaseInstrument {
         this.apAnnunciationProvider?.onEvent(event)
 
         const page = this.activePage
+        if (!page) return
         page.onEvent(event)
 
         if (!page.isModalOpen) {
@@ -213,7 +216,7 @@ export class AS5 extends BaseInstrument {
 
     private setActivePage(id: PageId): void {
         if (id === this.activePageId.get()) return
-        this.activePage.closeModals()
+        this.activePage?.closeModals()
         this.activePageId.set(id)
     }
 
@@ -228,8 +231,8 @@ export class AS5 extends BaseInstrument {
             const page = this.activePage
             this.knobValueSub?.destroy()
             this.knobUnitSub?.destroy()
-            this.knobValueSub = page.knobValue.sub(v => this.setKnobSimVar('Knob_Value', v), true)
-            this.knobUnitSub = page.knobUnit.sub(u => this.setKnobSimVar('Knob_Unit', u), true)
+            this.knobValueSub = page?.knobValue.sub(v => this.setKnobSimVar('Knob_Value', v), true)
+            this.knobUnitSub = page?.knobUnit.sub(u => this.setKnobSimVar('Knob_Unit', u), true)
         }, true)
     }
 
