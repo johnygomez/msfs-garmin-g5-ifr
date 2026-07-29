@@ -11,11 +11,36 @@ import {
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { formatDegrees3, normalizeDegrees360 } from './Utils'
 
-const HEADING_KNOB_RESET_MS = 600
+const KNOB_RESET_MS = 600
 const ALTITUDE_STEP_FEET = 100
 const MIN_BARO_HPA = 948
 const MAX_BARO_HPA = 1084
 const HPA_TO_KOHLSMAN = 16
+
+class KnobAccelerationHelper {
+    private readonly accel = new InputAcceleration({ increment: 1 })
+    private lastTime = 0
+    private lastSign = 0
+    private target = 0
+    private readonly resetMs: number
+
+    constructor(resetMs: number) {
+        this.resetMs = resetMs
+    }
+
+    step(sign: number, currentValue: number): number {
+        const now = Date.now()
+        if (now - this.lastTime > this.resetMs || sign !== this.lastSign) {
+            this.target = currentValue
+            this.accel.resume()
+        }
+        this.lastTime = now
+        this.lastSign = sign
+        const step = this.accel.doStep()
+        this.target = (((this.target + sign * step) % 360) + 360) % 360
+        return this.target
+    }
+}
 
 /** Owns every sim-variable interaction (heading, course, altitude, baro) and the reactive selected values. */
 export class AvionicsInteractionManager {
@@ -28,10 +53,8 @@ export class AvionicsInteractionManager {
     readonly courseText: MappedSubscribable<string>
     readonly altitudeText: MappedSubscribable<string>
 
-    private readonly headingAccel = new InputAcceleration({ increment: 1 })
-    private lastHeadingTime = 0
-    private lastHeadingSign = 0
-    private headingTarget = 0
+    private readonly headingAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
+    private readonly courseAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
 
     constructor(bus: EventBus) {
         const sub = bus.getSubscriber<G5CustomEvents & AdcEvents>()
@@ -62,11 +85,11 @@ export class AvionicsInteractionManager {
     }
 
     incrementCourse(): void {
-        this.setSimVar('K:VOR1_OBI_INC', 0)
+        this.changeCourse(1)
     }
 
     decrementCourse(): void {
-        this.setSimVar('K:VOR1_OBI_DEC', 0)
+        this.changeCourse(-1)
     }
 
     incrementAltitude(): void {
@@ -91,17 +114,13 @@ export class AvionicsInteractionManager {
     }
 
     private changeHeading(sign: number): void {
-        const now = Date.now()
-        const elapsed = now - this.lastHeadingTime
-        if (elapsed > HEADING_KNOB_RESET_MS || sign !== this.lastHeadingSign) {
-            this.headingTarget = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
-            this.headingAccel.resume()
-        }
-        this.lastHeadingTime = now
-        this.lastHeadingSign = sign
-        const step = this.headingAccel.doStep()
-        this.headingTarget = (((this.headingTarget + sign * step) % 360) + 360) % 360
-        this.setSimVar('K:HEADING_BUG_SET', this.headingTarget)
+        const currentHeading = Math.round(Simplane.getAutoPilotHeadingLockValueDegrees())
+        this.setSimVar('K:HEADING_BUG_SET', this.headingAccel.step(sign, currentHeading))
+    }
+
+    private changeCourse(sign: number): void {
+        const currentObs = Math.round(SimVar.GetSimVarValue('A:NAV OBS:1', SimVarValueType.Degree))
+        this.setSimVar('K:VOR1_SET', this.courseAccel.step(sign, currentObs))
     }
 
     private changeBaro(direction: 1 | -1): void {
