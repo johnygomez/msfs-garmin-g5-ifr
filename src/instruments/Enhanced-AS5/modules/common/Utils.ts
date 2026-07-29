@@ -1,3 +1,5 @@
+import { MappedSubscribable, Subscribable } from '@microsoft/msfs-sdk'
+
 /**
  * Centralised colour palette for the G5 Enhanced instrument.
  *
@@ -84,3 +86,21 @@ export function formatDegrees3(value: number): string {
     const text = normalizeDegrees360(value).toFixed(0)
     return '000'.slice(text.length) + text + '°'
 }
+
+const NO_COURSE = '---°'
+
+/**
+ * Formats the course into a 3 letter string
+ * @param course Course in degrees
+ * @returns formatted course string or '---°' if course is NaN
+ */
+export const formatCourse = (course: number): string =>
+    isNaN(course) ? NO_COURSE : formatDegrees3(course)
+
+/**
+ * displayStyle is a helper returning subscribable CSS style property for a component based on a reactive state of whether the component should be visible or not.
+ * @param visible reactive state of whethre component should be visible
+ * @returns CSS style property
+ */
+export const displayStyle = (visible: Subscribable<boolean>): MappedSubscribable<string> =>
+    visible.map(shown => (shown ? '' : 'display: none;'))
