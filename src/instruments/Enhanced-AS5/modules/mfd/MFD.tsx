@@ -1,10 +1,7 @@
 import {
     ComponentProps,
-    ConsumerSubject,
-    DisplayComponent,
     EventBus,
     FSComponent,
-    MappedSubscribable,
     MappedSubject,
     Subject,
     Subscribable,
@@ -37,63 +34,41 @@ interface WaypointDistanceInfoProps extends ComponentProps {
     navSource: Subscribable<NavSource>
 }
 
-class WaypointDistanceInfo extends DisplayComponent<WaypointDistanceInfoProps> {
+class WaypointDistanceInfo extends ReactiveComponent<WaypointDistanceInfoProps> {
     private readonly nav = this.props.bus.getSubscriber<G5NavEvents>()
 
-    private readonly gpsActiveWaypoint = ConsumerSubject.create(
-        this.nav.on('gps_active_waypoint'),
-        false
-    ).pause()
-    private readonly gpsDistance = ConsumerSubject.create(this.nav.on('gps_wp_distance'), 0).pause()
-    private readonly nav1HasDme = ConsumerSubject.create(this.nav.on('nav1_has_dme'), false).pause()
-    private readonly nav1Dme = ConsumerSubject.create(this.nav.on('nav1_dme'), 0).pause()
-    private readonly nav2HasDme = ConsumerSubject.create(this.nav.on('nav2_has_dme'), false).pause()
-    private readonly nav2Dme = ConsumerSubject.create(this.nav.on('nav2_dme'), 0).pause()
+    private readonly gpsActiveWaypoint = this.consume(this.nav.on('gps_active_waypoint'), false)
+    private readonly gpsDistance = this.consume(this.nav.on('gps_wp_distance'), 0)
+    private readonly nav1HasDme = this.consume(this.nav.on('nav1_has_dme'), false)
+    private readonly nav1Dme = this.consume(this.nav.on('nav1_dme'), 0)
+    private readonly nav2HasDme = this.consume(this.nav.on('nav2_has_dme'), false)
+    private readonly nav2Dme = this.consume(this.nav.on('nav2_dme'), 0)
 
-    private readonly mode = this.props.navSource.map(source =>
-        source === NavSource.GPS ? NavSource.GPS : 'VOR'
+    private readonly mode = this.track(
+        this.props.navSource.map(source => (source === NavSource.GPS ? NavSource.GPS : 'VOR'))
     )
 
-    private readonly distanceText = MappedSubject.create(
-        ([source, gpsActive, gpsDistance, nav1HasDme, nav1Dme, nav2HasDme, nav2Dme]) => {
-            switch (source) {
-                case NavSource.Nav1:
-                    return nav1HasDme ? fastToFixed(nav1Dme, 1) : '---'
-                case NavSource.Nav2:
-                    return nav2HasDme ? fastToFixed(nav2Dme, 1) : '---'
-                default:
-                    return gpsActive ? fastToFixed(gpsDistance, 1) : '---'
-            }
-        },
-        this.props.navSource,
-        this.gpsActiveWaypoint,
-        this.gpsDistance,
-        this.nav1HasDme,
-        this.nav1Dme,
-        this.nav2HasDme,
-        this.nav2Dme
+    private readonly distanceText = this.track(
+        MappedSubject.create(
+            ([source, gpsActive, gpsDistance, nav1HasDme, nav1Dme, nav2HasDme, nav2Dme]) => {
+                switch (source) {
+                    case NavSource.Nav1:
+                        return nav1HasDme ? fastToFixed(nav1Dme, 1) : '---'
+                    case NavSource.Nav2:
+                        return nav2HasDme ? fastToFixed(nav2Dme, 1) : '---'
+                    default:
+                        return gpsActive ? fastToFixed(gpsDistance, 1) : '---'
+                }
+            },
+            this.props.navSource,
+            this.gpsActiveWaypoint,
+            this.gpsDistance,
+            this.nav1HasDme,
+            this.nav1Dme,
+            this.nav2HasDme,
+            this.nav2Dme
+        )
     )
-
-    onAfterRender(): void {
-        this.gpsActiveWaypoint.resume()
-        this.gpsDistance.resume()
-        this.nav1HasDme.resume()
-        this.nav1Dme.resume()
-        this.nav2HasDme.resume()
-        this.nav2Dme.resume()
-    }
-
-    destroy(): void {
-        this.distanceText.destroy()
-        this.mode.destroy()
-        this.gpsActiveWaypoint.destroy()
-        this.gpsDistance.destroy()
-        this.nav1HasDme.destroy()
-        this.nav1Dme.destroy()
-        this.nav2HasDme.destroy()
-        this.nav2Dme.destroy()
-        super.destroy()
-    }
 
     render(): VNode {
         return (
@@ -129,74 +104,61 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
 
     readonly knobUnit = Subject.create(KnobValueUnit.Degrees)
 
-    readonly knobValue: MappedSubject<[MfdOverlay | null, number, number], number>
-    private readonly headingActive: MappedSubscribable<boolean>
-    private readonly courseActive: MappedSubscribable<boolean>
-    private readonly setupActive: MappedSubscribable<boolean>
-    private readonly obsOverlayActive: MappedSubscribable<boolean>
-    private readonly bearingPointerSelector1Active: MappedSubscribable<boolean>
-    private readonly bearingPointerSelector2Active: MappedSubscribable<boolean>
-    private readonly obsActive: MappedSubscribable<boolean>
-
     private readonly bearingPointer1 = Subject.create<BearingPointerValue>('VLOC1')
     private readonly bearingPointer2 = Subject.create<BearingPointerValue>('NONE')
+
+    readonly knobValue = this.track(
+        MappedSubject.create(
+            ([overlay, heading, course]) => (overlay === 'course' ? course : heading),
+            this.activeOverlay,
+            this.props.manager.selectedHeading,
+            this.props.manager.selectedCourse
+        )
+    )
+
+    private readonly headingActive = this.track(
+        this.activeOverlay.map(overlay => overlay === 'heading')
+    )
+    private readonly courseActive = this.track(
+        this.activeOverlay.map(overlay => overlay === 'course')
+    )
+    private readonly setupActive = this.track(
+        this.activeOverlay.map(overlay => overlay === 'setup')
+    )
+    private readonly obsOverlayActive = this.track(
+        this.activeOverlay.map(overlay => overlay === 'obs')
+    )
+    private readonly bearingPointerSelector1Active = this.track(
+        this.activeOverlay.map(overlay => overlay === 'bp-1')
+    )
+    private readonly bearingPointerSelector2Active = this.track(
+        this.activeOverlay.map(overlay => overlay === 'bp-2')
+    )
+
+    private readonly obsActive = this.consume(
+        this.props.bus.getSubscriber<G5NavEvents>().on('gps_obs_active'),
+        false
+    )
 
     private readonly bearingPointerProvider: BearingPointerDataProvider
 
     constructor(props: MfdContentProps) {
         super(props)
 
-        // NOTE: The bearing provider is owned by MFD, because MFD decides the bearing provider sources based on its settings.
         this.bearingPointerProvider = new BearingPointerDataProvider(
             this.props.bus,
             this.bearingPointer1,
             this.bearingPointer2
         )
-
-        this.knobValue = MappedSubject.create(
-            ([overlay, heading, course]) => (overlay === 'course' ? course : heading),
-            this.activeOverlay,
-            this.props.manager.selectedHeading,
-            this.props.manager.selectedCourse
-        ).pause()
-
-        this.headingActive = this.activeOverlay.map(overlay => overlay === 'heading').pause()
-        this.courseActive = this.activeOverlay.map(overlay => overlay === 'course').pause()
-        this.setupActive = this.activeOverlay.map(overlay => overlay === 'setup').pause()
-        this.bearingPointerSelector1Active = this.activeOverlay
-            .map(overlay => overlay === 'bp-1')
-            .pause()
-        this.bearingPointerSelector2Active = this.activeOverlay
-            .map(overlay => overlay === 'bp-2')
-            .pause()
-
-        const nav = this.props.bus.getSubscriber<G5NavEvents>()
-        this.obsActive = ConsumerSubject.create(nav.on('gps_obs_active'), false).pause()
-        this.obsOverlayActive = this.activeOverlay.map(overlay => overlay === 'obs').pause()
     }
 
     onAfterRender(): void {
-        this.knobValue.resume()
-        this.headingActive.resume()
-        this.courseActive.resume()
-        this.setupActive.resume()
-        this.bearingPointerSelector1Active.resume()
-        this.bearingPointerSelector2Active.resume()
+        super.onAfterRender()
         this.bearingPointerProvider.resume()
-        this.obsActive.resume()
-        this.obsOverlayActive.resume()
     }
 
     destroy(): void {
-        this.knobValue.destroy()
-        this.headingActive.destroy()
-        this.courseActive.destroy()
-        this.setupActive.destroy()
-        this.bearingPointerSelector1Active.destroy()
-        this.bearingPointerSelector2Active.destroy()
         this.bearingPointerProvider.destroy()
-        this.obsActive.destroy()
-        this.obsOverlayActive.destroy()
         super.destroy()
     }
 
