@@ -1,4 +1,4 @@
-import { CDIScaleLabel } from '@microsoft/msfs-garminsdk'
+import { CDIScaleLabel, FmsEvents } from '@microsoft/msfs-garminsdk'
 import {
     EventBus,
     EventSubscriber,
@@ -106,6 +106,11 @@ export class NavSourceDataProvider {
         const tacanDriven = subs.consume(nav.on('tacan_drives_nav1'), false)
         const nav1HasLoc = subs.consume(nav.on('nav1_has_loc'), false)
         const nav2HasLoc = subs.consume(nav.on('nav2_has_loc'), false)
+
+        const approachSupportsGp = subs.consume(
+            bus.getSubscriber<FmsEvents>().on('approach_supports_gp'),
+            false
+        )
 
         // The resolved Garmin GPS CDI-scaling phase label, published by NavdataStack.
         const cdiScaleLabel = subs.consume(
@@ -220,9 +225,10 @@ export class NavSourceDataProvider {
                     nav2HasGs,
                     gsi1,
                     gsi2,
+                    approachSupportsGp,
                 ]): VerticalGuidance => {
                     if (source === NavSource.GPS) {
-                        if (!hasGlidepath && verticalError === 0) return NO_GUIDANCE
+                        if (!hasGlidepath && !approachSupportsGp) return NO_GUIDANCE
                         const isApproach = gsiScaling > 0 && scaleLabel !== CDIScaleLabel.LNavPlusV
                         const fullScale = isApproach ? gsiScaling : VNAV_FULL_SCALE_DEVIATION_METERS
                         return {
@@ -246,7 +252,8 @@ export class NavSourceDataProvider {
                 nav1HasGlideslope,
                 nav2HasGlideslope,
                 nav1Gsi,
-                nav2Gsi
+                nav2Gsi,
+                approachSupportsGp
             )
         )
 
