@@ -48,7 +48,7 @@ A few things that were added/redesigned:
 
 - [ ] Support inHg units for baro.
 - [ ] Display Nav Course and maybe other ticks on Horizontal Compass.
-- [ ] Add full AFCS status box - currently the AP is supported only via GPSS.
+- [ ] Add full AFCS status box - currently the AP is not really supported, but will come soon in GPSS mode.
 
 ### MFD
 
