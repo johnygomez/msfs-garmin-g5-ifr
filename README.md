@@ -11,15 +11,14 @@ source files, but eventually decided to completely rewrite it for the MSFS 2024 
 The initial refactor was done with the help of LLMs, so the quality may be flaky in some places and bug reports are welcome!
 The project was switched to TypeScript and modern tooling, keeping the Rollup bundler as suggested by the MSFS SDK.
 
-<table style="width:100%; border-collapse: collapse">
-  <tr>
-    <td width="24.7%" style="border: none"><img src="images/cockpit1.png" alt="Cockpit" style="width:100%"/></td>
-    <td width="22.4%" style="border: none"><img src="images/cockpit.png" alt="Cockpit" style="width:100%"/></td>
-    <td width="17.9%" style="border: none"><img src="images/pfd.png" alt="PFD" style="width:100%"/></td>
-    <td width="18.2%" style="border: none"><img src="images/lpv.png" alt="LPV Approach" style="width:100%"/></td>
-    <td width="16.8%" style="border: none"><img src="images/bearing.png" alt="Bearing Pointers" style="width:100%"/></td>
-  </tr>
-</table>
+<div align="center" width="100%">
+  <img src="images/img1.png" width="16.5%" />
+  <img src="images/img2.png" width="16.5%" />
+  <img src="images/img3.png" width="16.5%" />
+  <img src="images/img4.png" width="16.5%" />
+  <img src="images/img5.png" width="16.5%" />
+  <img src="images/img6.png" width="16.5%" />
+</div>
 
 ## Installation
 
