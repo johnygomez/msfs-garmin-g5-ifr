@@ -12,12 +12,12 @@ The initial refactor was done with the help of LLMs, so the quality may be flaky
 The project was switched to TypeScript and modern tooling, keeping the Rollup bundler as suggested by the MSFS SDK.
 
 <div align="center" width="100%">
-  <img src="images/img1.png" width="16.5%" />
-  <img src="images/img2.png" width="16.5%" />
-  <img src="images/img3.png" width="16.5%" />
-  <img src="images/img4.png" width="16.5%" />
-  <img src="images/img5.png" width="16.5%" />
-  <img src="images/img6.png" width="16.5%" />
+  <img src="images/img1.jpg" width="16.5%" />
+  <img src="images/img2.jpg" width="16.5%" />
+  <img src="images/img3.jpg" width="16.5%" />
+  <img src="images/img4.jpg" width="16.5%" />
+  <img src="images/img5.jpg" width="16.5%" />
+  <img src="images/img6.jpg" width="16.5%" />
 </div>
 
 ## Installation
