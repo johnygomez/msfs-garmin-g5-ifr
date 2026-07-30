@@ -1,0 +1,43 @@
+name: Feature Request
+description: Suggest a new feature or improvement for the G5 avionics
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem would this feature solve? Is it related to real-world G5 behavior, IFR workflow, or quality of life?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature or improvement you'd like to see. Include any visual references or mockups if possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches or workarounds you've considered.
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Visual References
+      description: Screenshots, diagrams, or links to real G5 documentation that illustrate the request.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other details, links, or context about the feature request.
+    validations:
+      required: false

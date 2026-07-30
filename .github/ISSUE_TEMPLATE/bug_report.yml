@@ -1,0 +1,70 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in the G5 avionics
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        Steps to reproduce the behavior:
+        1. Load aircraft '...'
+        2. Set NAV/GPS mode '...'
+        3. Fly route '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: |
+        Please provide details about your setup:
+        - MSFS version (e.g. 2024, SU1 beta)
+        - Aircraft (e.g. default Cessna 172 G1000)
+        - Route/flight plan
+        - GPS/NAV mode (e.g. GPS, VLOC, LNAV, LPV)
+        - G5 mode (PFD or MFD)
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Logs
+      description: If applicable, attach screenshots or console logs to help explain the issue.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might be relevant.
+    validations:
+      required: false

@@ -1,0 +1,74 @@
+name: Aircraft Support Request
+description: Request G5 support for a new MSFS 2024 aircraft
+labels: ["aircraft-support"]
+body:
+  - type: input
+    id: manufacturer
+    attributes:
+      label: Aircraft Manufacturer
+      description: e.g. Cessna, Piper, Beechcraft
+      placeholder: Cessna
+    validations:
+      required: true
+
+  - type: input
+    id: variant
+    attributes:
+      label: Aircraft Variant / Model
+      description: e.g. 172 SP Skyhawk, PA-28 Archer
+      placeholder: 172 SP Skyhawk
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      description: Is this a default MSFS 2024 aircraft or a third-party addon?
+      options:
+        - Default (Asobo/Microsoft)
+        - Third-party addon
+    validations:
+      required: true
+
+  - type: input
+    id: link
+    attributes:
+      label: Link to Aircraft
+      description: If a third-party addon, provide a link to the store page or download.
+      placeholder: https://flightsim.to/...
+    validations:
+      required: false
+
+  - type: textarea
+    id: placement
+    attributes:
+      label: G5 Placement in Cockpit
+      description: |
+        Describe where the G5 units should be placed in the cockpit. Include:
+        - Which panel position (e.g. pilot side, co-pilot side)
+        - Which existing instruments should be replaced
+        - Desired G5 configuration (single PFD, dual PFD+MFD)
+        - Screenshots or references from real aircraft G5 installations
+    validations:
+      required: true
+
+  - type: textarea
+    id: avionics
+    attributes:
+      label: Avionics Integration
+      description: |
+        Any details about how the G5 should integrate with existing avionics:
+        - GPS/Navigator units present (e.g. GNS 430, GTN 650, G1000)
+        - Autopilot model
+        - Any other relevant instruments
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Details
+      description: Any other information that would help with the implementation.
+    validations:
+      required: false
