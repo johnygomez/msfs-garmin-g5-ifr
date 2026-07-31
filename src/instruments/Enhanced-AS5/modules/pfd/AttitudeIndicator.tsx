@@ -252,13 +252,12 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
     }
 
     public onAfterRender(): void {
-        // NOTE: Until full AP support, the FD will not be functional, not to confuse the users.
-        // this.fdPitch.resume()
-        // this.fdBank.resume()
-        // this.fdActive.resume()
-        // this.visibility.resume()
-        // this.bankRotation.resume()
-        // this.pitchTransform.resume()
+        this.fdPitch.resume()
+        this.fdBank.resume()
+        this.fdActive.resume()
+        this.visibility.resume()
+        this.bankRotation.resume()
+        this.pitchTransform.resume()
         return
     }
 
@@ -273,8 +272,9 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
     }
 
     public render(): VNode {
+        // NOTE: Until full AP support, the FD will not be functional, not to confuse the users.
         return (
-            <g class="flight-director" display={this.visibility} transform={this.bankRotation}>
+            <g class="flight-director" transform={this.bankRotation} display="none">
                 <path
                     class="flight-director-outer-left"
                     d="M-100 40 -100 20 0 0 -85 40 Z"

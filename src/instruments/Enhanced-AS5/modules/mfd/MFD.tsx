@@ -363,6 +363,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                         title="GPSS"
                         value={this.props.manager.gpssEnabled}
                         onSelect={this.toggleGpss}
+                        hidden={navSource.map(source => source !== NavSource.GPS)}
                         isBoolean
                     />
                     <Menu.Item

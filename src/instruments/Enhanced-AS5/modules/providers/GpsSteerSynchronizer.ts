@@ -4,11 +4,17 @@ import { ReactiveProvider } from '../common/Reactive'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
 const NULL_LNAV_COURSE: number | null = null
+const FD_BANK_ESTABLISHED_THRESHOLD = 3
 
 export class GpsSteerSynchronizer extends ReactiveProvider {
     private readonly gpssEnabled = this.consume(
         this.bus.getSubscriber<G5CustomEvents>().on('gpss_enabled'),
         false
+    )
+
+    private readonly fdBank = this.consume(
+        this.bus.getSubscriber<G5CustomEvents>().on('flight_director_bank'),
+        0
     )
 
     private readonly lnavTracking = this.consume(
@@ -26,7 +32,15 @@ export class GpsSteerSynchronizer extends ReactiveProvider {
     }
 
     onUpdate(): void {
-        if (!this.gpssEnabled.get() || !this.lnavTracking.get()) {
+        if (!this.gpssEnabled.get()) {
+            return
+        }
+
+        if (!this.lnavTracking.get()) {
+            return
+        }
+
+        if (Math.abs(this.fdBank.get()) >= FD_BANK_ESTABLISHED_THRESHOLD) {
             return
         }
 
@@ -36,14 +50,14 @@ export class GpsSteerSynchronizer extends ReactiveProvider {
         }
 
         const magvar = SimVar.GetSimVarValue('MAGVAR', SimVarValueType.Degree)
-        let magneticHeading = courseToSteer - magvar
+        let magneticHeading = Math.round(courseToSteer - magvar)
         while (magneticHeading < 0) magneticHeading += 360
         magneticHeading = magneticHeading % 360
 
         SimVar.SetSimVarValue(
             'AUTOPILOT HEADING LOCK DIR:1',
             SimVarValueType.Degree,
-            Math.round(magneticHeading)
+            magneticHeading
         )
     }
 }
