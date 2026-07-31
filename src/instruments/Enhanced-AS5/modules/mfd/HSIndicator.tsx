@@ -5,6 +5,7 @@ import {
     DisplayComponent,
     EventBus,
     FSComponent,
+    LNavEvents,
     MappedSubject,
     MappedSubscribable,
     SimVarValueType,
@@ -273,11 +274,13 @@ interface CenterTextProps extends ComponentProps {
     phaseText: Subscribable<string>
     phaseVisible: Subscribable<string>
     obsVisible: Subscribable<boolean>
+    suspVisible: Subscribable<boolean>
 }
 
 /** The central nav-source label plus flight-phase and cross-track annunciations. */
 class CenterText extends ReactiveComponent<CenterTextProps> {
     private readonly obsVisible = this.track(visibilityAttribute(this.props.obsVisible))
+    private readonly suspVisible = this.track(visibilityAttribute(this.props.suspVisible))
     public render(): VNode {
         return (
             <>
@@ -303,6 +306,16 @@ class CenterText extends ReactiveComponent<CenterTextProps> {
                     visibility={this.obsVisible}
                 >
                     OBS
+                </text>
+                <text
+                    fill={Colors.MAGENTA}
+                    x="65"
+                    y="66"
+                    font-size="6"
+                    text-anchor="middle"
+                    visibility={this.suspVisible}
+                >
+                    SUSP
                 </text>
             </>
         )
@@ -350,6 +363,20 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
     private readonly gpsActive = this.consume(this.nav.on('gps_active_waypoint'), false)
     private readonly gpsDesiredTrack = this.consume(this.nav.on('gps_wp_desired_track'), 0)
     private readonly gpsObsActive = this.consume(this.nav.on('gps_obs_active'), false)
+
+    private readonly lnavIsSuspended = this.consume(
+        this.props.bus.getSubscriber<LNavEvents>().on('lnav_is_suspended'),
+        false
+    )
+
+    private readonly suspVisible = this.track(
+        MappedSubject.create(
+            ([suspended, obs, source]) => suspended && !obs && source === NavSource.GPS,
+            this.lnavIsSuspended,
+            this.gpsObsActive,
+            this.props.activeSource
+        )
+    )
 
     private readonly cdiNeedle = this.consume(this.nav.on('hsi_cdi_needle'), 0)
 
@@ -712,6 +739,7 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
                                     phaseText={this.phaseText}
                                     phaseVisible={this.phaseVisible}
                                     obsVisible={this.gpsObsActive}
+                                    suspVisible={this.suspVisible}
                                 />
                             )}
                             <DmePanel
