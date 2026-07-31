@@ -207,7 +207,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     <AttitudeIndicatorComponent tas={airspeed.trueAirspeed} bus={bus} />
                 </div>
                 <div id="Altimeter">
-                    <AltimeterComponent bus={bus} height={1020} />
+                    <AltimeterComponent bus={bus} height={1020} baroUnit={manager.baroUnit} />
                 </div>
                 <div id="VerticalDeviation">
                     <VerticalDeviationIndicatorComponent
