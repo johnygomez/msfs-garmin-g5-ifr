@@ -5,12 +5,13 @@ import {
     InputAcceleration,
     MappedSubscribable,
     SimVarValueType,
+    Subject,
     Subscribable,
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
-import { formatDegrees3, normalizeDegrees360 } from './Utils'
+import { BaroUnit, formatDegrees3, normalizeDegrees360 } from './Utils'
 
 const KNOB_RESET_MS = 600
 const ALTITUDE_STEP_FEET = 100
@@ -59,6 +60,8 @@ export class AvionicsInteractionManager {
     private readonly courseAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
     private readonly obsAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
 
+    private readonly baroUnitSub = Subject.create<BaroUnit>('hPa')
+
     readonly gpssEnabled: ConsumerSubject<boolean>
 
     constructor(bus: EventBus) {
@@ -78,6 +81,10 @@ export class AvionicsInteractionManager {
         this.courseText = this.selectedCourse.map(formatDegrees3)
         this.obsText = gpsObs.map(formatDegrees3)
         this.altitudeText = this.selectedAltitude.map(altitude => fastToFixed(altitude, 0) + 'ft')
+    }
+
+    get baroUnit(): Subscribable<BaroUnit> {
+        return this.baroUnitSub
     }
 
     incrementHeading(): void {
@@ -121,6 +128,10 @@ export class AvionicsInteractionManager {
         this.setSimVar('K:AP_ALT_VAR_SET_ENGLISH', rounded)
     }
 
+    changeBaroUnits(unit: BaroUnit): void {
+        this.baroUnitSub.set(unit)
+    }
+
     increaseBaro(): void {
         this.changeBaro(1)
     }
@@ -152,6 +163,15 @@ export class AvionicsInteractionManager {
     }
 
     private changeBaro(direction: 1 | -1): void {
+        const unit = this.baroUnitSub.get()
+        if (unit === 'hPa') {
+            this.changeBaroHPA(direction)
+        } else {
+            this.changeBaroInHg(direction)
+        }
+    }
+
+    private changeBaroHPA(direction: 1 | -1): void {
         const currentHpa = SimVar.GetSimVarValue('A:KOHLSMAN SETTING MB:1', 'Millibars')
         const nextHpa = Math.round(currentHpa) + direction
         if (nextHpa >= MIN_BARO_HPA && nextHpa <= MAX_BARO_HPA) {
@@ -160,6 +180,14 @@ export class AvionicsInteractionManager {
                 SimVarValueType.Number,
                 nextHpa * HPA_TO_KOHLSMAN
             )
+        }
+    }
+
+    private changeBaroInHg(direction: 1 | -1): void {
+        if (direction === 1) {
+            SimVar.SetSimVarValue('K:KOHLSMAN_INC', SimVarValueType.Number, 0)
+        } else {
+            SimVar.SetSimVarValue('K:KOHLSMAN_DEC', SimVarValueType.Number, 0)
         }
     }
 

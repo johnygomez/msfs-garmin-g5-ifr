@@ -21,11 +21,13 @@ import {
     DebounceTimer,
 } from '@microsoft/msfs-sdk'
 
+import { BaroUnit } from '../common/Utils'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
 export interface AltimeterComponentProps extends ComponentProps {
     bus: EventBus
     height: number
+    baroUnit: Subscribable<BaroUnit>
     onDeviationAlert?: () => void
 }
 
@@ -394,7 +396,9 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly PX_PER_FT: number
 
     private readonly indicatedAlt: ConsumerSubject<number>
-    private readonly baroSetting: ConsumerSubject<number>
+    private readonly baroSettingMB: ConsumerSubject<number>
+    private readonly baroSettingInHG: ConsumerSubject<number>
+    private readonly baroSettingText: MappedSubscribable<string>
     private readonly verticalSpd: ConsumerSubject<number>
     private readonly refAltitude: ConsumerSubject<number>
 
@@ -423,9 +427,19 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
             sub.on('indicated_alt').withPrecision(0),
             0
         ).pause()
-        this.baroSetting = ConsumerSubject.create(
+        this.baroSettingMB = ConsumerSubject.create(
             sub.on('altimeter_baro_setting_mb').withPrecision(0),
             1013
+        ).pause()
+        this.baroSettingInHG = ConsumerSubject.create(
+            sub.on('altimeter_baro_setting_inhg').withPrecision(2),
+            29.92
+        ).pause()
+        this.baroSettingText = MappedSubject.create(
+            ([mb, inHg, unit]) => (unit === 'hPa' ? Math.round(mb).toString() : inHg.toFixed(2)),
+            this.baroSettingMB,
+            this.baroSettingInHG,
+            this.props.baroUnit
         ).pause()
         this.verticalSpd = ConsumerSubject.create(
             sub.on('vertical_speed').withPrecision(1),
@@ -503,7 +517,9 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
     public onAfterRender(): void {
         this.indicatedAlt.resume()
-        this.baroSetting.resume()
+        this.baroSettingMB.resume()
+        this.baroSettingInHG.resume()
+        this.baroSettingText.resume()
         this.verticalSpd.resume()
         this.refAltitude.resume()
 
@@ -523,7 +539,9 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.altitudeAlerter.destroy()
 
         this.indicatedAlt.destroy()
-        this.baroSetting.destroy()
+        this.baroSettingMB.destroy()
+        this.baroSettingInHG.destroy()
+        this.baroSettingText.destroy()
         this.verticalSpd.destroy()
         this.refAltitude.destroy()
 
@@ -613,7 +631,7 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                             text-anchor="middle"
                             dominant-baseline="central"
                         >
-                            {this.baroSetting.map(p => p.toFixed(0))}
+                            {this.baroSettingText}
                         </text>
                     </g>
                 </svg>

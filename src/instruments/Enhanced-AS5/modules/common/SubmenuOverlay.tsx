@@ -56,6 +56,7 @@ interface SubmenuOverlayProps extends ComponentProps {
     title: string
     active: Subscribable<boolean>
     onLongPush?: () => void
+    style?: string
 }
 
 export class SubmenuOverlay extends DisplayComponent<SubmenuOverlayProps> {
@@ -113,7 +114,7 @@ export class SubmenuOverlay extends DisplayComponent<SubmenuOverlayProps> {
 
     render(): VNode {
         return (
-            <div id="SubmenuOverlay" state={this.state}>
+            <div id="SubmenuOverlay" state={this.state} style={this.props.style}>
                 <div id="SubmenuOverlayTitle">{this.props.title}</div>
                 <div id="SubmenuOverlayItems">{this.itemNodes}</div>
             </div>

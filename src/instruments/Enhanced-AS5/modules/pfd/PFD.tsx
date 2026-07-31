@@ -12,7 +12,10 @@ import {
 
 import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager'
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
+import { DropdownOverlay } from '../common/DropdownOverlay'
 import { Menu } from '../common/Menu'
+import { SubmenuOverlay } from '../common/SubmenuOverlay'
+import { BARO_UNITS, BaroUnit } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { AirspeedSubjects } from '../providers/AirspeedDataProvider'
@@ -27,7 +30,7 @@ import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSl
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
-type PfdOverlay = 'heading' | 'altitude'
+type PfdOverlay = 'heading' | 'altitude' | 'setup' | 'baro'
 
 export interface PfdContentProps extends ComponentProps {
     bus: EventBus
@@ -41,6 +44,8 @@ export interface PfdContentProps extends ComponentProps {
 
 export class PfdContent extends DisplayComponent<PfdContentProps> implements AvionicsPage {
     private readonly menu = FSComponent.createRef<Menu>()
+    private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
+    private readonly baroSelector = FSComponent.createRef<DropdownOverlay<BaroUnit>>()
 
     private readonly activeOverlay = Subject.create<PfdOverlay | null>(null)
 
@@ -64,11 +69,22 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
 
     private readonly headingActive = this.activeOverlay.map(overlay => overlay === 'heading')
     private readonly altitudeActive = this.activeOverlay.map(overlay => overlay === 'altitude')
+    private readonly setupActive = this.activeOverlay.map(overlay => overlay === 'setup')
+    private readonly baroSelectorActive = this.activeOverlay.map(overlay => overlay === 'baro')
 
     private readonly closeMenu = (): void => this.menu.instance.close()
     private readonly openHeading = (): void => this.openOverlay('heading')
     private readonly openAltitude = (): void => this.openOverlay('altitude')
+    private readonly openSetup = (): void => this.openOverlay('setup')
     private readonly openMfd = (): void => this.props.switchPage('MFD')
+    private readonly openBaro = (): void => this.openOverlay('baro')
+    private readonly closeOverlays = (): void => this.closeModals()
+    private readonly onBaroSelected = (unit?: BaroUnit) => {
+        if (unit !== undefined && unit !== null) {
+            this.props.manager.changeBaroUnits(unit)
+        }
+        this.closeModals()
+    }
 
     private readonly turnRate: ConsumerSubject<number>
     private readonly slipSkid: ConsumerSubject<number>
@@ -107,7 +123,18 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
         this.onHardwareEvent(event)
 
         if (this.activeOverlay.get() !== null) {
-            this.onOverlayEvent(event)
+            switch (this.activeOverlay.get()) {
+                case 'heading':
+                case 'altitude':
+                    this.onOverlayEvent(event)
+                    break
+                case 'setup':
+                    this.setupSubmenu.instance.onEvent(event)
+                    break
+                case 'baro':
+                    this.baroSelector.instance.onEvent(event)
+                    break
+            }
         } else if (this.menu.instance.isOpen.get()) {
             this.menu.instance.onEvent(event)
         } else {
@@ -236,6 +263,11 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                         onSelect={this.openAltitude}
                     />
                     <Menu.Item title="MFD" icon={`${IMAGES}/MFD.png`} onSelect={this.openMfd} />
+                    <Menu.Item
+                        title="Setup"
+                        icon={`${IMAGES}/SETUP.png`}
+                        onSelect={this.openSetup}
+                    />
                 </Menu>
 
                 <ValueSelectOverlay
@@ -247,6 +279,30 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     title="Select Altitude"
                     value={manager.altitudeText}
                     active={this.altitudeActive}
+                />
+
+                <SubmenuOverlay
+                    title="Setup"
+                    active={this.setupActive}
+                    ref={this.setupSubmenu}
+                    onLongPush={this.closeOverlays}
+                    style="height: 35%;"
+                >
+                    <SubmenuOverlay.item
+                        title="Baro Units"
+                        onSelect={this.openBaro}
+                        value={manager.baroUnit}
+                    />
+                </SubmenuOverlay>
+
+                <DropdownOverlay
+                    ref={this.baroSelector}
+                    title="Baro Units"
+                    selected={manager.baroUnit}
+                    options={BARO_UNITS}
+                    active={this.baroSelectorActive}
+                    onSelected={this.onBaroSelected}
+                    onLongPush={this.closeOverlays}
                 />
             </>
         )
