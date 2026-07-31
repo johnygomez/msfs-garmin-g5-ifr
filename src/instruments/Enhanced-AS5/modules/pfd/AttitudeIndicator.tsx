@@ -252,12 +252,14 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
     }
 
     public onAfterRender(): void {
-        this.fdPitch.resume()
-        this.fdBank.resume()
-        this.fdActive.resume()
-        this.visibility.resume()
-        this.bankRotation.resume()
-        this.pitchTransform.resume()
+        // NOTE: Until full AP support, the FD will not be functional, not to confuse the users.
+        // this.fdPitch.resume()
+        // this.fdBank.resume()
+        // this.fdActive.resume()
+        // this.visibility.resume()
+        // this.bankRotation.resume()
+        // this.pitchTransform.resume()
+        return
     }
 
     public destroy(): void {
