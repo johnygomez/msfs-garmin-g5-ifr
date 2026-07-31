@@ -686,7 +686,7 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
                         <CompassCard noBackground={this.props.noBackground} />
 
                         <polygon
-                            points="46,0 47,0 50,4 53,0 54,0 54,5 46,5"
+                            points="50,-1 52,-4 57,-4 56,0 44,0 43,-4 48,-4"
                             fill={this.headingBugFill}
                             stroke={this.headingBugStroke}
                             transform={this.headingBugTransform}
@@ -729,7 +729,7 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
                         }
                     </g>
 
-                    <polygon points="46,-3 54,-3 50,3" fill={Colors.WHITE} stroke={Colors.BLACK} />
+                    <polygon points="47,-3 53,-3 50,0" fill={Colors.PFD_BOX_BG} />
                     <path
                         d="M44 50 L49 50 L49 53 L48 54 L48 55 L52 55 L52 54 L51 53 L51 50 L56 50 L56 49 L51 48 L51 46 Q50 44 49 46 L49 48 L44 49 Z"
                         fill={Colors.WHITE}
