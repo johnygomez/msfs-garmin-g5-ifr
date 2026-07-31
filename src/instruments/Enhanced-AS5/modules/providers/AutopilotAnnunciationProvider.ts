@@ -2,17 +2,7 @@ import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
 
 import { APInfoBarSubjects } from '../pfd/APInfoBar'
 
-/**
- * Computes the Garmin-style autopilot mode-annunciation strings (status, lateral,
- * vertical, armed states, yaw damper) from the sim's autopilot SimVars.
- *
- * It exposes a set of string Subjects — consumed by `APInfoBarComponent` via
- * {@link subjects} — and lives in the provider/computer layer next to
- * `NavSourceDataProvider`. Drive it by calling {@link onUpdate} every frame and
- * forwarding autopilot events to {@link onEvent}.
- */
 export class AutopilotAnnunciationProvider {
-    /** Status-annunciator state machine: 0=off, 1=red-flash, 2=yellow-flash, 3=red, 4=yellow, 5=engaged. */
     private statusState = 0
     private yellowFlashBegin = 0
     private manualDisconnected = false
@@ -27,7 +17,6 @@ export class AutopilotAnnunciationProvider {
     private readonly apArmedReference = Subject.create('')
     private readonly apYDStatus = Subject.create('')
 
-    /** The annunciation Subjects, in the shape expected by `APInfoBarComponent`. */
     get subjects(): APInfoBarSubjects {
         return {
             apStatus: this.apStatus,

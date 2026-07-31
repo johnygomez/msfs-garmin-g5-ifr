@@ -46,6 +46,8 @@ export interface G5CustomEvents {
     ap_mach_selected: number
     /** Autopilot selected airspeed reference, in knots. */
     ap_ias_selected: number
+    /** Whether GPSS (GPS Steering) mode is enabled. */
+    gpss_enabled: boolean
 }
 
 /**
@@ -82,6 +84,7 @@ const G5_CUSTOM_SIMVARS = new Map<keyof G5CustomEvents, SimVarPublisherEntry<any
     ],
     ['ap_mach_selected', { name: 'AUTOPILOT MACH HOLD VAR', type: SimVarValueType.Mach }],
     ['ap_ias_selected', { name: 'AUTOPILOT AIRSPEED HOLD VAR', type: SimVarValueType.Knots }],
+    ['gpss_enabled', { name: 'L:AS5_GPSS_ENABLED', type: SimVarValueType.Bool }],
 ])
 
 /**

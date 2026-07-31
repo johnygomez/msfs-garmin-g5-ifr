@@ -334,6 +334,7 @@ export interface HSIComponentProps extends ComponentProps {
     noAffectSimRadioNav: boolean
     bearing1State: Subscribable<BearingState>
     bearing2State: Subscribable<BearingState>
+    gpssEnabled: Subscribable<boolean>
     heading?: Subscribable<number>
     onApi?: (instance: HSIComponent) => void
 }
@@ -390,6 +391,13 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
 
     private readonly nav1 = this.subscribeNav(1)
     private readonly nav2 = this.subscribeNav(2)
+
+    private readonly headingBugStroke = this.track(
+        this.props.gpssEnabled.map(enabled => (enabled ? Colors.CYAN : 'transparent'))
+    )
+    private readonly headingBugFill = this.track(
+        this.props.gpssEnabled.map(enabled => (!enabled ? Colors.CYAN : 'transparent'))
+    )
 
     // ---- Resolved active nav source (consumed from NavSourceDataProvider) ----
     private readonly cdiSource = this.props.activeSource
@@ -679,8 +687,10 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
 
                         <polygon
                             points="46,0 47,0 50,4 53,0 54,0 54,5 46,5"
-                            fill={Colors.CYAN}
+                            fill={this.headingBugFill}
+                            stroke={this.headingBugStroke}
                             transform={this.headingBugTransform}
+                            id="HSIHeadingBug"
                         />
                         <circle
                             cx="50"

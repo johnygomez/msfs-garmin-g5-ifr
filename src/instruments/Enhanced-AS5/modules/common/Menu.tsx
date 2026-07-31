@@ -16,10 +16,11 @@ export interface MenuItemProps extends ComponentProps {
     title: string
     onSelect?: () => void
     icon?: string
-    value?: Subscribable<string>
+    value?: Subscribable<string | boolean>
     inactive?: boolean
     hidden?: Subscribable<boolean>
     color?: Colors
+    isBoolean?: boolean
 }
 
 /** A single menu entry. Renders its own row; its selected/visible state is driven by the parent {@link Menu}. */
@@ -32,6 +33,7 @@ export class MenuItem extends ReactiveComponent<MenuItemProps> {
     private readonly state: MappedSubscribable<string>
     private readonly style: MappedSubject<[boolean], string>
     private readonly valueStyle = this.props?.color ? `color: ${this.props.color};` : ''
+    private readonly boolValue: MappedSubscribable<'Active' | 'Inactive'>
 
     constructor(props: MenuItemProps) {
         super(props)
@@ -44,11 +46,17 @@ export class MenuItem extends ReactiveComponent<MenuItemProps> {
             ([hidden]) => (hidden ? 'display: none;' : ''),
             this.hidden
         ).pause()
+
+        this.boolValue = MappedSubject.create(
+            ([value]) => (value ? 'Active' : 'Inactive'),
+            this.props.value ?? Subject.create(false)
+        ).pause()
     }
 
     onAfterRender(): void {
         this.state.resume()
         this.style.resume()
+        this.boolValue.resume()
     }
 
     setSelected(selected: boolean): void {
@@ -58,6 +66,7 @@ export class MenuItem extends ReactiveComponent<MenuItemProps> {
     destroy(): void {
         this.state.destroy()
         this.style.destroy()
+        this.boolValue.destroy()
         super.destroy()
     }
 
@@ -75,9 +84,13 @@ export class MenuItem extends ReactiveComponent<MenuItemProps> {
                     </div>
                 ) : null}
                 {this.props.value ? (
-                    <div class="ContextualMenuElementValue" style={this.valueStyle}>
-                        {this.props.value}
-                    </div>
+                    this.props.isBoolean ? (
+                        <div class="ContextualMenuElementBooleanValue" state={this.boolValue} />
+                    ) : (
+                        <div class="ContextualMenuElementValue" style={this.valueStyle}>
+                            {this.props.value}
+                        </div>
+                    )
                 ) : null}
             </div>
         )

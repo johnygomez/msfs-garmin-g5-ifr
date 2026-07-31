@@ -59,6 +59,8 @@ export class AvionicsInteractionManager {
     private readonly courseAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
     private readonly obsAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
 
+    readonly gpssEnabled: ConsumerSubject<boolean>
+
     constructor(bus: EventBus) {
         const sub = bus.getSubscriber<G5CustomEvents & G5NavEvents & AdcEvents>()
 
@@ -67,6 +69,7 @@ export class AvionicsInteractionManager {
         const gpsObs = ConsumerSubject.create(sub.on('gps_obs'), 0)
         this.selectedAltitude = ConsumerSubject.create(sub.on('ap_altitude_selected'), 0)
         this.baroInHg = ConsumerSubject.create(sub.on('altimeter_baro_setting_inhg'), 29.92)
+        this.gpssEnabled = ConsumerSubject.create(sub.on('gpss_enabled'), false)
 
         this.selectedHeading = headingSelected.map(normalizeDegrees360)
         this.selectedCourse = nav1Obs.map(normalizeDegrees360)
@@ -124,6 +127,11 @@ export class AvionicsInteractionManager {
 
     decreaseBaro(): void {
         this.changeBaro(-1)
+    }
+
+    toggleGpss(): void {
+        const enable = !this.gpssEnabled.get()
+        this.setSimVar('L:AS5_GPSS_ENABLED', enable ? 1 : 0)
     }
 
     private changeHeading(sign: number): void {

@@ -20,6 +20,7 @@ import { MfdContent } from './mfd/MFD'
 import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
 import { AutopilotAnnunciationProvider } from './providers/AutopilotAnnunciationProvider'
+import { GpsSteerSynchronizer } from './providers/GpsSteerSynchronizer'
 import { NavdataStack } from './providers/NavdataStack'
 import { NavSourceDataProvider } from './providers/NavSourceDataProvider'
 import { G5CustomPublisher } from './publishers/G5CustomPublisher'
@@ -104,6 +105,7 @@ export class AS5 extends BaseInstrument {
     private airspeedProvider?: AirspeedDataProvider
     private navdataStack?: NavdataStack
     private apAnnunciationProvider?: AutopilotAnnunciationProvider
+    private gpsSynchronizer?: GpsSteerSynchronizer
 
     private knobValueSub?: Subscription
     private knobUnitSub?: Subscription
@@ -130,6 +132,8 @@ export class AS5 extends BaseInstrument {
         if (!this.isMfdInstrument) {
             this.navdataStack = new NavdataStack(this.bus)
             this.navdataStack.init().catch(e => console.error('NavdataStack init failed', e))
+            this.gpsSynchronizer = new GpsSteerSynchronizer(this.bus)
+            this.gpsSynchronizer.resume()
         }
         this.apAnnunciationProvider = new AutopilotAnnunciationProvider()
 
@@ -165,6 +169,7 @@ export class AS5 extends BaseInstrument {
 
     protected Update(): void {
         super.Update()
+
         this.adcPublisher?.onUpdate()
         this.ahrsPublisher?.onUpdate()
         this.navComPublisher?.onUpdate()
@@ -173,6 +178,9 @@ export class AS5 extends BaseInstrument {
         this.navdataStack?.onUpdate()
         this.airspeedProvider?.onUpdate(this.deltaTime)
         this.apAnnunciationProvider?.onUpdate()
+        if (this.isElectricityAvailable()) {
+            this.gpsSynchronizer?.onUpdate()
+        }
     }
 
     onInteractionEvent(args: string[]): void {

@@ -82,6 +82,31 @@ class WaypointDistanceInfo extends ReactiveComponent<WaypointDistanceInfoProps> 
     }
 }
 
+interface GPSSIndicatorProps extends ComponentProps {
+    gpssEnabled: Subscribable<boolean>
+}
+
+class GPSSIndicator extends ReactiveComponent<GPSSIndicatorProps> {
+    private readonly state = this.track(
+        this.props.gpssEnabled.map(enabled => (enabled ? 'Active' : 'Inactive'))
+    )
+
+    render(): VNode {
+        return (
+            <div id="GPSSIndicator" state={this.state}>
+                <svg id="GPSSIndicatorIcon" viewBox="-10 0 20 6">
+                    <polygon points="0,3 2,1 7,1 6,5 -6,5 -7,1 -2,1" fill={Colors.CYAN} />
+                    <line x1="-9" y1="0" x2="9" y2="6" stroke={Colors.BLACK} stroke-width="1.5" />
+                    <line x1="-9" y1="0" x2="9" y2="6" stroke={Colors.WHITE} stroke-width="1" />
+                    <line x1="-9" y1="6" x2="9" y2="0" stroke={Colors.BLACK} stroke-width="1.5" />
+                    <line x1="-9" y1="6" x2="9" y2="0" stroke={Colors.WHITE} stroke-width="1" />
+                </svg>
+                <span id="GPSSIndicatorLabel">GPSS</span>
+            </div>
+        )
+    }
+}
+
 export interface MfdContentProps extends ComponentProps {
     bus: EventBus
     manager: AvionicsInteractionManager
@@ -184,6 +209,8 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
         }
         this.closeModals()
     }
+
+    private readonly toggleGpss = (): void => this.props.manager.toggleGpss()
 
     get isModalOpen(): boolean {
         return (
@@ -290,9 +317,11 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                         noBackground={false}
                         noAffectSimRadioNav={false}
                         onApi={this.setHsi}
+                        gpssEnabled={manager.gpssEnabled}
                     />
                 </div>
                 <div id="Infos">
+                    <GPSSIndicator gpssEnabled={manager.gpssEnabled} />
                     <LeftInfoPanel
                         bus={bus}
                         navSource={navSource}
@@ -329,6 +358,12 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                         onSelect={this.openCourse}
                         hidden={navSource.map(source => source === NavSource.GPS)}
                         color={Colors.GREEN}
+                    />
+                    <Menu.Item
+                        title="GPSS"
+                        value={this.props.manager.gpssEnabled}
+                        onSelect={this.toggleGpss}
+                        isBoolean
                     />
                     <Menu.Item
                         title="OBS"

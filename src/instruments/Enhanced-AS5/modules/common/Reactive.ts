@@ -80,3 +80,34 @@ export abstract class ReactiveComponent<P = ComponentProps> extends DisplayCompo
         super.destroy()
     }
 }
+
+/**
+ * A non-DOM provider whose reactive state is built up front and activated immediately.
+ *
+ * State registered through {@link consume}, {@link track} and {@link live} is resumed by
+ * calling {@link resume} (typically at the end of the constructor), and destroyed via
+ * {@link destroy}. Subclasses only declare their subjects and implement their logic.
+ */
+export abstract class ReactiveProvider {
+    private readonly subscriptions = new SubscriptionCollection()
+
+    protected consume<T>(consumer: Consumer<T>, initial: T): ConsumerSubject<T> {
+        return this.subscriptions.consume(consumer, initial)
+    }
+
+    protected track<T extends Subscription>(member: T): T {
+        return this.subscriptions.track(member)
+    }
+
+    protected live<T extends Subscription>(member: T): T {
+        return this.subscriptions.live(member)
+    }
+
+    resume(): void {
+        this.subscriptions.resume()
+    }
+
+    destroy(): void {
+        this.subscriptions.destroy()
+    }
+}

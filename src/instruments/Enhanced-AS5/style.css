@@ -393,6 +393,30 @@ as5-element #PageContainer #MFD #Infos {
     width: 100%;
     height: 100%;
 }
+as5-element #PageContainer #MFD #Infos #GPSSIndicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 10px;
+    border: 2px solid var(--light-grey);
+}
+as5-element #PageContainer #MFD #Infos #GPSSIndicator[state='Inactive'] {
+    visibility: hidden;
+}
+as5-element #PageContainer #MFD #Infos #GPSSIndicator #GPSSIndicatorIcon {
+    width: 40px;
+    height: 12px;
+}
+as5-element #PageContainer #MFD #Infos #GPSSIndicator #GPSSIndicatorLabel {
+    font-size: 20px;
+    color: var(--white);
+    font-family: 'OpenSans-Bold';
+}
 as5-element #PageContainer #MFD #Infos #GroundSpeed {
     position: relative;
     width: 120px;
@@ -653,6 +677,7 @@ as5-element #ContextualMenu #ContextualMenuElements {
     overflow: visible;
 }
 as5-element #ContextualMenu #ContextualMenuElements .ContextualMenuElement {
+    position: relative;
     flex: 0 0 23.5%;
     margin: 1% 1%;
     box-sizing: border-box;
@@ -673,6 +698,28 @@ as5-element
     .ContextualMenuElement[state='Inactive']
     .ContextualMenuElementValue {
     color: darkgrey;
+}
+as5-element
+    #ContextualMenu
+    #ContextualMenuElements
+    .ContextualMenuElement
+    .ContextualMenuElementBooleanValue {
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--green);
+    height: 7px;
+    width: 90%;
+    border-radius: 5px;
+    border: 1px solid var(--dark-grey);
+}
+as5-element
+    #ContextualMenu
+    #ContextualMenuElements
+    .ContextualMenuElement
+    .ContextualMenuElementBooleanValue[state='Inactive'] {
+    background-color: var(--light-grey);
 }
 as5-element
     #ContextualMenu
