@@ -68,9 +68,9 @@ A few things that were added/redesigned:
 
 ### TODO
 
-- [ ] Improve the VNAV indication, especially in LNAV/VNAV mode and ENR VNAV.
+- [x] Improve the VNAV indication, especially in LNAV/VNAV mode and ENR VNAV.
 - [ ] Improve GPS source and scale annunciations, as MSFS differs from reality in some cases.
-- [ ] Add GPSS toggle
+- [x] Add GPSS toggle - done basic GPSS. Enabled via using HDG mode mode in AP
 
 ## Development
 
