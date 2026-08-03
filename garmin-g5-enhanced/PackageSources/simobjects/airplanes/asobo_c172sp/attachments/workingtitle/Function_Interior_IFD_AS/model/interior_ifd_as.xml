@@ -1,0 +1,7 @@
+<ModelInfo>
+	<LODS Template="..\..\Function_Interior_IFD\model\INTERIOR_IFD.xml">
+	</LODS>
+	<Behaviors Compiled="True" Version="2" Revision="0">
+		<IncludeBase RelativeFile="..\..\Function_Interior_IFD\model\INTERIOR_IFD.behavior.xml"/>
+	</Behaviors>
+</ModelInfo>
