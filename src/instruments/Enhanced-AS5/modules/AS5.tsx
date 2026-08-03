@@ -183,6 +183,12 @@ export class AS5 extends BaseInstrument {
         }
     }
 
+    protected isElectricityAvailable(): boolean {
+        return (
+            SimVar.GetSimVarValue(`L:AS5_${this.instrumentIndex}_Power`, SimVarValueType.Bool) !== 0
+        )
+    }
+
     onInteractionEvent(args: string[]): void {
         if (!this.isElectricityAvailable()) return
 
