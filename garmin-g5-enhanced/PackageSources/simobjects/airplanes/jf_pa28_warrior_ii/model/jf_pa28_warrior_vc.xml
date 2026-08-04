@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  G5 ENHANCED OVERRIDE - Based on Just Flight PA28 Warrior II VC model.
+
+  CHANGES FROM ORIGINAL (8 components force-hidden):
+    - Attitude_knob              -> visibility=0
+    - ATTITUDE_INDICATOR_pitch   -> visibility=0
+    - ATTITUDE_INDICATOR_bank    -> visibility=0
+    - ATTITUDE_INDICATOR_turn    -> visibility=0
+    - ATTITUDE_INDICATOR_bar     -> visibility=0
+    - Dir_ind_visibility         -> visibility=0
+    - HSI_visibility             -> visibility=0
+    - G5_HIDE_Reg_plate (NEW)   -> visibility=0
+
+  If JF updates this file, reapply the 8 changes above to the new version.
+-->
 <ModelInfo>
 	<LODS>
 		<LOD minSize="30" ModelFile="JF_PA28_WARRIOR_VC.gltf"/>
@@ -226,6 +241,7 @@
 				</Parameter>
 			</Visibility>
 		</Component>
+
 		<Component ID="ATTITUDE_INDICATOR_pitch" Node="ATTITUDE_INDICATOR_pitch">
 			<Visibility>
 				<Parameter>
@@ -425,13 +441,13 @@
 				<ANIM_NAME>DIRECTION_INDICATOR_bug_knob</ANIM_NAME>
 				<TOOLTIPID>HSI Heading: (%((A:AUTOPILOT HEADING LOCK DIR:1, degrees))%!d! deg)</TOOLTIPID>
 				<CLOCKWISE_CODE>
-							(L:Dir_ind_bug_knob, enum) ++  100 min (&gt;L:Dir_ind_bug_knob, enum) 
-							(&gt;K:HEADING_BUG_INC) 
+							(L:Dir_ind_bug_knob, enum) ++  100 min (&gt;L:Dir_ind_bug_knob, enum)
+							(&gt;K:HEADING_BUG_INC)
 							(L:Dir_ind_bug_knob, enum) 100 == if{ 0 (&gt;L:Dir_ind_bug_knob, enum) }
 						</CLOCKWISE_CODE>
 				<ANTICLOCKWISE_CODE>
 							(L:Dir_ind_bug_knob, enum) -- 0 max (&gt;L:Dir_ind_bug_knob, enum)
-							(&gt;K:HEADING_BUG_DEC) 
+							(&gt;K:HEADING_BUG_DEC)
 							(L:Dir_ind_bug_knob, enum) 0 == if{ 100 (&gt;L:Dir_ind_bug_knob, enum) }
 						</ANTICLOCKWISE_CODE>
 				<ARROW_TYPE>Curved</ARROW_TYPE>
@@ -460,13 +476,13 @@
 				<ANIM_NAME>HSI_hdg_bug_knob</ANIM_NAME>
 				<TOOLTIPID>HSI Heading: (%((A:AUTOPILOT HEADING LOCK DIR:1, degrees))%!d! deg)</TOOLTIPID>
 				<CLOCKWISE_CODE>
-							(L:HSI_heading_knob, enum) ++  100 min (&gt;L:HSI_heading_knob, enum) 
-							(&gt;K:HEADING_BUG_INC) 
+							(L:HSI_heading_knob, enum) ++  100 min (&gt;L:HSI_heading_knob, enum)
+							(&gt;K:HEADING_BUG_INC)
 							(L:HSI_heading_knob, enum) 100 == if{ 0 (&gt;L:HSI_heading_knob, enum) }
 						</CLOCKWISE_CODE>
 				<ANTICLOCKWISE_CODE>
 							(L:HSI_heading_knob, enum) -- 0 max (&gt;L:HSI_heading_knob, enum)
-							(&gt;K:HEADING_BUG_DEC) 
+							(&gt;K:HEADING_BUG_DEC)
 							(L:HSI_heading_knob, enum) 0 == if{ 100 (&gt;L:HSI_heading_knob, enum) }
 						</ANTICLOCKWISE_CODE>
 				<ARROW_TYPE>Curved</ARROW_TYPE>
@@ -478,15 +494,15 @@
 				<ANIM_NAME>HSI_crs_bug_knob</ANIM_NAME>
 				<TOOLTIPID>HSI Course: (%((A:NAV OBS:1, degrees))%!d! deg)</TOOLTIPID>
 				<CLOCKWISE_CODE>
-							(L:HSI_CRS_knob, enum) ++  100 min (&gt;L:HSI_CRS_knob, enum) 
+							(L:HSI_CRS_knob, enum) ++  100 min (&gt;L:HSI_CRS_knob, enum)
 							(&gt;K:VOR1_OBI_INC)
-							1 (A:GPS OBS ACTIVE,number) == if{ (A:NAV OBS:1, Degree) dnor (&gt;K:GPS_OBS_SET) } 
+							1 (A:GPS OBS ACTIVE,number) == if{ (A:NAV OBS:1, Degree) dnor (&gt;K:GPS_OBS_SET) }
 							(L:HSI_CRS_knob, enum) 100 == if{ 0 (&gt;L:HSI_CRS_knob, enum) }
 						</CLOCKWISE_CODE>
-				<ANTICLOCKWISE_CODE> 
+				<ANTICLOCKWISE_CODE>
 							(L:HSI_CRS_knob, enum) -- 0 max (&gt;L:HSI_CRS_knob, enum)
 							(&gt;K:VOR1_OBI_DEC)
-							1 (A:GPS OBS ACTIVE,number) == if{ (A:NAV OBS:1, Degree) dnor (&gt;K:GPS_OBS_SET) } 
+							1 (A:GPS OBS ACTIVE,number) == if{ (A:NAV OBS:1, Degree) dnor (&gt;K:GPS_OBS_SET) }
 							(L:HSI_CRS_knob, enum) 0 == if{ 100 (&gt;L:HSI_CRS_knob, enum) }
 						</ANTICLOCKWISE_CODE>
 				<ARROW_TYPE>Curved</ARROW_TYPE>
@@ -497,7 +513,7 @@
 				<PART_ID>HSI_to_flag</PART_ID>
 				<ANIM_NAME>HSI_to_flag</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 != (A:GPS DRIVES NAV1, bool) 0 != and
-							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 != (L:TDSGTNXI_ToFromFlag, number) 1 == or if{ 10 } els{ 0 } }                        
+							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 != (L:TDSGTNXI_ToFromFlag, number) 1 == or if{ 10 } els{ 0 } }
 							els{ (L:HSI_to_flag, number) 10 * } </ANIM_CODE>
 				<ANIM_LENGTH>10</ANIM_LENGTH>
 				<ANIM_LAG>20</ANIM_LAG>
@@ -508,7 +524,7 @@
 				<PART_ID>HSI_from_flag</PART_ID>
 				<ANIM_NAME>HSI_from_flag</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 != (A:GPS DRIVES NAV1, bool) 0 != and
-							if{ (L:TDSGTNXI_ToFromFlag, number) 2 == if{ 10 } els{ 0 } }                        
+							if{ (L:TDSGTNXI_ToFromFlag, number) 2 == if{ 10 } els{ 0 } }
 							els{ (L:HSI_from_flag, number) 10 * }	 </ANIM_CODE>
 				<ANIM_LENGTH>10</ANIM_LENGTH>
 				<ANIM_LAG>20</ANIM_LAG>
@@ -519,10 +535,10 @@
 				<PART_ID>HSI_gsi</PART_ID>
 				<ANIM_NAME>HSI_gsi</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 !=
-							(A:GPS DRIVES NAV1, bool) 0 != and 
+							(A:GPS DRIVES NAV1, bool) 0 != and
 							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 !=
 								if{ 157 } els{ (L:TDSGTNXI_GlidePathValueActive, bool) 0 != if{ (L:TDSGTNXI_GlidePathValueAngle, number) -100 * 105 + } els{ 210 } }
-							}	
+							}
 							els{ (L:HSI_gsi, number) } </ANIM_CODE>
 				<ANIM_LENGTH>210</ANIM_LENGTH>
 				<ANIM_LAG>210</ANIM_LAG>
@@ -542,10 +558,10 @@
 				<PART_ID>HSI_nav_flag</PART_ID>
 				<ANIM_NAME>HSI_nav_flag</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 !=
-							(A:GPS DRIVES NAV1, bool) 0 != and 
+							(A:GPS DRIVES NAV1, bool) 0 != and
 							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 !=
 								if{ 0 } els{ (L:TDSGTNXI_LateralValueActive, bool) 0 != if{ 0 } els{ 10 } }
-							}	
+							}
 							els{ (L:HSI_nav_flag, number) 10 * } </ANIM_CODE>
 				<ANIM_LENGTH>10</ANIM_LENGTH>
 				<ANIM_LAG>20</ANIM_LAG>
@@ -886,10 +902,10 @@
 				<CALLBACKCODE_DEFAULT_IM>
 							(M:Event) &apos;LeftSingle&apos; scmp 0 ==
 							if{ 1 (&gt;L:AUTOPILOT_alt, number) }
-							
+
 							(M:Event) &apos;WheelUp&apos; scmp 0 ==
 							if{ 1 (&gt;L:AUTOPILOT_alt_dn, number) }
-							
+
 							(M:Event) &apos;WheelDown&apos; scmp 0 ==
 							if{ 1 (&gt;L:AUTOPILOT_alt_up, number) }
 						</CALLBACKCODE_DEFAULT_IM>
@@ -903,10 +919,10 @@
 				<CALLBACKCODE_DEFAULT_IM>
 							(M:Event) &apos;LeftSingle&apos; scmp 0 ==
 							if{ 1 (&gt;L:AUTOPILOT_vs, number) }
-							
+
 							(M:Event) &apos;WheelUp&apos; scmp 0 ==
 							if{ 1 (&gt;L:AUTOPILOT_vs_dn, number) }
-							
+
 							(M:Event) &apos;WheelDown&apos; scmp 0 ==
 							if{ 1 (&gt;L:AUTOPILOT_vs_up, number) }
 						</CALLBACKCODE_DEFAULT_IM>
@@ -1044,7 +1060,7 @@
 		<Component ID="CENTRE_LOWER_bat">
 			<DefaultTemplateParameters>
 				<SYNC_AVIONICS_TO_BATTERY_STATE>
-							(L:AvionicsPower, Bool) (&gt;O:_AvionicsShouldBeOn) 
+							(L:AvionicsPower, Bool) (&gt;O:_AvionicsShouldBeOn)
 							1 (&gt;A:BUS LOOKUP INDEX, Number)
 							(O:_AvionicsShouldBeOn) (A:BUS CONNECTION ON:2, Bool) != if{
 								2 1 (&gt;K:2:ELECTRICAL_BUS_TO_BUS_CONNECTION_TOGGLE)
@@ -1156,10 +1172,10 @@
 				<PART_ID>VOR1_gsi</PART_ID>
 				<ANIM_NAME>VOR1_gsi</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 !=
-							(A:GPS DRIVES NAV1, bool) 0 != and 
+							(A:GPS DRIVES NAV1, bool) 0 != and
 							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 !=
 								if{ 125 } els{ (L:TDSGTNXI_GlidePathValueActive, bool) 0 != if{ (L:TDSGTNXI_GlidePathValueAngle, number) -100 * 100 + } els{ 100 } }
-							}	
+							}
 							els{ (L:VOR1_gsi, number) } </ANIM_CODE>
 				<ANIM_LENGTH>200</ANIM_LENGTH>
 				<ANIM_LAG>200</ANIM_LAG>
@@ -1178,8 +1194,8 @@
 			<UseTemplate Name="ASOBO_GT_Anim_Code">
 				<PART_ID>VOR1_gsi_flag</PART_ID>
 				<ANIM_NAME>VOR1_gsi_flag</ANIM_NAME>
-				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 != (A:GPS DRIVES NAV1, bool) 0 != and                 
-							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 != (L:TDSGTNXI_GlidePathValueActive, bool) 0 != or if{ 0 } els{ 100 } }    	
+				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 != (A:GPS DRIVES NAV1, bool) 0 != and
+							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 != (L:TDSGTNXI_GlidePathValueActive, bool) 0 != or if{ 0 } els{ 100 } }
 							els{ (L:VOR1_gsi_flag, number) 100 * } </ANIM_CODE>
 				<ANIM_LENGTH>100</ANIM_LENGTH>
 				<ANIM_LAG>200</ANIM_LAG>
@@ -1190,10 +1206,10 @@
 				<PART_ID>VOR1_cdi_flag</PART_ID>
 				<ANIM_NAME>VOR1_cdi_flag</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 !=
-							(A:GPS DRIVES NAV1, bool) 0 != and 
+							(A:GPS DRIVES NAV1, bool) 0 != and
 							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 !=
 								if{ 0 } els{ (L:TDSGTNXI_LateralValueActive, bool) 0 != if{ 0 } els{ 100 } }
-							}	
+							}
 							els{ (L:VOR1_cdi_flag, number) 100 * } </ANIM_CODE>
 				<ANIM_LENGTH>100</ANIM_LENGTH>
 				<ANIM_LAG>200</ANIM_LAG>
@@ -1204,7 +1220,7 @@
 				<PART_ID>VOR1_to_flag</PART_ID>
 				<ANIM_NAME>VOR1_to_flag</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 != (A:GPS DRIVES NAV1, bool) 0 != and
-							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 != (L:TDSGTNXI_ToFromFlag, number) 1 == or if{ 100 } els{ 0 } }                        
+							if{ (L:TDSGTNXI_InstrumentPanelSelfTest, bool) 0 != (L:TDSGTNXI_ToFromFlag, number) 1 == or if{ 100 } els{ 0 } }
 							els{ (L:VOR1_to_flag, number) 100 * } </ANIM_CODE>
 				<ANIM_LENGTH>100</ANIM_LENGTH>
 				<ANIM_LAG>200</ANIM_LAG>
@@ -1215,7 +1231,7 @@
 				<PART_ID>VOR1_from_flag</PART_ID>
 				<ANIM_NAME>VOR1_from_flag</ANIM_NAME>
 				<ANIM_CODE> (L:TDSGTNXI_ACTIVE, bool) 0 != (A:GPS DRIVES NAV1, bool) 0 != and
-							if{ (L:TDSGTNXI_ToFromFlag, number) 2 == if{ 100 } els{ 0 } }                        
+							if{ (L:TDSGTNXI_ToFromFlag, number) 2 == if{ 100 } els{ 0 } }
 							els{ (L:VOR1_from_flag, number) 100 * } </ANIM_CODE>
 				<ANIM_LENGTH>100</ANIM_LENGTH>
 				<ANIM_LAG>200</ANIM_LAG>
@@ -1227,14 +1243,14 @@
 				<ANIM_NAME>VOR1_knob</ANIM_NAME>
 				<TOOLTIPID>Nav 1 OBS: (%((A:NAV OBS:1, degrees))%!d! deg)</TOOLTIPID>
 				<CLOCKWISE_CODE>
-							(L:VOR1_knob, enum) ++  100 min (&gt;L:VOR1_knob, enum) 
-							(&gt;K:VOR1_OBI_INC) 
+							(L:VOR1_knob, enum) ++  100 min (&gt;L:VOR1_knob, enum)
+							(&gt;K:VOR1_OBI_INC)
 							 1 (A:GPS OBS ACTIVE,number) == if{ (&gt;K:GPS_OBS_INC) }
 							(L:VOR1_knob, enum) 100 == if{ 0 (&gt;L:VOR1_knob, enum) }
 						</CLOCKWISE_CODE>
 				<ANTICLOCKWISE_CODE>
 							(L:VOR1_knob, enum) -- 0 max (&gt;L:VOR1_knob, enum)
-							(&gt;K:VOR1_OBI_DEC) 
+							(&gt;K:VOR1_OBI_DEC)
 							 1 (A:GPS OBS ACTIVE,number) == if{ (&gt;K:GPS_OBS_DEC) }
 							(L:VOR1_knob, enum) 0 == if{ 100 (&gt;L:VOR1_knob, enum) }
 						</ANTICLOCKWISE_CODE>
@@ -2325,7 +2341,7 @@
 				<USE_TRAJECTORY_DRAG_MODE>True</USE_TRAJECTORY_DRAG_MODE>
 				<NO_ARROWS/>
 				<DRAG_CODE>
-							100 (M:DragPercent) * (&gt;L:RIGHT_LOWER_cabin_heat_1,number) 
+							100 (M:DragPercent) * (&gt;L:RIGHT_LOWER_cabin_heat_1,number)
 						</DRAG_CODE>
 				<ANIM_NAME>RIGHT_LOWER_cabin_heat_1</ANIM_NAME>
 				<ANIM_LENGTH>100</ANIM_LENGTH>
@@ -2347,7 +2363,7 @@
 				<USE_TRAJECTORY_DRAG_MODE>True</USE_TRAJECTORY_DRAG_MODE>
 				<NO_ARROWS/>
 				<DRAG_CODE>
-							100 (M:DragPercent) * (&gt;L:RIGHT_LOWER_cabin_heat_2,number) 
+							100 (M:DragPercent) * (&gt;L:RIGHT_LOWER_cabin_heat_2,number)
 						</DRAG_CODE>
 				<ANIM_NAME>RIGHT_LOWER_cabin_heat_2</ANIM_NAME>
 				<ANIM_LENGTH>100</ANIM_LENGTH>
