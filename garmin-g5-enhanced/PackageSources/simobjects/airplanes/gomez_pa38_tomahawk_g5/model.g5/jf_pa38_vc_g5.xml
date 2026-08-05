@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inherits JF's VC model and hides the steam gauges the G5s are mounted over. -->
+<ModelInfo>
+	<LODS Template="..\..\JF_PA38_Tomahawk\model\JF_PA38_VC.xml">
+	</LODS>
+	<Behaviors>
+		<IncludeBase RelativeFile="..\..\JF_PA38_Tomahawk\model\JF_PA38_VC.xml"/>
+
+		<Component ID="ATTITUDE_INDICATOR_pitch" Node="ATTITUDE_INDICATOR_pitch">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_bank" Node="ATTITUDE_INDICATOR_bank">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_bar" Node="ATTITUDE_INDICATOR_bar">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_knob" Node="ATTITUDE_INDICATOR_knob">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+
+		<Component ID="DIRECTION_INDICATOR_card" Node="DIRECTION_INDICATOR_card">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="DIRECTION_INDICATOR_card_knob" Node="DIRECTION_INDICATOR_card_knob">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+	</Behaviors>
+</ModelInfo>
