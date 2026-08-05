@@ -3,6 +3,9 @@
 		<MFD_ID>1</MFD_ID>
 		<CIRCUIT_ID>1</CIRCUIT_ID>
 		<CIRCUIT_NAME>1</CIRCUIT_NAME>
+		<EMISSIVE_MIN>0.05</EMISSIVE_MIN>
+		<BRIGHTNESS_SCALE>1</BRIGHTNESS_SCALE>
+		<USE_AMBIENT_POLYFILL>0</USE_AMBIENT_POLYFILL>
 	</DynamicParameters>
 	<Components count="5">
 		<Component ID="AS5">
@@ -166,6 +169,7 @@
 		<Update OwnerID="2" StringID="13090222211784660751" Frequency="10.000000" InteractionModel="Default"/>
 		<Update OwnerID="2" StringID="6875668430223133527" Frequency="10.000000" InteractionModel="Drag"/>
 		<Update OwnerID="3" StringID="7031497352855602369" Frequency="10.000000"/>
+		<Update OwnerID="3" StringID="10000000000000000001" Frequency="1.000000"/>
 	</UpdateCodes>
 	<InputEvents>
 		<Instances>
@@ -296,13 +300,14 @@
 		</Bindings>
 	</InputEvents>
 	<Strings>
+		<10000000000000000001>[USE_AMBIENT_POLYFILL] 0 == if{ (A:AMBIENT LIGHT SENSOR, Number) (&gt;L:Final_AmbientLight_Value, Number) } els{ (E:TIME OF DAY, enum) 1 == if{ (A:SUN ELEVATION, radians) sin 0 max 0.6 max } els{ (E:TIME OF DAY, enum) 3 == if{ (A:SUN ELEVATION, radians) sin 0 max 0.1 * 0.02 max } els{ (A:SUN ELEVATION, radians) sin 0 max 0.1 * 0.15 max } } (A:AMBIENT VISIBILITY, miles) 10 min 10 / 0.25 + 1 min * 20000 * (L:Final_AmbientLight_Value, Number) 0.9 * swap 0.1 * + (&gt;L:Final_AmbientLight_Value, Number) }</10000000000000000001>
 		<8489693899981837289>(M:Event) &apos;WheelUp&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (M:Event) &apos;WheelDown&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } els{ (M:Event) &apos;LeftSingle&apos; scmi 0 == if{ (M:RelativeX) abs 0.004 &gt; if{ 0 (&gt;O:_ButtonPressed) (M:RelativeX) (&gt;O:_MouseDownRelativePosX) (E:SIMULATION TIME, seconds) 0.5 + (&gt;O:XMLVAR_Interacting_RepeatTime) (O:_MouseDownRelativePosX) 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (O:_MouseDownRelativePosX) 0 &lt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } } } els{ 0 (&gt;O:_MouseDownRelativePosX) 1 (&gt;O:_ButtonPressed) (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) } } els{ (M:Event) &apos;LeftRelease&apos; scmi 0 == if{ (O:_MouseDownRelativePosX) 0 != if{ } (O:_ButtonPressed) if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } 0 (&gt;O:_MouseDownRelativePosX) 0 (&gt;O:_ButtonPressed) } } } }</8489693899981837289>
 		<11323198475392682743>(M:InputType) 1 == if{ (M:Event) &apos;LeftSingle&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) quit } (M:Event) &apos;LeftRelease&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) quit } } els{ (M:Event) &apos;RightSingle&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) quit } (M:Event) &apos;RightRelease&apos; scmi 0 == if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) quit } } (M:Event) &apos;WheelUp&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (M:Event) &apos;WheelDown&apos; scmi 0 == if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } els{ (M:Event) &apos;Lock&apos; scmi 0 == if{ (M:RelativeX) (&gt;O:_LastX) (M:RelativeY) (&gt;O:_LastY) 1 (&gt;O:_Is_Interacting) } els{ (M:Event) &apos;Unlock&apos; scmi 0 == if{ 0 (&gt;O:_LastX) 0 (&gt;O:_LastY) (O:_PushLocked) if{ 0 (&gt;O:_PushLocked) } (O:_PullLocked) if{ 0 (&gt;O:_PullLocked) } 0 (&gt;O:_Is_Interacting) } els{ (M:Event) &apos;LeftDrag&apos; scmi 0 == if{ (M:RelativeX) (O:_LastX) - sp0 0.2 0.01 (M:InputType) 1 == ? (&gt;O:_InputThresholdX) l0 abs (O:_InputThresholdX) &gt; if{ l0 (O:_InputThresholdX) / abs flr sp1 l0 (O:_InputThresholdX) % abs sp2 :1 (* for loop *) l1 0 &lt;= if{ g2 } l1 -- sp1 l0 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } g1 :2 l0 0 &gt; if{ (M:RelativeX) l2 - (&gt;O:_LastX) } els{ (M:RelativeX) l2 + (&gt;O:_LastX) } } (M:RelativeY) (O:_LastY) - sp0 0.05 0.025 (M:InputType) 1 == ? (&gt;O:_InputThresholdY) l0 abs (O:_InputThresholdY) &gt; if{ l0 (O:_InputThresholdY) / abs flr sp1 l0 (O:_InputThresholdY) % abs sp2 :3 (* for loop *) l1 0 &lt;= if{ g4 } l1 -- sp1 l0 0 &gt; if{ (M:InputType) 1 == if{ (E:SIMULATION TIME, second) (&gt;O:_LastPushTime) } (O:_PushLocked) ! (M:InputType) 1 == and if{ 1 (&gt;O:_PushLocked) (&gt;B:AS5_[MFD_ID]_Knob_Button_Push) } (O:_PullLocked) if{ 0 (&gt;O:_PullLocked) } } els{ (M:InputType) 1 == if{ (E:SIMULATION TIME, second) (&gt;O:_LastPullTime) } (O:_PullLocked) ! (M:InputType) 1 == and if{ 1 (&gt;O:_PullLocked) (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } (O:_PushLocked) if{ 0 (&gt;O:_PushLocked) } } g3 :4 l0 0 &gt; if{ (M:RelativeY) l2 - (&gt;O:_LastY) } els{ (M:RelativeY) l2 + (&gt;O:_LastY) } } } } } } } quit</11323198475392682743>
 		<12022570010134859418>1 (&gt;O:_ButtonAnimVar) (&gt;B:ELECTRICAL_Circuit_[CIRCUIT_NAME]_Toggle)</12022570010134859418>
 		<2869848318015977142>(O:_KnobAnimVar) 3.6 /</2869848318015977142>
 		<9322824146186438678>(O:_PressTime) 0 &gt; if{ 100 (&gt;O:_PushAnimVar) } els{ (O:_PushAnimVar) 100 0.7 * - 0 max (&gt;O:_PushAnimVar) } (O:_PushAnimVar)</9322824146186438678>
 		<5382485736248851408>100 (O:_ButtonAnimVar) *</5382485736248851408>
-		<14128170738945443690>1 [EMISSIVE_MIN] - (A:AMBIENT LIGHT SENSOR, Number) 1 4000 0.001 1 (F:MapRange) * [EMISSIVE_MIN] + (A:CIRCUIT ON:[CIRCUIT_ID], Bool) *</14128170738945443690>
+		<14128170738945443690>1 [EMISSIVE_MIN] - (L:Final_AmbientLight_Value, Number) 1 4000 0.001 1 (F:MapRange) (E:TIME OF DAY, enum) 1 == if{ 1 } els{ [BRIGHTNESS_SCALE] } * * [EMISSIVE_MIN] + (A:CIRCUIT ON:[CIRCUIT_ID], Bool) *</14128170738945443690>
 		<17665437713776213026>(O:_PressTime) 0 &gt; if{ (O:_PressForDuration) 0 &gt; if{ (E:SIMULATION TIME, second) (O:_PressTime) (O:_PressForDuration) + &gt; if{ (O:_PressForDuration) 1 &gt;= if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } els{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } } els{ (E:SIMULATION TIME, second) (O:_PressTime) 1 + &gt; if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } }</17665437713776213026>
 		<13090222211784660751>(O:XMLVAR_Interacting_RepeatTime) (E:SIMULATION TIME, seconds) &lt; if{ (O:_MouseDownRelativePosX) 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (O:_MouseDownRelativePosX) 0 &lt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } } }</13090222211784660751>
 		<6875668430223133527>(O:_PushLocked) (O:_LastPushTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPushTime) - 0.15 &gt; if{ 0 (&gt;O:_PushLocked) 0 (&gt;O:_LastPushTime) } } (O:_PullLocked) (O:_LastPullTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPullTime) - 0.15 &gt; if{ 0 (&gt;O:_PullLocked) 0 (&gt;O:_LastPullTime) } }</6875668430223133527>
