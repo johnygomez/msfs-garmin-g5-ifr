@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  G5 ENHANCED - interior model for the Warrior II G5 variant.
+
+  Inherits JF's VC model wholesale and declares only what has to change, so none of their
+  authored content lives in this repo:
+    LODS Template  - takes their five LOD entries, and with them their glTF, by reference
+    IncludeBase    - takes their behaviours (every Component, template include and animation)
+
+  Same pattern as the C172 attachments in this package, e.g.
+  simobjects/airplanes/asobo_c172sp/attachments/gomez/Function_Interior_IFD_G5/model/interior_ifd_g5.xml
+
+  The overrides below hide the steam gauges the G5s are mounted over. Six of them re-declare
+  a Component JF already defines; the last one is new.
+
+  If JF renames JF_PA28_WARRIOR_VC.xml or any node ID below, this breaks visibly - the old
+  gauges reappear underneath the G5s - rather than silently.
+-->
+<ModelInfo>
+	<LODS Template="..\..\jf_pa28_warrior_ii\model\JF_PA28_WARRIOR_VC.xml">
+	</LODS>
+	<Behaviors>
+		<IncludeBase RelativeFile="..\..\jf_pa28_warrior_ii\model\JF_PA28_WARRIOR_VC.xml"/>
+
+		<Component ID="Attitude_knob" Node="Attitude_knob">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_pitch" Node="ATTITUDE_INDICATOR_pitch">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_bank" Node="ATTITUDE_INDICATOR_bank">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_turn" Node="ATTITUDE_INDICATOR_turn">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_bar" Node="ATTITUDE_INDICATOR_bar">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+
+		<!-- JF's original code here: (L:HSI_enabled, bool) if{ 1 } els{ 0 } -->
+		<Component ID="HSI_visibility" Node="HSI_visibility">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+
+		<!-- New - JF declares no component for this node -->
+		<Component ID="G5_HIDE_Reg_plate" Node="Reg_plate">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+	</Behaviors>
+</ModelInfo>

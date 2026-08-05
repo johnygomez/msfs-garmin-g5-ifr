@@ -13,7 +13,6 @@
 	<PackageOrderHint>CUSTOM_SIMOBJECTS_PATCH</PackageOrderHint>
 	<GloballyOverridenBaseSimFiles>
 		<GloballyOverridenBaseSimFile>html_ui/Pages/VCockpit/Instruments/NavSystems/AS5/AS5.html</GloballyOverridenBaseSimFile>
-		<GloballyOverridenBaseSimFile>SimObjects/Airplanes/jf_pa28_warrior_ii/model/jf_pa28_warrior_vc.xml</GloballyOverridenBaseSimFile>
 	</GloballyOverridenBaseSimFiles>
 	<AssetGroups>
 		<AssetGroup Name="ContentInfo">

@@ -20,6 +20,22 @@ The project was switched to TypeScript and modern tooling, keeping the Rollup bu
   <img src="images/img6.jpg" width="16.5%" />
 </div>
 
+## Disclaimer
+
+This is an unofficial, non-commercial flight simulator addon, and is not affiliated with, endorsed by, or
+sponsored by any of the following.
+
+**Garmin.** "Garmin" and "G5" are trademarks of Garmin Ltd. or its subsidiaries. This addon is a simulation of
+the appearance and behaviour of a G5 electronic flight instrument for entertainment purposes only. It is not a
+Garmin product, it is not certified for any real-world use, and it must never be used for actual navigation or
+flight planning.
+
+**Asobo Studio / Microsoft.** Microsoft Flight Simulator and its aircraft are the property of Microsoft and
+Asobo Studio.
+
+**Just Flight.** The PA28 Warrior II aircraft is a separate commercial product by Just Flight and is not
+included here. The variant shipped by this addon only references an installation you already own.
+
 ## Installation
 
 As a community addon, place the addon folder into your MSFS Community folder, or use a tool like [MSFS Addons Linker](https://flightsim.to/addon/1572/msfs-addons-linker)
