@@ -302,7 +302,7 @@
 		<2869848318015977142>(O:_KnobAnimVar) 3.6 /</2869848318015977142>
 		<9322824146186438678>(O:_PressTime) 0 &gt; if{ 100 (&gt;O:_PushAnimVar) } els{ (O:_PushAnimVar) 100 0.7 * - 0 max (&gt;O:_PushAnimVar) } (O:_PushAnimVar)</9322824146186438678>
 		<5382485736248851408>100 (O:_ButtonAnimVar) *</5382485736248851408>
-		<14128170738945443690>1 1 * 0.950000 * (A:AMBIENT LIGHT SENSOR, Number) 1 4000 0.001 1 (F:MapRange) * 0.05 + (A:CIRCUIT ON:[CIRCUIT_ID], Bool) *</14128170738945443690>
+		<14128170738945443690>1 [EMISSIVE_MIN] - (A:AMBIENT LIGHT SENSOR, Number) 1 4000 0.001 1 (F:MapRange) * [EMISSIVE_MIN] + (A:CIRCUIT ON:[CIRCUIT_ID], Bool) *</14128170738945443690>
 		<17665437713776213026>(O:_PressTime) 0 &gt; if{ (O:_PressForDuration) 0 &gt; if{ (E:SIMULATION TIME, second) (O:_PressTime) (O:_PressForDuration) + &gt; if{ (O:_PressForDuration) 1 &gt;= if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } els{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } } els{ (E:SIMULATION TIME, second) (O:_PressTime) 1 + &gt; if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } }</17665437713776213026>
 		<13090222211784660751>(O:XMLVAR_Interacting_RepeatTime) (E:SIMULATION TIME, seconds) &lt; if{ (O:_MouseDownRelativePosX) 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (O:_MouseDownRelativePosX) 0 &lt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } } }</13090222211784660751>
 		<6875668430223133527>(O:_PushLocked) (O:_LastPushTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPushTime) - 0.15 &gt; if{ 0 (&gt;O:_PushLocked) 0 (&gt;O:_LastPushTime) } } (O:_PullLocked) (O:_LastPullTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPullTime) - 0.15 &gt; if{ 0 (&gt;O:_PullLocked) 0 (&gt;O:_LastPullTime) } }</6875668430223133527>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Inherits JF's VC model by reference (LODS Template for the glTF, IncludeBase for their
+  behaviours) and hides only the steam gauges the G5s are mounted over.
+-->
+<ModelInfo>
+	<LODS Template="..\..\jf_pa28_warrior_ii\model\JF_PA28_WARRIOR_VC.xml">
+	</LODS>
+	<Behaviors>
+		<IncludeBase RelativeFile="..\..\jf_pa28_warrior_ii\model\JF_PA28_WARRIOR_VC.xml"/>
+
+		<Component ID="Attitude_knob" Node="Attitude_knob">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_pitch" Node="ATTITUDE_INDICATOR_pitch">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_bank" Node="ATTITUDE_INDICATOR_bank">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_turn" Node="ATTITUDE_INDICATOR_turn">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="ATTITUDE_INDICATOR_bar" Node="ATTITUDE_INDICATOR_bar">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+
+		<!-- JF's original code here: (L:HSI_enabled, bool) if{ 1 } els{ 0 } -->
+		<Component ID="HSI_visibility" Node="HSI_visibility">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+
+		<!-- New - JF declares no component for this node -->
+		<Component ID="G5_HIDE_Reg_plate" Node="Reg_plate">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+	</Behaviors>
+</ModelInfo>
