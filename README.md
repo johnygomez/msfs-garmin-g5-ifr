@@ -19,6 +19,7 @@ The project was switched to TypeScript and modern tooling, keeping the Rollup bu
   <img src="images/img5.jpg" width="16.5%" />
   <img src="images/img6.jpg" width="16.5%" />
   <img src="images/img7.jpg" width="16.5%" />
+  <img src="images/img8.jpg" width="16.5%" />
 </div>
 
 ## Disclaimer
@@ -34,8 +35,9 @@ flight planning.
 **Asobo Studio / Microsoft.** Microsoft Flight Simulator and its aircraft are the property of Microsoft and
 Asobo Studio.
 
-**Just Flight.** The PA28 Warrior II aircraft is a separate commercial product by Just Flight and is not
-included here. The variant shipped by this addon only references an installation you already own.
+**Just Flight.** The PA28 Warrior II and PA38 Tomahawk aircraft are separate commercial products by Just
+Flight and are not included here. The variants shipped by this addon only reference an installation you
+already own.
 
 ## Installation
 
