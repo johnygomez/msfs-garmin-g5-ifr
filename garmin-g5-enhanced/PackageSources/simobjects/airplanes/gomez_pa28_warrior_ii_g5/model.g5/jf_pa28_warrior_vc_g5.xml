@@ -1,20 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  G5 ENHANCED - interior model for the Warrior II G5 variant.
-
-  Inherits JF's VC model wholesale and declares only what has to change, so none of their
-  authored content lives in this repo:
-    LODS Template  - takes their five LOD entries, and with them their glTF, by reference
-    IncludeBase    - takes their behaviours (every Component, template include and animation)
-
-  Same pattern as the C172 attachments in this package, e.g.
-  simobjects/airplanes/asobo_c172sp/attachments/gomez/Function_Interior_IFD_G5/model/interior_ifd_g5.xml
-
-  The overrides below hide the steam gauges the G5s are mounted over. Six of them re-declare
-  a Component JF already defines; the last one is new.
-
-  If JF renames JF_PA28_WARRIOR_VC.xml or any node ID below, this breaks visibly - the old
-  gauges reappear underneath the G5s - rather than silently.
+  Inherits JF's VC model by reference (LODS Template for the glTF, IncludeBase for their
+  behaviours) and hides only the steam gauges the G5s are mounted over.
 -->
 <ModelInfo>
 	<LODS Template="..\..\jf_pa28_warrior_ii\model\JF_PA28_WARRIOR_VC.xml">
