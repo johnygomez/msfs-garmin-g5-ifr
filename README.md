@@ -49,6 +49,18 @@ to manage your addons.
 Currently, I have only added the G5 avionics into the default Cessna 172 from Asobo, similar to what the original plugin by `tb110188` does.
 You can request support for additional aircraft via GitHub issues.
 
+### Supported aircrafts
+
+- *Asobo Cessna 172SP*
+    - 2 new presets for the classic C172, with Analog gauges combined with G5 and IFD variant with G5.
+- *Just Flight's PA28 Warrior II*
+    - A new aircraft type inheriting from JF PA28. Tested in combination with GTN units.
+- *Just Flight's PA38 Tomahawk*
+    - A new aircraft type inheriting from JF PA38. Tested in combination with GTN units.
+
+The issue with custom variants for third-party aircrafts, such as PA28/38 is that any update to the base aircraft can break the G5 unit.
+Due to that, it's better to request support for custom variants directly from manufacturer of the aircraft.
+
 ### PFD
 
 I tried to make the PFD features and visuals as close to the real G5 (the one I use in real life) as possible, even though there are some compromises,
