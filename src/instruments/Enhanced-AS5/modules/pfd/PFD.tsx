@@ -7,6 +7,7 @@ import {
     FSComponent,
     MappedSubject,
     Subject,
+    Subscribable,
     VNode,
 } from '@microsoft/msfs-sdk'
 
@@ -19,7 +20,7 @@ import { BARO_UNITS, BaroUnit } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { AirspeedSubjects } from '../providers/AirspeedDataProvider'
-import { AltimeterSubjects, CDISubjects } from '../providers/NavSourceDataProvider'
+import { AltimeterSubjects, CDISubjects, CourseGuidance } from '../providers/NavSourceDataProvider'
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
 import { AltimeterComponent } from './Altimeter'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
@@ -40,6 +41,7 @@ export interface PfdContentProps extends ComponentProps {
     airspeed: AirspeedSubjects
     altimeter: AltimeterSubjects
     cdi: CDISubjects
+    currentNavCourse: Subscribable<CourseGuidance>
 }
 
 export class PfdContent extends DisplayComponent<PfdContentProps> implements AvionicsPage {
@@ -197,7 +199,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     }
 
     render(): VNode {
-        const { bus, manager, autopilot, airspeed, altimeter, cdi } = this.props
+        const { bus, manager, autopilot, airspeed, altimeter, cdi, currentNavCourse } = this.props
         return (
             <>
                 <div id="AP">
@@ -232,6 +234,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                         truncateRight={78}
                         spacing={50}
                         groundTrackActive={true}
+                        currentNavCourse={currentNavCourse}
                     />
                 </div>
                 <div id="CDI">

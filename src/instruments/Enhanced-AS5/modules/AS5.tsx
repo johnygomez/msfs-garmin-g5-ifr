@@ -63,6 +63,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         airspeed={airspeedData.subjects}
                         altimeter={navData.altimeterSubjects}
                         cdi={navData.cdiSubjects}
+                        currentNavCourse={navData.currentNavCourse}
                     />
                 </div>
                 <div id="MFD">
@@ -75,6 +76,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         navSource={navData.activeSource}
                         navSourceLabel={navData.navSourceLabel}
                         selectedCourse={navData.selectedCourse}
+                        currentNavCourse={navData.currentNavCourse}
                         cdiVisible={navData.cdiSubjects.cdiVisible}
                     />
                 </div>

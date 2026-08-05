@@ -19,7 +19,7 @@ import { Colors } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
-import { AltimeterSubjects } from '../providers/NavSourceDataProvider'
+import { AltimeterSubjects, CourseGuidance } from '../providers/NavSourceDataProvider'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
 import { LeftInfoPanel } from './LeftInfoPanel'
@@ -115,6 +115,7 @@ export interface MfdContentProps extends ComponentProps {
     navSource: Subscribable<NavSource>
     navSourceLabel: Subscribable<NavSourceLabel>
     selectedCourse: Subscribable<number>
+    currentNavCourse: Subscribable<CourseGuidance>
     cdiVisible: Subscribable<boolean>
 }
 
@@ -300,8 +301,16 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
     }
 
     render(): VNode {
-        const { bus, manager, altimeter, navSource, navSourceLabel, selectedCourse, cdiVisible } =
-            this.props
+        const {
+            bus,
+            manager,
+            altimeter,
+            navSource,
+            navSourceLabel,
+            selectedCourse,
+            cdiVisible,
+            currentNavCourse,
+        } = this.props
 
         return (
             <>
@@ -310,6 +319,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                         bus={bus}
                         activeSource={navSource}
                         navSourceLabel={navSourceLabel}
+                        currentNavCourse={currentNavCourse}
                         bearing1State={this.bearingPointerProvider.bearing1}
                         bearing2State={this.bearingPointerProvider.bearing2}
                         cdiVisible={cdiVisible}

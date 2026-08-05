@@ -41,6 +41,12 @@ interface VerticalGuidance {
     readonly deviation: number
 }
 
+export interface CourseGuidance {
+    readonly active: boolean
+    readonly course: number
+    readonly source: NavSource
+}
+
 const NEEDLE_FULL_SCALE_DEFLECTION = 127
 
 const VNAV_FULL_SCALE_DEVIATION_METERS = 304.8
@@ -57,6 +63,8 @@ export class NavSourceDataProvider {
     readonly navSourceLabel: MappedSubscribable<NavSourceLabel>
     /** Course selected on the active nav source, or `NaN` while that source is not receivable. */
     readonly selectedCourse: MappedSubscribable<number>
+    /** The actual course the HSI/compass needle points to. For GPS this is the desired track; for NAV radios this is the selected OBS. */
+    readonly currentNavCourse: MappedSubscribable<CourseGuidance>
     readonly verticalDeviationMode: MappedSubscribable<VerticalDeviationMode>
     readonly verticalDeviationValue: MappedSubscribable<number>
 
@@ -107,6 +115,9 @@ export class NavSourceDataProvider {
         const nav1HasLoc = subs.consume(nav.on('nav1_has_loc'), false)
         const nav2HasLoc = subs.consume(nav.on('nav2_has_loc'), false)
 
+        const gpsActive = subs.consume(nav.on('gps_active_waypoint'), false)
+        const gpsDesiredTrack = subs.consume(nav.on('gps_wp_desired_track'), 0)
+
         const approachSupportsGp = subs.consume(
             bus.getSubscriber<FmsEvents>().on('approach_supports_gp'),
             false
@@ -117,6 +128,9 @@ export class NavSourceDataProvider {
             bus.getSubscriber<G5NavdataEvents>().on('g5_cdi_scale_label'),
             CDIScaleLabel.Enroute
         )
+
+        const navCourse1 = this.navCourse(nav, 1, tacanDriven, nav1HasLoc)
+        const navCourse2 = this.navCourse(nav, 2, tacanDriven, nav2HasLoc)
 
         this.activeSource = subs.track(
             MappedSubject.create(
@@ -161,8 +175,32 @@ export class NavSourceDataProvider {
                 this.activeSource,
                 nav1HasNav,
                 nav2HasNav,
-                this.navCourse(nav, 1, tacanDriven, nav1HasLoc),
-                this.navCourse(nav, 2, tacanDriven, nav2HasLoc)
+                navCourse1,
+                navCourse2
+            )
+        )
+
+        this.currentNavCourse = subs.track(
+            MappedSubject.create(
+                ([src, active, gpsTrk, course1, course2, hasNav1, hasNav2]) => {
+                    switch (src) {
+                        case NavSource.Nav1:
+                            return { source: src, course: course1, active: hasNav1 }
+                        case NavSource.Nav2:
+                            return { source: src, course: course2, active: hasNav2 }
+                        case NavSource.GPS:
+                            return { source: src, course: active ? gpsTrk : 0, active: active }
+                        default:
+                            return { source: src, course: 0, active: false }
+                    }
+                },
+                this.activeSource,
+                gpsActive,
+                gpsDesiredTrack,
+                navCourse1,
+                navCourse2,
+                nav1HasNav,
+                nav2HasNav
             )
         )
 

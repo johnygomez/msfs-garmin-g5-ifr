@@ -13,11 +13,12 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { NavRadioIndex, NavSource, NavSourceLabel, resolveNavCourse } from '../common/Nav'
+import { NavRadioIndex, NavSource, NavSourceLabel } from '../common/Nav'
 import { ReactiveComponent } from '../common/Reactive'
 import { Colors, formatDegrees3, visibilityAttribute } from '../common/Utils'
 import { BearingState } from '../providers/BearingPointerDataProvider'
 import { G5NavdataEvents } from '../providers/GpsPhaseSource'
+import { CourseGuidance } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 
@@ -336,6 +337,7 @@ export interface HSIComponentProps extends ComponentProps {
     bearing2State: Subscribable<BearingState>
     gpssEnabled: Subscribable<boolean>
     heading?: Subscribable<number>
+    currentNavCourse: Subscribable<CourseGuidance>
     onApi?: (instance: HSIComponent) => void
 }
 
@@ -362,7 +364,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
     private readonly nav2Available = this.consume(this.nav.on('nav2_available'), false)
 
     private readonly gpsActive = this.consume(this.nav.on('gps_active_waypoint'), false)
-    private readonly gpsDesiredTrack = this.consume(this.nav.on('gps_wp_desired_track'), 0)
     private readonly gpsObsActive = this.consume(this.nav.on('gps_obs_active'), false)
 
     private readonly lnavIsSuspended = this.consume(
@@ -402,20 +403,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
     // ---- Resolved active nav source (consumed from NavSourceDataProvider) ----
     private readonly cdiSource = this.props.activeSource
 
-    private readonly displayedCourse = this.track(
-        MappedSubject.create(
-            ([src, active, gpsTrk, course1, course2]) => {
-                if (src === NavSource.GPS) return active ? gpsTrk : 0
-                return src === NavSource.Nav1 ? course1 : course2
-            },
-            this.cdiSource,
-            this.gpsActive,
-            this.gpsDesiredTrack,
-            this.navCourse(this.nav1),
-            this.navCourse(this.nav2)
-        )
-    )
-
     private readonly toFrom = this.track(
         MappedSubject.create(
             ([src, tf1, tf2]) => (src === NavSource.GPS ? 1 : src === NavSource.Nav1 ? tf1 : tf2),
@@ -434,7 +421,7 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
     )
     private readonly headingText = this.track(this.magneticHeading.map(formatDegrees3))
     private readonly courseTransform = this.track(
-        this.displayedCourse.map(c => `rotate(${c}, 50, 50)`)
+        this.props.currentNavCourse.map(c => `rotate(${c.course}, 50, 50)`)
     )
     private readonly cdiTransform = this.track(
         this.cdiNeedle.map(n => `translate(${clamp((n / 127) * 30, -30, 30)}, 0)`)
@@ -524,12 +511,7 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
     private subscribeNav(index: NavRadioIndex) {
         const nav = this.props.bus.getSubscriber<G5NavEvents>()
         return {
-            hasLoc: this.consume(nav.on(`nav${index}_has_loc`), false),
-            localizer: this.consume(nav.on(`nav${index}_localizer`), 0),
-            obs: this.consume(nav.on(`nav${index}_obs`), 0),
             toFrom: this.consume(nav.on(`nav${index}_to_from`), 0),
-            hasTacan: this.consume(nav.on(`nav${index}_has_tacan`), false),
-            tacanObs: this.consume(nav.on(`nav${index}_tacan_obs`), 0),
             tacanToFrom: this.consume(nav.on(`nav${index}_tacan_to_from`), 0),
             signal: this.consume(nav.on(`nav${index}_signal`), 0),
             hasDme: this.consume(nav.on(`nav${index}_has_dme`), false),
@@ -537,19 +519,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
             radial: this.consume(nav.on(`nav${index}_radial`), 0),
             actFreq: this.consume(nav.on(`nav${index}_act_freq`), 0),
         }
-    }
-
-    private navCourse(nav: NavConsumers): MappedSubscribable<number> {
-        return this.track(
-            MappedSubject.create(
-                params => resolveNavCourse(...params),
-                this.tacanDriven,
-                nav.hasLoc,
-                nav.localizer,
-                nav.obs,
-                nav.tacanObs
-            )
-        )
     }
 
     private navToFrom(nav: NavConsumers): MappedSubscribable<number> {

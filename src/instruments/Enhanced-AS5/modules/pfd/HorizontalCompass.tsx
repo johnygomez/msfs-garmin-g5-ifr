@@ -11,7 +11,9 @@ import {
     NavMath,
 } from '@microsoft/msfs-sdk'
 
+import { NavSource } from '../common/Nav'
 import { Colors } from '../common/Utils'
+import { CourseGuidance } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
 // The ribbon spans ±80° around the current heading, with a labelled mark every
@@ -30,6 +32,7 @@ export interface HorizontalCompassProps extends ComponentProps {
     truncateRight: number
     spacing: number
     groundTrackActive: boolean
+    currentNavCourse: Subscribable<CourseGuidance>
 }
 
 export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompassProps> {
@@ -39,6 +42,10 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
 
     private readonly courseBugTransform: MappedSubject<[number, number], string>
     private readonly trackBugTransform: MappedSubject<[number, number], string>
+    private readonly navCourse: MappedSubject<[CourseGuidance], number>
+    private readonly navCourseBugTransform: MappedSubject<[number, number], string>
+    private readonly navCourseBugColor: MappedSubject<[number], string>
+    private readonly navCourseVisibility: MappedSubject<[CourseGuidance], string>
     private readonly ribbonTransform: MappedSubject<[number], string>
     private readonly bearingText: MappedSubject<[number], string>
     private readonly digitTextSubjects: MappedSubject<[number], string>[] = []
@@ -66,6 +73,17 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
         this.courseBugTransform = bugTransform(this.course)
         this.trackBugTransform = bugTransform(this.track)
 
+        this.navCourse = MappedSubject.create(([c]) => c.course, this.props.currentNavCourse)
+        this.navCourseBugTransform = bugTransform(this.navCourse)
+        this.navCourseBugColor = MappedSubject.create(
+            ([navSource]) => (navSource.source === NavSource.GPS ? Colors.MAGENTA : Colors.GREEN),
+            this.props.currentNavCourse
+        )
+        this.navCourseVisibility = MappedSubject.create(
+            ([navSource]) => (navSource.active ? 'visible' : 'hidden'),
+            this.props.currentNavCourse
+        )
+
         this.ribbonTransform = MappedSubject.create(
             ([hdg]) => `translate(${(roundTo10(hdg) - hdg) * pxPerDeg}, 0)`,
             this.heading
@@ -91,6 +109,10 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
 
         this.courseBugTransform.destroy()
         this.trackBugTransform.destroy()
+        this.navCourseBugColor.destroy()
+        this.navCourse.destroy()
+        this.navCourseBugTransform.destroy()
+        this.navCourseVisibility.destroy()
         this.ribbonTransform.destroy()
         this.bearingText.destroy()
         this.digitTextSubjects.forEach(s => s.destroy())
@@ -182,6 +204,17 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                         )
                     })}
                 </g>
+                <rect
+                    x={center - 1.5}
+                    y="15"
+                    width="3"
+                    height="10"
+                    class="nav-course-bug"
+                    fill={this.navCourseBugColor}
+                    stroke={Colors.BLACK}
+                    transform={this.navCourseBugTransform}
+                    visibility={this.navCourseVisibility}
+                />
                 <polygon
                     class="course-bug"
                     points={`${center},18 ${center + 2},16 ${center + 7},16 ${center + 6},20 ${center - 6},20 ${center - 7},16 ${center - 2},16`}

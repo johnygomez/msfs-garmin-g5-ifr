@@ -84,7 +84,7 @@ A few things that were added/redesigned:
 
 - [x] Support inHg units for baro.
     - Baro units can be changed in Menu -> Setup of the PFD
-- [ ] Display Nav Course and maybe other ticks on Horizontal Compass.
+- [x] Display Nav Course and maybe other ticks on Horizontal Compass.
 - [ ] Add full AFCS status box - currently the AP is not really supported, but will come soon in GPSS mode.
 
 ### MFD
