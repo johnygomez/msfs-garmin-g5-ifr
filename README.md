@@ -39,6 +39,9 @@ Asobo Studio.
 Flight and are not included here. The variants shipped by this addon only reference an installation you
 already own.
 
+**Carenado.** The C182 RG II aircraft is a separate commercial product by Carenado and is not included
+here. The variant shipped by this addon only references an installation you already own.
+
 ## Installation
 
 As a community addon, place the addon folder into your MSFS Community folder, or use a tool like [MSFS Addons Linker](https://flightsim.to/addon/1572/msfs-addons-linker)
@@ -57,6 +60,8 @@ You can request support for additional aircraft via GitHub issues.
     - A new aircraft type inheriting from JF PA28. Tested in combination with GTN units.
 - *Just Flight's PA38 Tomahawk*
     - A new aircraft type inheriting from JF PA38. Tested in combination with GTN units.
+- *Carenado's C182 RG II*
+    - A new aircraft type inheriting from the Carenado C182RG, replacing the AI and HSI.
 
 The issue with custom variants for third-party aircrafts, such as PA28/38 is that any update to the base aircraft can break the G5 unit.
 Due to that, it's better to request support for custom variants directly from manufacturer of the aircraft.

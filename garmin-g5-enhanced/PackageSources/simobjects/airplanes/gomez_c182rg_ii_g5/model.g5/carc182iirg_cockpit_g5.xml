@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inherits Carenado's cockpit model and hides the gauges the G5s are mounted over. -->
+<ModelInfo>
+	<LODS Template="..\..\Carenado_C182RG\model\CARC182IIRG_cockpit.xml">
+	</LODS>
+	<Behaviors>
+		<IncludeBase RelativeFile="..\..\Carenado_C182RG\model\CARC182IIRG_cockpit.xml"/>
+
+		<!-- Attitude indicator, replaced by G5 #1 -->
+		<Component ID="INSTRUMENT_ATTITUDEINDICATOR_BANK_1" Node="INSTRUMENT_ATTITUDEINDICATOR_BANK_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="INSTRUMENT_ATTITUDEINDICATOR_PITCH_1" Node="INSTRUMENT_ATTITUDEINDICATOR_PITCH_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="INSTRUMENT_ATTITUDEINDICATOR_BARS_1" Node="INSTRUMENT_ATTITUDEINDICATOR_BARS_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="INSTRUMENT_ATTITUDEINDICATOR_KNOB_1" Node="INSTRUMENT_ATTITUDEINDICATOR_KNOB_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+
+		<!-- HSI, replaced by G5 #2 -->
+		<Component ID="CARENADO_INSTRUMENT_HSI_COMPASS_1" Node="CARENADO_INSTRUMENT_HSI_COMPASS_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="CARENADO_INSTRUMENT_HSI_NEEDLE_COURSE_1" Node="CARENADO_INSTRUMENT_HSI_NEEDLE_COURSE_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="CARENADO_INSTRUMENT_HSI_NEEDLE_GS_1" Node="CARENADO_INSTRUMENT_HSI_NEEDLE_GS_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="CARENADO_HSI_HDG_FLAG_1" Node="CARENADO_HSI_HDG_FLAG_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="CARENADO_HSI_NAV_FLAG_1" Node="CARENADO_HSI_NAV_FLAG_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="TAPA_HSI" Node="TAPA_HSI">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+
+		<!-- HSI heading/course knobs and their collars - these protrude past the G5 bezel -->
+		<Component ID="CARENADO_INSTRUMENT_HSI_KNOB_CRS_1" Node="CARENADO_INSTRUMENT_HSI_KNOB_CRS_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="CARENADO_INSTRUMENT_HSI_KNOB_HDG_BUG_1" Node="CARENADO_INSTRUMENT_HSI_KNOB_HDG_BUG_1">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="Cylinder001" Node="Cylinder001">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+		<Component ID="Cylinder002" Node="Cylinder002">
+			<Visibility>
+				<Parameter>
+					<Code>0</Code>
+				</Parameter>
+			</Visibility>
+		</Component>
+	</Behaviors>
+</ModelInfo>
