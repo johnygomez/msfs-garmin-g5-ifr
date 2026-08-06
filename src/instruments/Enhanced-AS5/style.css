@@ -36,6 +36,14 @@
     --airspeed-ias-box-line-height: 25px;
     --airspeed-ias-box-line-offset-y: -1px;
 
+    /* AP annunciation bar (lateral | status | vertical sections) */
+    --ap-infobar-height: 18px;
+    --ap-infobar-font-size: 18px;
+    --ap-infobar-lateral-width: 31.25%;
+    --ap-infobar-status-width: 18.75%;
+    --ap-infobar-section-padding: 1em;
+    --ap-infobar-annunciation-gap: 0.5em;
+
     /* Ground-speed readout box (overlaid at the bottom of the airspeed column) */
     --airspeed-gs-box-height: 24px;
     --airspeed-gs-box-width: 82px;
@@ -133,12 +141,7 @@ as5-element #PageContainer #PFD {
 as5-element #PageContainer #PFD #AP {
     position: absolute;
     width: 100%;
-    height: 18px;
-    top: 0;
-    left: 0;
-}
-as5-element #PageContainer #PFD #AP svg {
-    position: absolute;
+    height: var(--ap-infobar-height);
     top: 0;
     left: 0;
 }
@@ -1122,36 +1125,86 @@ as5-element .DropdownOverlay .DropdownOptions .DropdownOption[state='Selected'] 
 }
 
 /* AP info bar */
-as5-element #PFD .ap-infobar #AP_Status[Display='Yellow'] {
-    fill: yellow;
+as5-element #PFD .ap-infobar {
+    display: flex;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    background: var(--black);
+    border-bottom: 1px solid var(--white);
+    font-family: 'OpenSans-Bold';
+    font-size: var(--ap-infobar-font-size);
+    line-height: 1;
+    color: var(--white);
 }
-as5-element #PFD .ap-infobar #AP_Status[Display='Red'] {
-    fill: red;
+as5-element #PFD .ap-infobar .ap-infobar-section {
+    position: relative;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 0 var(--ap-infobar-section-padding);
 }
-as5-element #PFD .ap-infobar #AP_Status[Display='YellowFlash'] {
+as5-element #PFD .ap-infobar .ap-infobar-section + .ap-infobar-section::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 11%;
+    bottom: 22%;
+    width: 1px;
+    background: var(--white);
+}
+as5-element #PFD .ap-infobar .ap-infobar-lateral {
+    width: var(--ap-infobar-lateral-width);
+    justify-content: space-between;
+}
+as5-element #PFD .ap-infobar .ap-infobar-status {
+    width: var(--ap-infobar-status-width);
+    justify-content: center;
+    gap: var(--ap-infobar-annunciation-gap);
+}
+as5-element #PFD .ap-infobar .ap-infobar-vertical {
+    flex: 1;
+    justify-content: space-between;
+}
+as5-element #PFD .ap-infobar .ap-infobar-group {
+    display: flex;
+    align-items: center;
+    gap: var(--ap-infobar-annunciation-gap);
+}
+as5-element #PFD .ap-infobar .ap-infobar-active {
+    color: var(--green);
+}
+as5-element #PFD .ap-infobar #AP_Status[state='Yellow'] {
+    color: var(--yellow);
+}
+as5-element #PFD .ap-infobar #AP_Status[state='Red'] {
+    color: var(--red);
+}
+as5-element #PFD .ap-infobar #AP_Status[state='YellowFlash'] {
     animation: FlashYellow 1s infinite;
 }
-as5-element #PFD .ap-infobar #AP_Status[Display='RedFlash'] {
+as5-element #PFD .ap-infobar #AP_Status[state='RedFlash'] {
     animation: FlashRed 1s infinite;
 }
 @keyframes FlashYellow {
     5%,
     45% {
-        fill: yellow;
+        color: var(--yellow);
     }
     55%,
     95% {
-        fill: transparent;
+        color: transparent;
     }
 }
 @keyframes FlashRed {
     0%,
     45% {
-        fill: red;
+        color: var(--red);
     }
     55%,
     100% {
-        fill: white;
+        color: var(--white);
     }
 }
 

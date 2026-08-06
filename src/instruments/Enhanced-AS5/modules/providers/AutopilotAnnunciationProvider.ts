@@ -1,6 +1,6 @@
 import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
 
-import { APInfoBarSubjects } from '../pfd/APInfoBar'
+import { APDisplayMode, APInfoBarSubjects } from '../pfd/APInfoBar'
 
 export class AutopilotAnnunciationProvider {
     private statusState = 0
@@ -8,7 +8,7 @@ export class AutopilotAnnunciationProvider {
     private manualDisconnected = false
 
     private readonly apStatus = Subject.create('')
-    private readonly apStatusDisplay = Subject.create('')
+    private readonly apStatusDisplay = Subject.create<APDisplayMode>('')
     private readonly apLateralActive = Subject.create('')
     private readonly apLateralArmed = Subject.create('')
     private readonly apVerticalActive = Subject.create('')
