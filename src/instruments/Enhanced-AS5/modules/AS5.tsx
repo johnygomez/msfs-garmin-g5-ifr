@@ -137,7 +137,8 @@ export class AS5 extends BaseInstrument {
             this.gpsSynchronizer = new GpsSteerSynchronizer(this.bus)
             this.gpsSynchronizer.resume()
         }
-        this.apAnnunciationProvider = new AutopilotAnnunciationProvider()
+        this.apAnnunciationProvider = new AutopilotAnnunciationProvider(this.bus)
+        this.apAnnunciationProvider.resume()
 
         this.adcPublisher = new AdcPublisher(this.bus)
         this.ahrsPublisher = new AhrsPublisher(this.bus)
@@ -179,7 +180,6 @@ export class AS5 extends BaseInstrument {
         this.navPublisher?.onUpdate()
         this.navdataStack?.onUpdate()
         this.airspeedProvider?.onUpdate(this.deltaTime)
-        this.apAnnunciationProvider?.onUpdate()
         if (this.isElectricityAvailable()) {
             this.gpsSynchronizer?.onUpdate()
         }
@@ -211,8 +211,6 @@ export class AS5 extends BaseInstrument {
 
     private dispatch(event: string): void {
         if (!this.isBootProcedureComplete()) return
-
-        this.apAnnunciationProvider?.onEvent(event)
 
         const page = this.activePage
         if (!page) return

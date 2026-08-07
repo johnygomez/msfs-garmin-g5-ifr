@@ -1,246 +1,237 @@
-import { SimVarValueType, Subject } from '@microsoft/msfs-sdk'
+import { FmaData, FmaMasterSlotState, GarminAPUtils } from '@microsoft/msfs-garminsdk'
+import {
+    APAltitudeModes,
+    APLateralModes,
+    APVerticalModes,
+    Consumer,
+    ConsumerSubject,
+    EventBus,
+    MappedSubscribable,
+    Subject,
+    Subscribable,
+} from '@microsoft/msfs-sdk'
 
-import { APDisplayMode, APInfoBarSubjects } from '../pfd/APInfoBar'
+import { resolveNavRadioIndex } from '../common/Nav'
+import { ReactiveProvider } from '../common/Reactive'
+import { APInfoBarSubjects } from '../pfd/APInfoBar'
+import { G5CustomEvents } from '../publishers/G5CustomPublisher'
+import { G5NavEvents } from '../publishers/G5NavPublisher'
+import {
+    FmaModeSlotSource,
+    lateralLabel,
+    verticalActiveLabel,
+    verticalArmedLabels,
+} from './FmaAnnunciations'
 
-export class AutopilotAnnunciationProvider {
-    private statusState = 0
-    private yellowFlashBegin = 0
-    private manualDisconnected = false
+const formatMach = (mach: number): string =>
+    'M ' + (mach < 1 ? fastToFixed(mach, 3).slice(1) : fastToFixed(mach, 3))
 
-    private readonly apStatus = Subject.create('')
-    private readonly apStatusDisplay = Subject.create<APDisplayMode>('')
-    private readonly apLateralActive = Subject.create('')
-    private readonly apLateralArmed = Subject.create('')
-    private readonly apVerticalActive = Subject.create('')
-    private readonly apModeReference = Subject.create('')
-    private readonly apArmed = Subject.create('')
-    private readonly apArmedReference = Subject.create('')
-    private readonly apYDStatus = Subject.create('')
+const formatKnots = (knots: number): string => fastToFixed(knots, 0)
+
+const formatFeet = (feet: number): string => fastToFixed(feet, 0)
+
+const formatVerticalSpeed = (fpm: number): string => fastToFixed(fpm, 0)
+
+const masterSlotState = (engaged: boolean): FmaMasterSlotState =>
+    engaged ? FmaMasterSlotState.On : FmaMasterSlotState.Off
+
+export class AutopilotAnnunciationProvider extends ReactiveProvider {
+    private readonly inputs: Subscribable<unknown>[] = []
+
+    private readonly lateralSlot = new FmaModeSlotSource()
+    private readonly verticalSlot = new FmaModeSlotSource()
+
+    private readonly lateralArmed = Subject.create('')
+    private readonly verticalArmedPrimary = Subject.create('')
+    private readonly verticalArmedSecondary = Subject.create('')
+    private readonly verticalReference = Subject.create('')
+
+    private readonly apState: MappedSubscribable<FmaMasterSlotState>
+    private readonly ydState: MappedSubscribable<FmaMasterSlotState>
+
+    private readonly gpsDrivesNav1: ConsumerSubject<boolean>
+    private readonly navSelected: ConsumerSubject<number>
+    private readonly nav1HasLoc: ConsumerSubject<boolean>
+    private readonly nav2HasLoc: ConsumerSubject<boolean>
+
+    private readonly wingLeveler: ConsumerSubject<boolean>
+    private readonly bankHold: ConsumerSubject<boolean>
+    private readonly headingHold: ConsumerSubject<boolean>
+    private readonly navHold: ConsumerSubject<boolean>
+    private readonly backcourseHold: ConsumerSubject<boolean>
+    private readonly approachHold: ConsumerSubject<boolean>
+
+    private readonly pitchHold: ConsumerSubject<boolean>
+    private readonly flcActive: ConsumerSubject<boolean>
+    private readonly machHold: ConsumerSubject<boolean>
+    private readonly altitudeHold: ConsumerSubject<boolean>
+    private readonly altitudeArm: ConsumerSubject<boolean>
+    private readonly verticalSpeedHold: ConsumerSubject<boolean>
+    private readonly glideslopeActive: ConsumerSubject<boolean>
+    private readonly glideslopeArm: ConsumerSubject<boolean>
+
+    private readonly airspeedInMach: ConsumerSubject<boolean>
+    private readonly managedSpeedInMach: ConsumerSubject<boolean>
+    private readonly machSelected: ConsumerSubject<number>
+    private readonly iasSelected: ConsumerSubject<number>
+    private readonly altitudeSelected: ConsumerSubject<number>
+    private readonly verticalSpeedSelected: ConsumerSubject<number>
 
     get subjects(): APInfoBarSubjects {
         return {
-            apStatus: this.apStatus,
-            apStatusDisplay: this.apStatusDisplay,
-            apLateralActive: this.apLateralActive,
-            apLateralArmed: this.apLateralArmed,
-            apVerticalActive: this.apVerticalActive,
-            apModeReference: this.apModeReference,
-            apArmed: this.apArmed,
-            apArmedReference: this.apArmedReference,
-            apYDStatus: this.apYDStatus,
+            apState: this.apState,
+            ydState: this.ydState,
+            lateralActive: this.lateralSlot.subject,
+            lateralArmed: this.lateralArmed,
+            verticalActive: this.verticalSlot.subject,
+            verticalArmedPrimary: this.verticalArmedPrimary,
+            verticalArmedSecondary: this.verticalArmedSecondary,
+            verticalReference: this.verticalReference,
         }
     }
 
-    onUpdate(): void {
-        if (SimVar.GetSimVarValue('AUTOPILOT MASTER', SimVarValueType.Bool)) {
-            this.statusState = 5
-            this.manualDisconnected = false
-        } else {
-            if (this.statusState == 5) {
-                setTimeout(() => {
-                    if (!this.manualDisconnected) this.statusState = 1
-                }, 200)
-            }
-            if (
-                this.statusState == 2 &&
-                this.yellowFlashBegin + 5 < SimVar.GetSimVarValue('E:ABSOLUTE TIME', 'seconds')
-            ) {
-                this.statusState = 0
-            }
-        }
+    constructor(bus: EventBus) {
+        super()
 
-        this.apYDStatus.set(
-            SimVar.GetSimVarValue('AUTOPILOT YAW DAMPER', SimVarValueType.Bool) ? 'YD' : ''
-        )
-        this.apStatus.set(this.statusState != 0 ? 'AP' : '')
-        switch (this.statusState) {
-            case 1:
-                this.apStatusDisplay.set('RedFlash')
-                break
-            case 2:
-                this.apStatusDisplay.set('YellowFlash')
-                break
-            case 3:
-                this.apStatusDisplay.set('Red')
-                break
-            case 4:
-                this.apStatusDisplay.set('Yellow')
-                break
-            case 0:
-            case 5:
+        const sub = bus.getSubscriber<G5CustomEvents & G5NavEvents>()
+
+        this.gpsDrivesNav1 = this.watch(sub.on('gps_drives_nav1'), false)
+        this.navSelected = this.watch(sub.on('nav_selected'), 0)
+        this.nav1HasLoc = this.watch(sub.on('nav1_has_loc'), false)
+        this.nav2HasLoc = this.watch(sub.on('nav2_has_loc'), false)
+
+        this.wingLeveler = this.watch(sub.on('ap_wing_leveler'), false)
+        this.bankHold = this.watch(sub.on('ap_bank_hold'), false)
+        this.headingHold = this.watch(sub.on('ap_heading_hold'), false)
+        this.navHold = this.watch(sub.on('ap_nav_hold'), false)
+        this.backcourseHold = this.watch(sub.on('ap_backcourse_hold'), false)
+        this.approachHold = this.watch(sub.on('ap_appr_hold'), false)
+
+        this.pitchHold = this.watch(sub.on('ap_pitch_hold'), false)
+        this.flcActive = this.watch(sub.on('ap_flc_active'), false)
+        this.machHold = this.watch(sub.on('ap_mach_hold'), false)
+        this.altitudeHold = this.watch(sub.on('ap_altitude_hold'), false)
+        this.altitudeArm = this.watch(sub.on('ap_altitude_arm'), false)
+        this.verticalSpeedHold = this.watch(sub.on('ap_vs_hold'), false)
+        this.glideslopeActive = this.watch(sub.on('ap_glideslope_active'), false)
+        this.glideslopeArm = this.watch(sub.on('ap_glideslope_arm'), false)
+
+        this.airspeedInMach = this.watch(sub.on('ap_airspeed_in_mach'), false)
+        this.managedSpeedInMach = this.watch(sub.on('ap_managed_speed_in_mach'), false)
+        this.machSelected = this.watch(sub.on('ap_mach_selected'), 0)
+        this.iasSelected = this.watch(sub.on('ap_ias_selected'), 0)
+        this.altitudeSelected = this.watch(sub.on('ap_altitude_selected'), 0)
+        this.verticalSpeedSelected = this.watch(sub.on('ap_vs_selected'), 0)
+
+        this.apState = this.track(this.consume(sub.on('ap_master'), false).map(masterSlotState))
+        this.ydState = this.track(this.consume(sub.on('ap_yaw_damper'), false).map(masterSlotState))
+
+        for (const input of this.inputs) {
+            this.live(input.sub(() => this.annunciate(this.resolve())))
+        }
+    }
+
+    private watch<T>(consumer: Consumer<T>, initial: T): ConsumerSubject<T> {
+        const input = this.consume(consumer, initial)
+        this.inputs.push(input)
+        return input
+    }
+
+    private resolve(): FmaData {
+        return {
+            ...GarminAPUtils.createEmptyFmaData(),
+            lateralActive: this.resolveLateralActive(),
+            lateralArmed: this.resolveLateralArmed(),
+            verticalActive: this.resolveVerticalActive(),
+            verticalApproachArmed: this.resolveApproachArmed(),
+            verticalAltitudeArmed: this.altitudeArm.get()
+                ? APAltitudeModes.ALTS
+                : APAltitudeModes.NONE,
+            altitudeCaptureArmed: this.altitudeArm.get() && !this.altitudeHold.get(),
+        }
+    }
+
+    private resolveLateralActive(): APLateralModes {
+        if (this.wingLeveler.get()) return APLateralModes.LEVEL
+        if (this.bankHold.get()) return APLateralModes.ROLL
+        if (this.headingHold.get()) return APLateralModes.HEADING
+        return this.resolveCoupledMode()
+    }
+
+    private resolveLateralArmed(): APLateralModes {
+        const steersItself = this.wingLeveler.get() || this.headingHold.get()
+        return steersItself ? this.resolveCoupledMode() : APLateralModes.NONE
+    }
+
+    private resolveCoupledMode(): APLateralModes {
+        if (this.navHold.get()) return this.navLateralMode()
+        if (this.backcourseHold.get()) return APLateralModes.BC
+        if (this.approachHold.get()) return this.navLateralMode()
+        return APLateralModes.NONE
+    }
+
+    private navLateralMode(): APLateralModes {
+        if (this.gpsDrivesNav1.get()) return APLateralModes.GPSS
+        return this.selectedNavHasLoc() ? APLateralModes.LOC : APLateralModes.VOR
+    }
+
+    private selectedNavHasLoc(): boolean {
+        return resolveNavRadioIndex(this.navSelected.get()) === 2
+            ? this.nav2HasLoc.get()
+            : this.nav1HasLoc.get()
+    }
+
+    private resolveVerticalActive(): APVerticalModes {
+        if (this.pitchHold.get()) return APVerticalModes.PITCH
+        if (this.flcActive.get() || this.machHold.get()) return APVerticalModes.FLC
+        if (this.altitudeHold.get()) {
+            return this.altitudeArm.get() ? APVerticalModes.CAP : APVerticalModes.ALT
+        }
+        if (this.verticalSpeedHold.get()) return APVerticalModes.VS
+        if (this.glideslopeActive.get()) return this.glidepathMode()
+        return APVerticalModes.NONE
+    }
+
+    private resolveApproachArmed(): APVerticalModes {
+        return this.glideslopeArm.get() ? this.glidepathMode() : APVerticalModes.NONE
+    }
+
+    private glidepathMode(): APVerticalModes {
+        return this.gpsDrivesNav1.get() ? APVerticalModes.GP : APVerticalModes.GS
+    }
+
+    private resolveReference(mode: APVerticalModes): string {
+        switch (mode) {
+            case APVerticalModes.ALT:
+            case APVerticalModes.CAP:
+                return formatFeet(this.altitudeSelected.get())
+            case APVerticalModes.VS:
+                return formatVerticalSpeed(this.verticalSpeedSelected.get())
+            case APVerticalModes.FLC:
+                return this.referenceInMach()
+                    ? formatMach(this.machSelected.get())
+                    : formatKnots(this.iasSelected.get())
             default:
-                this.apStatusDisplay.set('')
-                break
-        }
-
-        if (SimVar.GetSimVarValue('AUTOPILOT PITCH HOLD', SimVarValueType.Bool)) {
-            this.apVerticalActive.set('PIT')
-            this.apModeReference.set('')
-        } else if (SimVar.GetSimVarValue('AUTOPILOT FLIGHT LEVEL CHANGE', SimVarValueType.Bool)) {
-            this.apVerticalActive.set('FLC')
-            if (
-                SimVar.GetSimVarValue('L:XMLVAR_AirSpeedIsInMach', SimVarValueType.Bool) ||
-                SimVar.GetSimVarValue('AUTOPILOT MANAGED SPEED IN MACH', SimVarValueType.Bool)
-            ) {
-                const refMach = SimVar.GetSimVarValue(
-                    'AUTOPILOT MACH HOLD VAR',
-                    SimVarValueType.Mach
-                )
-                this.apModeReference.set(
-                    'M ' +
-                        (refMach < 1 ? fastToFixed(refMach, 3).slice(1) : fastToFixed(refMach, 3))
-                )
-            } else {
-                this.apModeReference.set(
-                    fastToFixed(
-                        SimVar.GetSimVarValue('AUTOPILOT AIRSPEED HOLD VAR', SimVarValueType.Knots),
-                        0
-                    ) + 'KT'
-                )
-            }
-        } else if (SimVar.GetSimVarValue('AUTOPILOT MACH HOLD', SimVarValueType.Bool)) {
-            this.apVerticalActive.set('FLC')
-            const refMach = SimVar.GetSimVarValue('AUTOPILOT MACH HOLD VAR', SimVarValueType.Mach)
-            this.apModeReference.set(
-                'M ' + (refMach < 1 ? fastToFixed(refMach, 3).slice(1) : fastToFixed(refMach, 3))
-            )
-        } else if (SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK', SimVarValueType.Bool)) {
-            if (SimVar.GetSimVarValue('AUTOPILOT ALTITUDE ARM', SimVarValueType.Bool)) {
-                this.apVerticalActive.set('ALTS')
-            } else {
-                this.apVerticalActive.set('ALT')
-            }
-            this.apModeReference.set(
-                fastToFixed(
-                    SimVar.GetSimVarValue('AUTOPILOT ALTITUDE LOCK VAR:2', SimVarValueType.Feet),
-                    0
-                ) + 'FT'
-            )
-        } else if (SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD', SimVarValueType.Bool)) {
-            this.apVerticalActive.set('VS')
-            this.apModeReference.set(
-                fastToFixed(
-                    SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD VAR', SimVarValueType.FPM),
-                    0
-                ) + 'FPM'
-            )
-        } else if (SimVar.GetSimVarValue('AUTOPILOT GLIDESLOPE ACTIVE', SimVarValueType.Bool)) {
-            if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                this.apVerticalActive.set('GP')
-            } else {
-                this.apVerticalActive.set('GS')
-            }
-            this.apModeReference.set('')
-        } else {
-            this.apVerticalActive.set('')
-            this.apModeReference.set('')
-        }
-
-        if (SimVar.GetSimVarValue('AUTOPILOT ALTITUDE ARM', SimVarValueType.Bool)) {
-            this.apArmed.set('ALT')
-            this.apArmedReference.set('')
-        } else if (SimVar.GetSimVarValue('AUTOPILOT GLIDESLOPE ARM', SimVarValueType.Bool)) {
-            if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                this.apArmed.set('V ALT')
-                this.apArmedReference.set('GP')
-            } else {
-                this.apArmed.set('GS')
-                this.apArmedReference.set('')
-            }
-        } else if (SimVar.GetSimVarValue('AUTOPILOT VERTICAL HOLD', SimVarValueType.Bool)) {
-            this.apArmed.set('ALTS')
-            this.apArmedReference.set('')
-        } else {
-            this.apArmed.set('')
-            this.apArmedReference.set('')
-        }
-
-        if (SimVar.GetSimVarValue('AUTOPILOT WING LEVELER', SimVarValueType.Bool)) {
-            this.apLateralActive.set('LVL')
-        } else if (SimVar.GetSimVarValue('AUTOPILOT BANK HOLD', SimVarValueType.Bool)) {
-            this.apLateralActive.set('ROL')
-        } else if (SimVar.GetSimVarValue('AUTOPILOT HEADING LOCK', SimVarValueType.Bool)) {
-            this.apLateralActive.set('HDG')
-        } else if (SimVar.GetSimVarValue('AUTOPILOT NAV1 LOCK', SimVarValueType.Bool)) {
-            if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                this.apLateralActive.set('GPS')
-            } else {
-                if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                    this.apLateralActive.set('LOC')
-                } else {
-                    this.apLateralActive.set('VOR')
-                }
-            }
-        } else if (SimVar.GetSimVarValue('AUTOPILOT BACKCOURSE HOLD', SimVarValueType.Bool)) {
-            this.apLateralArmed.set('BC')
-        } else if (SimVar.GetSimVarValue('AUTOPILOT APPROACH HOLD', SimVarValueType.Bool)) {
-            if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                this.apLateralArmed.set('GPS')
-            } else {
-                if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                    this.apLateralActive.set('LOC')
-                } else {
-                    this.apLateralActive.set('VOR')
-                }
-            }
-        } else {
-            this.apLateralActive.set('')
-        }
-
-        if (
-            SimVar.GetSimVarValue('AUTOPILOT HEADING LOCK', SimVarValueType.Bool) ||
-            SimVar.GetSimVarValue('AUTOPILOT WING LEVELER', SimVarValueType.Bool)
-        ) {
-            if (SimVar.GetSimVarValue('AUTOPILOT NAV1 LOCK', SimVarValueType.Bool)) {
-                if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                    this.apLateralArmed.set('GPS')
-                } else {
-                    if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                        this.apLateralArmed.set('LOC')
-                    } else {
-                        this.apLateralArmed.set('VOR')
-                    }
-                }
-            } else if (SimVar.GetSimVarValue('AUTOPILOT BACKCOURSE HOLD', SimVarValueType.Bool)) {
-                this.apLateralArmed.set('BC')
-            } else if (SimVar.GetSimVarValue('AUTOPILOT APPROACH HOLD', SimVarValueType.Bool)) {
-                if (SimVar.GetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool)) {
-                    this.apLateralArmed.set('GPS')
-                } else {
-                    if (Simplane.getAutoPilotNavHasLoc(Simplane.getAutoPilotSelectedNav())) {
-                        this.apLateralArmed.set('LOC')
-                    } else {
-                        this.apLateralArmed.set('VOR')
-                    }
-                }
-            } else {
-                this.apLateralArmed.set('')
-            }
-        } else {
-            this.apLateralArmed.set('')
+                return ''
         }
     }
 
-    onEvent(event: string): void {
-        switch (event) {
-            case 'Autopilot_Manual_Off':
-                this.onManualAutopilotDisconnect()
-                break
-            case 'Autopilot_Disc':
-                if (this.statusState != 0) {
-                    if (this.statusState != 5) {
-                        this.statusState = 0
-                    } else {
-                        this.onManualAutopilotDisconnect()
-                    }
-                }
-                break
-        }
+    private referenceInMach(): boolean {
+        return this.airspeedInMach.get() || this.managedSpeedInMach.get() || this.machHold.get()
     }
 
-    private onManualAutopilotDisconnect(): void {
-        this.statusState = 2
-        this.yellowFlashBegin = SimVar.GetSimVarValue('E:ABSOLUTE TIME', 'seconds')
-        this.manualDisconnected = true
+    private annunciate(data: Readonly<FmaData>): void {
+        const lateralArmed = lateralLabel(data.lateralArmed)
+        this.lateralSlot.update(lateralLabel(data.lateralActive), [lateralArmed])
+        this.lateralArmed.set(lateralArmed)
+
+        const verticalArmed = verticalArmedLabels(data)
+        this.verticalSlot.update(
+            verticalActiveLabel(data.verticalActive, data.verticalAltitudeArmed),
+            verticalArmed
+        )
+        this.verticalArmedPrimary.set(verticalArmed[0] ?? '')
+        this.verticalArmedSecondary.set(verticalArmed[1] ?? '')
+        this.verticalReference.set(this.resolveReference(data.verticalActive))
     }
 }

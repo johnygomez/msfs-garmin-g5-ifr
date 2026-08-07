@@ -48,6 +48,34 @@ export interface G5CustomEvents {
     ap_ias_selected: number
     /** Whether GPSS (GPS Steering) mode is enabled. */
     gpss_enabled: boolean
+    /** Whether the autopilot master is engaged. */
+    ap_master: boolean
+    /** Whether the yaw damper is engaged. */
+    ap_yaw_damper: boolean
+    /** Whether the autopilot is in pitch hold mode. */
+    ap_pitch_hold: boolean
+    /** Whether autopilot altitude hold is active. */
+    ap_altitude_hold: boolean
+    /** Whether autopilot altitude capture is armed. */
+    ap_altitude_arm: boolean
+    /** Whether autopilot vertical speed hold is active. */
+    ap_vs_hold: boolean
+    /** Whether the autopilot is tracking a glideslope/glidepath. */
+    ap_glideslope_active: boolean
+    /** Whether glideslope/glidepath capture is armed. */
+    ap_glideslope_arm: boolean
+    /** Whether autopilot heading hold is active. */
+    ap_heading_hold: boolean
+    /** Whether the autopilot is coupled to the navigation source. */
+    ap_nav_hold: boolean
+    /** Whether autopilot backcourse mode is active. */
+    ap_backcourse_hold: boolean
+    /** Whether autopilot wings-level mode is active. */
+    ap_wing_leveler: boolean
+    /** Whether autopilot bank (roll) hold is active. */
+    ap_bank_hold: boolean
+    /** Whether the airspeed reference is displayed in Mach. */
+    ap_airspeed_in_mach: boolean
 }
 
 /**
@@ -85,6 +113,20 @@ const G5_CUSTOM_SIMVARS = new Map<keyof G5CustomEvents, SimVarPublisherEntry<any
     ['ap_mach_selected', { name: 'AUTOPILOT MACH HOLD VAR', type: SimVarValueType.Mach }],
     ['ap_ias_selected', { name: 'AUTOPILOT AIRSPEED HOLD VAR', type: SimVarValueType.Knots }],
     ['gpss_enabled', { name: 'L:AS5_GPSS_ENABLED', type: SimVarValueType.Bool }],
+    ['ap_master', { name: 'AUTOPILOT MASTER', type: SimVarValueType.Bool }],
+    ['ap_yaw_damper', { name: 'AUTOPILOT YAW DAMPER', type: SimVarValueType.Bool }],
+    ['ap_pitch_hold', { name: 'AUTOPILOT PITCH HOLD', type: SimVarValueType.Bool }],
+    ['ap_altitude_hold', { name: 'AUTOPILOT ALTITUDE LOCK', type: SimVarValueType.Bool }],
+    ['ap_altitude_arm', { name: 'AUTOPILOT ALTITUDE ARM', type: SimVarValueType.Bool }],
+    ['ap_vs_hold', { name: 'AUTOPILOT VERTICAL HOLD', type: SimVarValueType.Bool }],
+    ['ap_glideslope_active', { name: 'AUTOPILOT GLIDESLOPE ACTIVE', type: SimVarValueType.Bool }],
+    ['ap_glideslope_arm', { name: 'AUTOPILOT GLIDESLOPE ARM', type: SimVarValueType.Bool }],
+    ['ap_heading_hold', { name: 'AUTOPILOT HEADING LOCK', type: SimVarValueType.Bool }],
+    ['ap_nav_hold', { name: 'AUTOPILOT NAV1 LOCK', type: SimVarValueType.Bool }],
+    ['ap_backcourse_hold', { name: 'AUTOPILOT BACKCOURSE HOLD', type: SimVarValueType.Bool }],
+    ['ap_wing_leveler', { name: 'AUTOPILOT WING LEVELER', type: SimVarValueType.Bool }],
+    ['ap_bank_hold', { name: 'AUTOPILOT BANK HOLD', type: SimVarValueType.Bool }],
+    ['ap_airspeed_in_mach', { name: 'L:XMLVAR_AirSpeedIsInMach', type: SimVarValueType.Bool }],
 ])
 
 /**

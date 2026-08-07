@@ -43,6 +43,7 @@
     --ap-infobar-status-width: 18.75%;
     --ap-infobar-section-padding: 1em;
     --ap-infobar-annunciation-gap: 0.5em;
+    --ap-infobar-annunciation-padding: 0.15em;
 
     /* Ground-speed readout box (overlaid at the bottom of the airspeed column) */
     --airspeed-gs-box-height: 24px;
@@ -1172,39 +1173,48 @@ as5-element #PFD .ap-infobar .ap-infobar-group {
     align-items: center;
     gap: var(--ap-infobar-annunciation-gap);
 }
-as5-element #PFD .ap-infobar .ap-infobar-active {
+as5-element #PFD .ap-infobar .ap-infobar-reference {
     color: var(--green);
 }
-as5-element #PFD .ap-infobar #AP_Status[state='Yellow'] {
-    color: var(--yellow);
+as5-element #PFD .ap-infobar .ap-infobar-armed {
+    color: var(--white);
 }
-as5-element #PFD .ap-infobar #AP_Status[state='Red'] {
-    color: var(--red);
+
+/* AP annunciation slots — ported from the Garmin SDK's FmaMasterSlot.css / FmaModeSlot.css */
+as5-element #PFD .ap-infobar .fma-master,
+as5-element #PFD .ap-infobar .fma-mode {
+    color: var(--green);
+    padding: 0 var(--ap-infobar-annunciation-padding);
+    border-radius: 3px;
 }
-as5-element #PFD .ap-infobar #AP_Status[state='YellowFlash'] {
-    animation: FlashYellow 1s infinite;
+as5-element #PFD .ap-infobar .fma-master-alert {
+    animation: fma-master-alert-flash 1s infinite;
 }
-as5-element #PFD .ap-infobar #AP_Status[state='RedFlash'] {
-    animation: FlashRed 1s infinite;
+as5-element #PFD .ap-infobar .fma-mode-alert {
+    animation: fma-mode-alert-flash 1s infinite;
 }
-@keyframes FlashYellow {
-    5%,
-    45% {
-        color: var(--yellow);
-    }
-    55%,
-    95% {
-        color: transparent;
-    }
-}
-@keyframes FlashRed {
+@keyframes fma-master-alert-flash {
     0%,
-    45% {
-        color: var(--red);
+    74.9% {
+        color: var(--black);
+        background-color: var(--yellow);
     }
-    55%,
-    100% {
-        color: var(--white);
+    75%,
+    99.9% {
+        color: var(--yellow);
+        background-color: transparent;
+    }
+}
+@keyframes fma-mode-alert-flash {
+    0%,
+    74.9% {
+        color: var(--black);
+        background-color: var(--green);
+    }
+    75%,
+    99.9% {
+        color: var(--green);
+        background-color: transparent;
     }
 }
 
