@@ -23,6 +23,14 @@ export enum NavSource {
 /** Index of one of the two nav radios, as used in the `navN_*` event topics. */
 export type NavRadioIndex = 1 | 2
 
+export function resolveNavRadioIndex(navSelected: number): NavRadioIndex {
+    return navSelected === 2 ? 2 : 1
+}
+
+export function resolveNavRadioSource(navSelected: number): NavSource {
+    return resolveNavRadioIndex(navSelected) === 2 ? NavSource.Nav2 : NavSource.Nav1
+}
+
 export function resolveNavSourceLabel(
     source: NavSource,
     tacan: boolean,

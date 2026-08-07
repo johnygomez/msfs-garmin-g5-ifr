@@ -12,6 +12,7 @@ import {
     NavSource,
     NavSourceLabel,
     resolveNavCourse,
+    resolveNavRadioSource,
     resolveNavSourceLabel,
 } from '../common/Nav'
 import { SubscriptionCollection } from '../common/Reactive'
@@ -95,8 +96,6 @@ export class NavSourceDataProvider {
         const gpsDrivesNav1 = subs.consume(g5.on('gps_drives_nav1'), false)
         const navSelected = subs.consume(g5.on('nav_selected'), 0)
 
-        const apprHold = subs.consume(nav.on('ap_appr_hold'), false)
-        const approachType = subs.consume(nav.on('ap_approach_type'), 0)
         const cdiNeedleValid = subs.consume(nav.on('hsi_cdi_needle_valid'), false)
         const nav1HasNav = subs.consume(nav.on('nav1_has_nav'), false)
         const nav2HasNav = subs.consume(nav.on('nav2_has_nav'), false)
@@ -134,18 +133,9 @@ export class NavSourceDataProvider {
 
         this.activeSource = subs.track(
             MappedSubject.create(
-                ([gpsDrives, apprActive, apprType, navSel]) => {
-                    const navCoupled =
-                        !gpsDrives || (apprActive && apprType !== ApproachType.APPROACH_TYPE_RNAV)
-                    if (navCoupled && navSel !== 0) {
-                        if (navSel === 1) return NavSource.Nav1
-                        if (navSel === 2) return NavSource.Nav2
-                    }
-                    return NavSource.GPS
-                },
+                ([gpsDrives, navSel]) =>
+                    gpsDrives ? NavSource.GPS : resolveNavRadioSource(navSel),
                 gpsDrivesNav1,
-                apprHold,
-                approachType,
                 navSelected
             )
         )

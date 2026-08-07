@@ -82,7 +82,6 @@ export interface G5NavEvents {
 
     // ---- Autopilot ----
     ap_appr_hold: boolean
-    ap_approach_type: number
 
     // ---- DME (L: vars) ----
     dme_source: number
@@ -163,7 +162,6 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
 
     // Autopilot
     ['ap_appr_hold', { name: 'AUTOPILOT APPROACH HOLD', type: SimVarValueType.Bool }],
-    ['ap_approach_type', { name: 'AUTOPILOT APPROACH TYPE', type: SimVarValueType.Number }],
 
     // DME
     ['dme_source', { name: 'L:Glasscockpit_DmeSource', type: SimVarValueType.Number }],

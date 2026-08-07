@@ -357,9 +357,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
     private readonly headingSource: Subscribable<number> =
         this.props.heading ?? this.consume(this.nav.on('ap_heading_selected').withPrecision(1), 0)
 
-    private readonly gpsDrivesNav1 = this.consume(this.nav.on('gps_drives_nav1'), true)
-    private readonly apprHold = this.consume(this.nav.on('ap_appr_hold'), false)
-    private readonly approachType = this.consume(this.nav.on('ap_approach_type'), 0)
     private readonly tacanDriven = this.consume(this.nav.on('tacan_drives_nav1'), false)
     private readonly nav2Available = this.consume(this.nav.on('nav2_available'), false)
 
@@ -382,7 +379,10 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
 
     private readonly cdiNeedle = this.consume(this.nav.on('hsi_cdi_needle'), 0)
 
-    private readonly dmeSource = this.consume(this.nav.on('dme_source'), 1)
+    /** `L:Glasscockpit_DmeSource` is 0 until a source is picked; treat anything but NAV2 as NAV1. */
+    private readonly dmeSource: Subscribable<NavRadioIndex> = this.track(
+        this.consume(this.nav.on('dme_source'), 1).map(src => (src === 2 ? 2 : 1))
+    )
     private readonly dmeDisplayed = this.consume(this.nav.on('dme_displayed'), false)
 
     private readonly cdiScaleLabel = this.consume(
@@ -482,31 +482,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
             this.nav2Dme
         )
     )
-
-    constructor(props: HSIComponentProps) {
-        super(props)
-
-        // Drop GPS coupling when a non-RNAV approach becomes active, so the ILS/VOR drives the CDI.
-        this.live(
-            this.apprHold.sub(hold => {
-                if (
-                    !this.props.noAffectSimRadioNav &&
-                    hold &&
-                    this.approachType.get() !== ApproachType.APPROACH_TYPE_RNAV &&
-                    this.gpsDrivesNav1.get()
-                ) {
-                    SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Bool, 0)
-                }
-            })
-        )
-        this.live(
-            this.dmeSource.sub(src => {
-                if (src === 0 && !this.props.noAffectSimRadioNav) {
-                    SimVar.SetSimVarValue('L:Glasscockpit_DmeSource', SimVarValueType.Number, 1)
-                }
-            })
-        )
-    }
 
     private subscribeNav(index: NavRadioIndex) {
         const nav = this.props.bus.getSubscriber<G5NavEvents>()
@@ -628,9 +603,7 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
             nextIndex = (nextIndex + 1) % order.length
         }
         const next = order[nextIndex]
-        if ((next === NavSource.GPS) !== this.gpsDrivesNav1.get()) {
-            SimVar.SetSimVarValue('K:TOGGLE_GPS_DRIVES_NAV1', SimVarValueType.Bool, 0)
-        }
+        SimVar.SetSimVarValue('GPS DRIVES NAV1', SimVarValueType.Bool, next === NavSource.GPS)
         if (next !== NavSource.GPS) {
             ;(Simplane as any).setAutoPilotSelectedNav(next === NavSource.Nav1 ? 1 : 2)
         }
