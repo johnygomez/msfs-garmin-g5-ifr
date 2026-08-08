@@ -119,18 +119,42 @@ class IASDisplayBox extends DisplayComponent<IASDisplayBoxProps> {
 interface VSpeedReferenceProps extends ComponentProps {
     speed: string
     x: string
-    y: Subscribable<number>
+    centerY: Subscribable<number>
 }
 
 class VSpeedReference extends DisplayComponent<VSpeedReferenceProps> {
+    private static readonly HEIGHT = 30
+
+    private readonly topY: MappedSubject<[number], number>
+
+    constructor(props: VSpeedReferenceProps) {
+        super(props)
+
+        this.topY = MappedSubject.create(
+            ([centerY]) => centerY - VSpeedReference.HEIGHT / 2,
+            props.centerY
+        )
+    }
+
+    public destroy(): void {
+        this.topY.destroy()
+        super.destroy()
+    }
+
     public render(): VNode {
         return (
-            <svg x={this.props.x} y={this.props.y} width="50" height="30" viewBox="0 0 15 10">
+            <svg
+                x={this.props.x}
+                y={this.topY}
+                width="50"
+                height={VSpeedReference.HEIGHT}
+                viewBox="0 -5 15 10"
+            >
                 <g>
-                    <polygon points="0,5 5,0 15,0 15,10 5,10" fill={Colors.BLACK} opacity="0.9" />
+                    <polygon points="0,0 5,-5 15,-5 15,5 5,5" fill={Colors.BLACK} opacity="0.9" />
                     <text
                         x="10"
-                        y="5"
+                        y="0"
                         fill="cyan"
                         font-size="8"
                         text-anchor="middle"
@@ -338,7 +362,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         super(props)
 
         this.height = props.height
-        this.centerY = props.height / 2 - 50
+        this.centerY = props.height / 2
 
         this.readDesignSpeeds()
 
@@ -660,11 +684,11 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                                 refSpeed={this.props.refSpeed}
                                 center={center}
                             />
-                            <VSpeedReference speed="A" x="200" y={this.VaOffset} />
-                            <VSpeedReference speed="G" x="200" y={this.VgOffset} />
-                            <VSpeedReference speed="R" x="200" y={this.VrOffset} />
-                            <VSpeedReference speed="X" x="200" y={this.VxOffset} />
-                            <VSpeedReference speed="Y" x="200" y={this.VyOffset} />
+                            <VSpeedReference speed="A" x="200" centerY={this.VaOffset} />
+                            <VSpeedReference speed="G" x="200" centerY={this.VgOffset} />
+                            <VSpeedReference speed="R" x="200" centerY={this.VrOffset} />
+                            <VSpeedReference speed="X" x="200" centerY={this.VxOffset} />
+                            <VSpeedReference speed="Y" x="200" centerY={this.VyOffset} />
                         </g>
                     </svg>
                     <AirspeedTrendVector trend={this.props.airspeedTrend} center={center} />

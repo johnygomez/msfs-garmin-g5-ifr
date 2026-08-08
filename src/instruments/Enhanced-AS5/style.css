@@ -1220,6 +1220,7 @@ as5-element #PFD .ap-infobar .ap-infobar-group {
 }
 as5-element #PFD .ap-infobar .ap-infobar-reference {
     color: var(--green);
+    padding: 0 var(--ap-infobar-annunciation-padding);
 }
 as5-element #PFD .ap-infobar .ap-infobar-armed {
     color: var(--white);
