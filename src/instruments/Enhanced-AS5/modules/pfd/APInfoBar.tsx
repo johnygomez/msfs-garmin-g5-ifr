@@ -17,6 +17,7 @@ export interface APInfoBarSubjects {
     verticalArmedPrimary: Subscribable<string>
     verticalArmedSecondary: Subscribable<string>
     verticalReference: Subscribable<string>
+    hasAnnunciation: Subscribable<boolean>
 }
 
 export interface APInfoBarProps extends APInfoBarSubjects, ComponentProps {}

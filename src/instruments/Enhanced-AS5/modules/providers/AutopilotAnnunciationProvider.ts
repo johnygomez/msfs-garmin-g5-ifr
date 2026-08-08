@@ -5,7 +5,9 @@ import {
     APVerticalModes,
     Consumer,
     ConsumerSubject,
+    DebounceTimer,
     EventBus,
+    MappedSubject,
     MappedSubscribable,
     Subject,
     Subscribable,
@@ -32,6 +34,9 @@ const formatFeet = (feet: number): string => fastToFixed(feet, 0)
 
 const formatVerticalSpeed = (fpm: number): string => fastToFixed(fpm, 0)
 
+/** Mirrors the disconnect flash of `FmaMasterSlot`, whose duration the SDK does not export. */
+const ANNUNCIATION_LINGER_MS = 5000
+
 const masterSlotState = (engaged: boolean): FmaMasterSlotState =>
     engaged ? FmaMasterSlotState.On : FmaMasterSlotState.Off
 
@@ -48,6 +53,9 @@ export class AutopilotAnnunciationProvider extends ReactiveProvider {
 
     private readonly apState: MappedSubscribable<FmaMasterSlotState>
     private readonly ydState: MappedSubscribable<FmaMasterSlotState>
+
+    private readonly hasAnnunciation = Subject.create(false)
+    private readonly annunciationTimer = new DebounceTimer()
 
     private readonly gpsDrivesNav1: ConsumerSubject<boolean>
     private readonly navSelected: ConsumerSubject<number>
@@ -87,6 +95,7 @@ export class AutopilotAnnunciationProvider extends ReactiveProvider {
             verticalArmedPrimary: this.verticalArmedPrimary,
             verticalArmedSecondary: this.verticalArmedSecondary,
             verticalReference: this.verticalReference,
+            hasAnnunciation: this.hasAnnunciation,
         }
     }
 
@@ -126,8 +135,48 @@ export class AutopilotAnnunciationProvider extends ReactiveProvider {
         this.apState = this.track(this.consume(sub.on('ap_master'), false).map(masterSlotState))
         this.ydState = this.track(this.consume(sub.on('ap_yaw_damper'), false).map(masterSlotState))
 
+        const annunciating = this.track(
+            MappedSubject.create(
+                ([ap, yd, lateral, lateralArmed, vertical, armedPrimary, armedSecondary]) =>
+                    ap === FmaMasterSlotState.On ||
+                    yd === FmaMasterSlotState.On ||
+                    lateral.active !== '' ||
+                    lateralArmed !== '' ||
+                    vertical.active !== '' ||
+                    armedPrimary !== '' ||
+                    armedSecondary !== '',
+                this.apState,
+                this.ydState,
+                this.lateralSlot.subject,
+                this.lateralArmed,
+                this.verticalSlot.subject,
+                this.verticalArmedPrimary,
+                this.verticalArmedSecondary
+            )
+        )
+
+        this.live(annunciating.sub(active => this.onAnnunciationChanged(active)))
+
         for (const input of this.inputs) {
             this.live(input.sub(() => this.annunciate(this.resolve())))
+        }
+    }
+
+    destroy(): void {
+        this.annunciationTimer.clear()
+        super.destroy()
+    }
+
+    private onAnnunciationChanged(active: boolean): void {
+        this.annunciationTimer.clear()
+
+        if (active) {
+            this.hasAnnunciation.set(true)
+        } else {
+            this.annunciationTimer.schedule(
+                () => this.hasAnnunciation.set(false),
+                ANNUNCIATION_LINGER_MS
+            )
         }
     }
 

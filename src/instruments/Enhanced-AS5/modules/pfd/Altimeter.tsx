@@ -21,6 +21,7 @@ import {
     DebounceTimer,
 } from '@microsoft/msfs-sdk'
 
+import { ReactiveComponent } from '../common/Reactive'
 import { BaroUnit } from '../common/Utils'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
@@ -385,6 +386,35 @@ class SelectedAltitudeBox extends DisplayComponent<SelectedAltitudeBoxProps> {
     }
 }
 
+interface BaroSettingBoxProps extends ComponentProps {
+    bus: EventBus
+    baroUnit: Subscribable<BaroUnit>
+}
+
+class BaroSettingBox extends ReactiveComponent<BaroSettingBoxProps> {
+    private readonly sub = this.props.bus.getSubscriber<AdcEvents>()
+    private readonly baroSettingMB = this.consume(
+        this.sub.on('altimeter_baro_setting_mb').withPrecision(0),
+        1013
+    )
+    private readonly baroSettingInHG = this.consume(
+        this.sub.on('altimeter_baro_setting_inhg').withPrecision(2),
+        29.92
+    )
+    private readonly baroSettingText = this.track(
+        MappedSubject.create(
+            ([mb, inHg, unit]) => (unit === 'hPa' ? Math.round(mb).toString() : inHg.toFixed(2)),
+            this.baroSettingMB,
+            this.baroSettingInHG,
+            this.props.baroUnit
+        )
+    )
+
+    public render(): VNode {
+        return <div class="altimeter-barosetting-box">{this.baroSettingText}</div>
+    }
+}
+
 export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps> {
     private readonly ALT_WINDOW_FT = 400
     private readonly MAJOR_TICK_INTERVAL = 100
@@ -396,9 +426,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
     private readonly PX_PER_FT: number
 
     private readonly indicatedAlt: ConsumerSubject<number>
-    private readonly baroSettingMB: ConsumerSubject<number>
-    private readonly baroSettingInHG: ConsumerSubject<number>
-    private readonly baroSettingText: MappedSubscribable<string>
     private readonly verticalSpd: ConsumerSubject<number>
     private readonly refAltitude: ConsumerSubject<number>
 
@@ -426,20 +453,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.indicatedAlt = ConsumerSubject.create(
             sub.on('indicated_alt').withPrecision(0),
             0
-        ).pause()
-        this.baroSettingMB = ConsumerSubject.create(
-            sub.on('altimeter_baro_setting_mb').withPrecision(0),
-            1013
-        ).pause()
-        this.baroSettingInHG = ConsumerSubject.create(
-            sub.on('altimeter_baro_setting_inhg').withPrecision(2),
-            29.92
-        ).pause()
-        this.baroSettingText = MappedSubject.create(
-            ([mb, inHg, unit]) => (unit === 'hPa' ? Math.round(mb).toString() : inHg.toFixed(2)),
-            this.baroSettingMB,
-            this.baroSettingInHG,
-            this.props.baroUnit
         ).pause()
         this.verticalSpd = ConsumerSubject.create(
             sub.on('vertical_speed').withPrecision(1),
@@ -517,9 +530,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
     public onAfterRender(): void {
         this.indicatedAlt.resume()
-        this.baroSettingMB.resume()
-        this.baroSettingInHG.resume()
-        this.baroSettingText.resume()
         this.verticalSpd.resume()
         this.refAltitude.resume()
 
@@ -539,9 +549,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
         this.altitudeAlerter.destroy()
 
         this.indicatedAlt.destroy()
-        this.baroSettingMB.destroy()
-        this.baroSettingInHG.destroy()
-        this.baroSettingText.destroy()
         this.verticalSpd.destroy()
         this.refAltitude.destroy()
 
@@ -558,7 +565,6 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
 
     public render(): VNode {
         const tapeCenterY = this.TAPE_WINDOW_PX / 2
-        const GF_font = 'OpenSans-Bold'
         const viewBoxWidth = 300
 
         return (
@@ -607,34 +613,8 @@ export class AltimeterComponent extends DisplayComponent<AltimeterComponentProps
                         selectedAlt={this.refAltitude}
                         onDeviationAlert={this.props.onDeviationAlert}
                     />
-                    <g
-                        width="310"
-                        height="70"
-                        transform={`translate(0, ${this.TAPE_WINDOW_PX - 75})`}
-                    >
-                        <rect
-                            class="pressure-background"
-                            width="310"
-                            height="70"
-                            fill="#1a1d21"
-                            stroke="#36c8d2"
-                            stroke-width="5"
-                        />
-                        <text
-                            x="155"
-                            y="35"
-                            class="pressure-text"
-                            fill="#36c8d2"
-                            font-size="56"
-                            font-family={GF_font}
-                            letter-spacing="0.05em"
-                            text-anchor="middle"
-                            dominant-baseline="central"
-                        >
-                            {this.baroSettingText}
-                        </text>
-                    </g>
                 </svg>
+                <BaroSettingBox bus={this.props.bus} baroUnit={this.props.baroUnit} />
                 <IndicatedAltDisplayBox indicatedAlt={this.indicatedAlt} />
             </>
         )

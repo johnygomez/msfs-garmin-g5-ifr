@@ -267,7 +267,8 @@ class GroundSpeedDisplay extends DisplayComponent<GroundSpeedDisplayProps> {
             <div class="airspeed-gs-box">
                 <span class="airspeed-gs-box-label">GS</span>
                 <span class="airspeed-gs-box-value">
-                    {this.gs.map(g => fastToFixed(g, 0) + 'KT')}
+                    {this.gs.map(g => fastToFixed(g, 0))}
+                    <span class="airspeed-gs-box-value-units">kt</span>
                 </span>
             </div>
         )

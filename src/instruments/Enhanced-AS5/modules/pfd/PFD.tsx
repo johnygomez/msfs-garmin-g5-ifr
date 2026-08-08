@@ -88,6 +88,10 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
         this.closeModals()
     }
 
+    private readonly apBarState = this.props.autopilot.hasAnnunciation.map(annunciating =>
+        annunciating ? 'Active' : 'Inactive'
+    )
+
     private readonly turnRate: ConsumerSubject<number>
     private readonly slipSkid: ConsumerSubject<number>
 
@@ -202,51 +206,59 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
         const { bus, manager, autopilot, airspeed, altimeter, cdi, currentNavCourse } = this.props
         return (
             <>
-                <div id="AP">
-                    <APInfoBarComponent {...autopilot} />
-                </div>
-                <div id="Horizon">
-                    <AttitudeIndicatorComponent tas={airspeed.trueAirspeed} bus={bus} />
-                </div>
-                <div id="Altimeter">
-                    <AltimeterComponent bus={bus} height={1020} baroUnit={manager.baroUnit} />
-                </div>
-                <div id="VerticalDeviation">
-                    <VerticalDeviationIndicatorComponent
-                        mode={altimeter.verticalDeviationMode}
-                        deviation={altimeter.verticalDeviationValue}
-                    />
-                </div>
-                <div id="Airspeed">
-                    <AirspeedIndicatorComponent
-                        bus={bus}
-                        height={1020}
-                        noColor={false}
-                        indicatedAirspeed={airspeed.indicatedAirspeed}
-                        refSpeed={airspeed.refSpeed}
-                        airspeedTrend={airspeed.airspeedTrend}
-                    />
-                </div>
-                <div id="Compass">
-                    <HorizontalCompassComponent
-                        bus={bus}
-                        truncateLeft={50}
-                        truncateRight={78}
-                        spacing={50}
-                        groundTrackActive={true}
-                        currentNavCourse={currentNavCourse}
-                    />
-                </div>
-                <div id="CDI">
-                    <CDIComponent
-                        cdiSource={cdi.cdiSource}
-                        cdiDeviation={cdi.cdiDeviation}
-                        isVisible={cdi.cdiVisible}
-                    />
-                </div>
-                <div id="BottomIndicators">
-                    <SlipSkidIndicatorComponent slipSkid={this.slipSkid} />
-                    <TurnRateIndicatorComponent turnRate={this.turnRate} />
+                <div id="PfdWrapper">
+                    <div id="AP" state={this.apBarState}>
+                        <APInfoBarComponent {...autopilot} />
+                    </div>
+                    <div id="PfdMain">
+                        <div id="Horizon">
+                            <AttitudeIndicatorComponent tas={airspeed.trueAirspeed} bus={bus} />
+                        </div>
+                        <div id="Altimeter">
+                            <AltimeterComponent
+                                bus={bus}
+                                height={1020}
+                                baroUnit={manager.baroUnit}
+                            />
+                        </div>
+                        <div id="VerticalDeviation">
+                            <VerticalDeviationIndicatorComponent
+                                mode={altimeter.verticalDeviationMode}
+                                deviation={altimeter.verticalDeviationValue}
+                            />
+                        </div>
+                        <div id="Airspeed">
+                            <AirspeedIndicatorComponent
+                                bus={bus}
+                                height={1020}
+                                noColor={false}
+                                indicatedAirspeed={airspeed.indicatedAirspeed}
+                                refSpeed={airspeed.refSpeed}
+                                airspeedTrend={airspeed.airspeedTrend}
+                            />
+                        </div>
+                        <div id="Compass">
+                            <HorizontalCompassComponent
+                                bus={bus}
+                                truncateLeft={50}
+                                truncateRight={78}
+                                spacing={50}
+                                groundTrackActive={true}
+                                currentNavCourse={currentNavCourse}
+                            />
+                        </div>
+                        <div id="CDI">
+                            <CDIComponent
+                                cdiSource={cdi.cdiSource}
+                                cdiDeviation={cdi.cdiDeviation}
+                                isVisible={cdi.cdiVisible}
+                            />
+                        </div>
+                        <div id="BottomIndicators">
+                            <SlipSkidIndicatorComponent slipSkid={this.slipSkid} />
+                            <TurnRateIndicatorComponent turnRate={this.turnRate} />
+                        </div>
+                    </div>
                 </div>
 
                 <Menu ref={this.menu}>

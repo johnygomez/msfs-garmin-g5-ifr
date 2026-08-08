@@ -46,10 +46,10 @@
     --ap-infobar-annunciation-padding: 0.15em;
 
     /* Ground-speed readout box (overlaid at the bottom of the airspeed column) */
-    --airspeed-gs-box-height: 24px;
+    --airspeed-gs-box-height: 30px;
     --airspeed-gs-box-width: 82px;
-    --airspeed-gs-box-label-font-size: 13px;
-    --airspeed-gs-box-value-font-size: 15px;
+    --airspeed-gs-box-label-font-size: 15px;
+    --airspeed-gs-box-value-font-size: 20px;
 
     /* Colors — aligned with G3X Touch reference values (G3XTouch.css) */
     --black: black;
@@ -137,14 +137,31 @@ as5-element #PageContainer #PFD {
     position: absolute;
     width: 100%;
     height: 100%;
-    display: flex;
 }
-as5-element #PageContainer #PFD #AP {
+as5-element #PageContainer #PFD #PfdWrapper {
     position: absolute;
-    width: 100%;
-    height: var(--ap-infobar-height);
     top: 0;
     left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+as5-element #PageContainer #PFD #AP {
+    display: none;
+    position: relative;
+    width: 100%;
+    flex: 0 0 var(--ap-infobar-height);
+    background-color: var(--black);
+}
+as5-element #PageContainer #PFD #AP[state='Active'] {
+    display: flex;
+}
+as5-element #PageContainer #PFD #PfdMain {
+    flex: 1 1 0;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
 }
 
 as5-element #PageContainer #PFD #Horizon {
@@ -1015,6 +1032,21 @@ as5-element .DropdownOverlay .DropdownOptions .DropdownOption[state='Selected'] 
         rgba(0, 0, 0, 1) 95%
     );
 }
+#Altimeter .altimeter-barosetting-box {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 108px;
+    height: 25px;
+    background-color: var(--black);
+    border: 2px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'OpenSans-Bold';
+    font-size: 20px;
+    line-height: 1em;
+    text-align: center;
+    box-sizing: border-box;
+}
 
 /* PFD Airspeed IAS box styles */
 
@@ -1116,13 +1148,25 @@ as5-element .DropdownOverlay .DropdownOptions .DropdownOption[state='Selected'] 
 
 .airspeed-gs-box-label {
     font-size: var(--airspeed-gs-box-label-font-size);
-    font-family: 'OpenSans';
+    font-family: 'OpenSans-Bold';
 }
 
 .airspeed-gs-box-value {
+    display: inline-block;
     font-size: var(--airspeed-gs-box-value-font-size);
     color: magenta;
     font-family: 'OpenSans-Bold';
+}
+.airspeed-gs-box-value-units {
+    display: inline-block;
+    vertical-align: middle;
+    height: var(--airspeed-gs-box-value-font-size);
+    padding-right: 0.5em;
+    font-size: 12px;
+    line-height: 8px;
+    width: 0.1em;
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 
 /* AP info bar */
