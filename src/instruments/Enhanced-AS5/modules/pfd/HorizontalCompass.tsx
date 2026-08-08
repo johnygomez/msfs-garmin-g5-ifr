@@ -33,6 +33,7 @@ export interface HorizontalCompassProps extends ComponentProps {
     spacing: number
     groundTrackActive: boolean
     currentNavCourse: Subscribable<CourseGuidance>
+    gpssEnabled: Subscribable<boolean>
 }
 
 export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompassProps> {
@@ -49,6 +50,9 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
     private readonly ribbonTransform: MappedSubject<[number], string>
     private readonly bearingText: MappedSubject<[number], string>
     private readonly digitTextSubjects: MappedSubject<[number], string>[] = []
+
+    private readonly headingBugFill: MappedSubject<[boolean], string>
+    private readonly headingBugStroke: MappedSubject<[boolean], string>
 
     constructor(props: HorizontalCompassProps) {
         super(props)
@@ -100,6 +104,15 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                 )
             )
         }
+
+        this.headingBugFill = MappedSubject.create(
+            ([gpssEnabled]) => (!gpssEnabled ? Colors.CYAN : Colors.BLACK),
+            this.props.gpssEnabled
+        )
+        this.headingBugStroke = MappedSubject.create(
+            ([gpssEnabled]) => (!gpssEnabled ? Colors.BLACK : Colors.CYAN),
+            this.props.gpssEnabled
+        )
     }
 
     destroy(): void {
@@ -116,6 +129,8 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
         this.ribbonTransform.destroy()
         this.bearingText.destroy()
         this.digitTextSubjects.forEach(s => s.destroy())
+        this.headingBugFill.destroy()
+        this.headingBugStroke.destroy()
 
         super.destroy()
     }
@@ -218,8 +233,8 @@ export class HorizontalCompassComponent extends DisplayComponent<HorizontalCompa
                 <polygon
                     class="course-bug"
                     points={`${center},18 ${center + 2},16 ${center + 7},16 ${center + 6},20 ${center - 6},20 ${center - 7},16 ${center - 2},16`}
-                    fill={Colors.CYAN}
-                    stroke={Colors.BLACK}
+                    fill={this.headingBugFill}
+                    stroke={this.headingBugStroke}
                     transform={this.courseBugTransform}
                 />
                 <polygon

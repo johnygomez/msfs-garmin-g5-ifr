@@ -14,6 +14,7 @@ import {
 import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager'
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
 import { DropdownOverlay } from '../common/DropdownOverlay'
+import { GPSSIndicator } from '../common/GPSSIndicator'
 import { Menu } from '../common/Menu'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
 import { BARO_UNITS, BaroUnit } from '../common/Utils'
@@ -244,6 +245,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                                 spacing={50}
                                 groundTrackActive={true}
                                 currentNavCourse={currentNavCourse}
+                                gpssEnabled={manager.gpssEnabled}
                             />
                         </div>
                         <div id="CDI">
@@ -257,6 +259,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                             <SlipSkidIndicatorComponent slipSkid={this.slipSkid} />
                             <TurnRateIndicatorComponent turnRate={this.turnRate} />
                         </div>
+                        <GPSSIndicator gpssEnabled={manager.gpssEnabled} />
                     </div>
                 </div>
 
