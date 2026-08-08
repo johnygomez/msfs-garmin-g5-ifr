@@ -177,19 +177,18 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
 
     private onOverlayEvent(event: string): void {
         const { manager } = this.props
-        const heading = this.activeOverlay.get() === 'heading'
         switch (event) {
             case 'Knob_Inc':
-                if (heading) manager.incrementHeading()
-                else manager.incrementAltitude()
+                if (this.headingActive.get()) manager.incrementHeading()
+                else if (this.altitudeActive.get()) manager.incrementAltitude()
                 break
             case 'Knob_Dec':
-                if (heading) manager.decrementHeading()
-                else manager.decrementAltitude()
+                if (this.headingActive.get()) manager.decrementHeading()
+                else if (this.altitudeActive.get()) manager.decrementAltitude()
                 break
             case 'Knob_Long_Push':
-                if (heading) manager.syncHeading()
-                else manager.syncAltitude()
+                if (this.headingActive.get()) manager.syncHeading()
+                else if (this.altitudeActive.get()) manager.syncAltitude()
                 break
             case 'Knob_Push':
                 this.activeOverlay.set(null)
