@@ -79,13 +79,15 @@ A few things that were added/redesigned:
 - Ball, CDI and VDI visual
 - Vertical speed indicator
 - QNH in hPa
+- Horizontal compass displays varios info, such as ground track or nav course
+- AP info box which displays when AP is active (or any annunciation is available)
 
 ### TODO
 
 - [x] Support inHg units for baro.
     - Baro units can be changed in Menu -> Setup of the PFD
 - [x] Display Nav Course and maybe other ticks on Horizontal Compass.
-- [ ] Add full AFCS status box - currently the AP is not really supported, but will come soon in GPSS mode.
+- [/] Add full AFCS status box - partially support, however no AP with FD and advanced GFC500 functionality is available in any aircraft ATM.
 
 ### MFD
 
@@ -101,11 +103,12 @@ A few things that were added/redesigned:
 - VDI
 - DTK/CRS modes in lower left panel
 - NAV mode and phase indications
+- GPSS mode, which simulates the GPS steering by adjusting the heading
 
 ### TODO
 
 - [x] Improve the VNAV indication, especially in LNAV/VNAV mode and ENR VNAV.
-- [ ] Improve GPS source and scale annunciations, as MSFS differs from reality in some cases.
+- [x] Improve GPS source and scale annunciations, as MSFS differs from reality in some cases.
 - [x] Add GPSS toggle - done basic GPSS. Enabled via using HDG mode mode in AP
 
 ## Development
