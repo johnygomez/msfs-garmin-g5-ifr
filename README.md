@@ -1,5 +1,20 @@
 # Garmin G5 Improvements for MSFS 2024
 
+<a href="https://buymeacoffee.com/johnygomez">
+  <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-yellow?logo=buymeacoffee&logoColor=white" alt="Buy Me a Coffee">
+</a>
+<a href="https://flightsim.to/addon/112759/garmin-g5-ifr">
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fflightsim.to%2Fbackend%2Ffiles%2Fdetail%3Fid%3D112759%26slug%3Dgarmin-g5-ifr&query=%24.downloads&label=Downloads&color=blue" alt="Downloads">
+</a>
+<a href="https://flightsim.to/addon/112759/garmin-g5-ifr">
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fflightsim.to%2Fbackend%2Ffiles%2Fdetail%3Fid%3D112759%26slug%3Dgarmin-g5-ifr&query=%24.likeCount&label=%F0%9F%91%8D%20Likes&color=red" alt="Likes">
+</a>
+<a href="https://flightsim.to/addon/112759/garmin-g5-ifr">
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fflightsim.to%2Fbackend%2Ffiles%2Fdetail%3Fid%3D112759%26slug%3Dgarmin-g5-ifr&query=%24.rating&label=%E2%98%85%20Rating&suffix=%2F5&color=green" alt="Rating">
+</a>
+
+You can find the project on a MSFS community marketplace at https://flightsim.to/addon/112759/garmin-g5-ifr
+
 ## Introduction
 
 This addon is based on the original addon by tb110188 and Sal1800: [Enhanced Garmin G5 Attachment](https://flightsim.to/addon/104825/enhanced-garmin-g5-attachment).
