@@ -22,6 +22,8 @@ export interface G5CustomEvents {
     ap_vs_selected: number
     /** Ground speed, in knots. */
     ground_speed: number
+    /** Whether the airframe is equipped with a flight director, set per aircraft in `attached_objects.cfg`. */
+    fd_installed: boolean
     /** Whether the flight director is active. */
     flight_director_is_active: boolean
     /** Flight director pitch command, in degrees. Positive values command upward pitch. */
@@ -80,6 +82,8 @@ export interface G5CustomEvents {
 
 const negate = (value: number): number => -value
 
+const invert = (value: number): boolean => !value
+
 /**
  * SimVar definitions for the G5 custom publisher.
  */
@@ -90,6 +94,7 @@ const G5_CUSTOM_SIMVARS = new Map<keyof G5CustomEvents, SimVarPublisherEntry<any
     ['ap_altitude_selected', { name: 'AUTOPILOT ALTITUDE LOCK VAR', type: SimVarValueType.Feet }],
     ['ap_vs_selected', { name: 'AUTOPILOT VERTICAL HOLD VAR', type: SimVarValueType.FPM }],
     ['ground_speed', { name: 'GROUND VELOCITY', type: SimVarValueType.Knots }],
+    ['fd_installed', { name: 'L:AS5_NO_FLIGHT_DIRECTOR', type: SimVarValueType.Bool, map: invert }],
     [
         'flight_director_is_active',
         { name: 'AUTOPILOT FLIGHT DIRECTOR ACTIVE', type: SimVarValueType.Bool },

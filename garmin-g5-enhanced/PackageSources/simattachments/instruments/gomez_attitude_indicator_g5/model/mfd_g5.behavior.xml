@@ -6,6 +6,7 @@
 		<EMISSIVE_MIN>0.05</EMISSIVE_MIN>
 		<BRIGHTNESS_SCALE>1</BRIGHTNESS_SCALE>
 		<USE_AMBIENT_POLYFILL>0</USE_AMBIENT_POLYFILL>
+		<NO_FLIGHT_DIRECTOR>0</NO_FLIGHT_DIRECTOR>
 	</DynamicParameters>
 	<Components count="5">
 		<Component ID="AS5">
@@ -311,7 +312,7 @@
 		<17665437713776213026>(O:_PressTime_[MFD_ID]) 0 &gt; if{ (O:_PressForDuration_[MFD_ID]) 0 &gt; if{ (E:SIMULATION TIME, second) (O:_PressTime_[MFD_ID]) (O:_PressForDuration_[MFD_ID]) + &gt; if{ (O:_PressForDuration_[MFD_ID]) 1 &gt;= if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } els{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } } els{ (E:SIMULATION TIME, second) (O:_PressTime_[MFD_ID]) 1 + &gt; if{ (&gt;B:AS5_[MFD_ID]_Knob_Button_Release) } } }</17665437713776213026>
 		<13090222211784660751>(O:XMLVAR_Interacting_RepeatTime) (E:SIMULATION TIME, seconds) &lt; if{ (O:_MouseDownRelativePosX) 0 &gt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Inc) } } els{ (O:_MouseDownRelativePosX) 0 &lt; if{ 1 if{ 1 (&gt;B:AS5_[MFD_ID]_Knob_Dec) } } } }</13090222211784660751>
 		<6875668430223133527>(O:_PushLocked) (O:_LastPushTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPushTime) - 0.15 &gt; if{ 0 (&gt;O:_PushLocked) 0 (&gt;O:_LastPushTime) } } (O:_PullLocked) (O:_LastPullTime) 0 &gt; and if{ (E:SIMULATION TIME, second) (O:_LastPullTime) - 0.15 &gt; if{ 0 (&gt;O:_PullLocked) 0 (&gt;O:_LastPullTime) } }</6875668430223133527>
-		<7031497352855602369>(O:_ButtonAnimVar_[MFD_ID]) 0 &gt; (O:ForcePush) 0 &gt; or if{ (O:_ButtonAnimVar_[MFD_ID]) 0.1 0.5 / - (O:ForcePush) max (&gt;O:_ButtonAnimVar_[MFD_ID]) } (A:CIRCUIT ON:[CIRCUIT_ID], Bool) (&gt;L:AS5_[MFD_ID]_Power)</7031497352855602369>
+		<7031497352855602369>(O:_ButtonAnimVar_[MFD_ID]) 0 &gt; (O:ForcePush) 0 &gt; or if{ (O:_ButtonAnimVar_[MFD_ID]) 0.1 0.5 / - (O:ForcePush) max (&gt;O:_ButtonAnimVar_[MFD_ID]) } (A:CIRCUIT ON:[CIRCUIT_ID], Bool) (&gt;L:AS5_[MFD_ID]_Power) [NO_FLIGHT_DIRECTOR] (&gt;L:AS5_NO_FLIGHT_DIRECTOR, Bool)</7031497352855602369>
 		<7714275831914868064>1 (&gt;B:AS5_[MFD_ID]_Knob_Button_Set)</7714275831914868064>
 		<10992749366997106479>p0</10992749366997106479>
 		<13943189266386180578>0 (&gt;B:AS5_[MFD_ID]_Knob_Button_Set)</13943189266386180578>

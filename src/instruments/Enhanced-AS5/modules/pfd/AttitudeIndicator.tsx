@@ -228,6 +228,8 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
     private readonly fdPitch: ConsumerSubject<number>
     private readonly fdBank: ConsumerSubject<number>
     private readonly fdActive: ConsumerSubject<boolean>
+    private readonly fdInstalled: ConsumerSubject<boolean>
+    private readonly gpssEnabled: ConsumerSubject<boolean>
 
     private readonly visibility: MappedSubscribable<string>
     private readonly bankRotation: MappedSubscribable<string>
@@ -246,9 +248,16 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
             0
         ).pause()
         this.fdActive = ConsumerSubject.create(sub.on('flight_director_is_active'), false).pause()
+        this.fdInstalled = ConsumerSubject.create(sub.on('fd_installed'), true).pause()
+        this.gpssEnabled = ConsumerSubject.create(sub.on('gpss_enabled'), false).pause()
 
         const pitchScale = props.pitchScale
-        this.visibility = this.fdActive.map(a => (a ? 'inherit' : 'none')).pause()
+        this.visibility = MappedSubject.create(
+            ([installed, active, gpss]) => (installed && active && !gpss ? 'inherit' : 'none'),
+            this.fdInstalled,
+            this.fdActive,
+            this.gpssEnabled
+        ).pause()
         this.bankRotation = this.fdBank.map(b => `rotate(${b})`).pause()
         this.pitchTransform = MappedSubject.create(
             ([pitch, fdPitch]) => {
@@ -264,6 +273,8 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
         this.fdPitch.resume()
         this.fdBank.resume()
         this.fdActive.resume()
+        this.fdInstalled.resume()
+        this.gpssEnabled.resume()
         this.visibility.resume()
         this.bankRotation.resume()
         this.pitchTransform.resume()
@@ -277,6 +288,8 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
         this.fdPitch.destroy()
         this.fdBank.destroy()
         this.fdActive.destroy()
+        this.fdInstalled.destroy()
+        this.gpssEnabled.destroy()
         super.destroy()
     }
 
