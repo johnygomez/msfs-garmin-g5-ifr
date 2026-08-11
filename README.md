@@ -170,3 +170,9 @@ In general, it's encouraged to follow React best practices for writing component
 
 When developing components (parts of the UI), please familiarize yourself with the [Reactive.ts](src/instruments/Enhanced-AS5/modules/common/Reactive.ts) module, which should serve as a base class for all components. Thanks to helpers like `track` and `consume`, the lifecycle of reactive elements like Subjects is handled automatically,
 and resources are not leaked or left behind.
+
+
+## Known Issues
+
+- The exterior view of our custom Carenado C182 RG II aircraft, the cockpit texture is not loaded properly, as incompatibility with MSFS 2024 LOD logic breaks the chain.
+  As a result, the interior is visible only when zoomed in. Any modifications to LOD mechanism/minSizes are ignored.
