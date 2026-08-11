@@ -54,6 +54,8 @@ export class APInfoBarComponent extends ReactiveComponent<APInfoBarProps> {
                     </div>
                     <div class="ap-infobar-group">
                         <span class="ap-infobar-armed">{verticalArmedPrimary}</span>
+                    </div>
+                    <div class="ap-infobar-group">
                         <span class="ap-infobar-armed">{verticalArmedSecondary}</span>
                     </div>
                 </div>
