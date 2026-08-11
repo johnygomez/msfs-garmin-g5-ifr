@@ -2,6 +2,8 @@ import { CDIScaleLabel, FmsEvents } from '@microsoft/msfs-garminsdk'
 import {
     EventBus,
     EventSubscriber,
+    LNavEvents,
+    MagVar,
     MappedSubject,
     MappedSubscribable,
     Subscribable,
@@ -117,6 +119,11 @@ export class NavSourceDataProvider {
         const gpsActive = subs.consume(nav.on('gps_active_waypoint'), false)
         const gpsDesiredTrack = subs.consume(nav.on('gps_wp_desired_track'), 0)
 
+        // lnav_dtk is degrees true; convert to magnetic before mixing it with the other
+        // (magnetic) course sources below.
+        const lnavDtkTrue = subs.consume(bus.getSubscriber<LNavEvents>().on('lnav_dtk'), 0)
+        const magvar = subs.consume(nav.on('gps_magvar'), 0)
+
         const approachSupportsGp = subs.consume(
             bus.getSubscriber<FmsEvents>().on('approach_supports_gp'),
             false
@@ -172,21 +179,42 @@ export class NavSourceDataProvider {
 
         this.currentNavCourse = subs.track(
             MappedSubject.create(
-                ([src, active, gpsTrk, course1, course2, hasNav1, hasNav2]) => {
+                ([
+                    src,
+                    gpsWpId,
+                    active,
+                    gpsTrk,
+                    lnavDtkTrue,
+                    magvar,
+                    course1,
+                    course2,
+                    hasNav1,
+                    hasNav2,
+                ]) => {
                     switch (src) {
                         case NavSource.Nav1:
                             return { source: src, course: course1, active: hasNav1 }
                         case NavSource.Nav2:
                             return { source: src, course: course2, active: hasNav2 }
-                        case NavSource.GPS:
-                            return { source: src, course: active ? gpsTrk : 0, active: active }
+                        case NavSource.GPS: {
+                            const hasWaypoint = active || gpsWpId !== ''
+                            const course = active
+                                ? gpsTrk
+                                : hasWaypoint
+                                  ? MagVar.trueToMagnetic(lnavDtkTrue, magvar)
+                                  : 0
+                            return { source: src, course, active: hasWaypoint }
+                        }
                         default:
                             return { source: src, course: 0, active: false }
                     }
                 },
                 this.activeSource,
+                gpsWpNextId,
                 gpsActive,
                 gpsDesiredTrack,
+                lnavDtkTrue,
+                magvar,
                 navCourse1,
                 navCourse2,
                 nav1HasNav,

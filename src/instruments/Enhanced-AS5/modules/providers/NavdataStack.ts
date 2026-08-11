@@ -8,7 +8,6 @@ import {
 } from '@microsoft/msfs-garminsdk'
 import {
     ConsumerSubject,
-    ConsumerValue,
     EventBus,
     FacilityLoader,
     FacilityRepository,
@@ -58,7 +57,10 @@ export class NavdataStack {
     private readonly lnav: LNavComputer
     private readonly routeSync = new GarminFlightPlanRouteSyncManager()
     private readonly publisher: Publisher<G5NavdataEvents>
-    private readonly navdataLabel: ConsumerValue<CDIScaleLabel>
+    private cdiScaleLabel = CDIScaleLabel.Oceanic
+    private cdiScaleLabelChanged = false
+    private cdiScaleLabelSub?: Subscription
+
     private readonly gpsActiveWaypoint: ConsumerSubject<boolean>
     private readonly gpsApproachActive: ConsumerSubject<boolean>
     private readonly gpsHasGlidepath: ConsumerSubject<boolean>
@@ -79,10 +81,13 @@ export class NavdataStack {
         this.planner = FlightPlanner.getPlanner(bus, this.calculator)
         this.fms = new Fms(true, bus, this.planner, undefined, { facLoader: this.facLoader })
         this.lnav = new LNavComputer(0, bus, this.planner, undefined, {})
-        this.navdataLabel = ConsumerValue.create(
-            bus.getSubscriber<LNavDataEvents>().on('lnavdata_cdi_scale_label'),
-            CDIScaleLabel.Oceanic
-        )
+        this.cdiScaleLabelSub = bus
+            .getSubscriber<LNavDataEvents>()
+            .on('lnavdata_cdi_scale_label')
+            .handle(label => {
+                this.cdiScaleLabel = label
+                this.cdiScaleLabelChanged = true
+            })
 
         const navSub = bus.getSubscriber<G5NavEvents>()
         this.gpsActiveWaypoint = ConsumerSubject.create(navSub.on('gps_active_waypoint'), false)
@@ -126,7 +131,7 @@ export class NavdataStack {
 
     destroy(): void {
         this.efbRouteSub?.destroy()
-        this.navdataLabel.destroy()
+        this.cdiScaleLabelSub?.destroy()
         this.routeSync.destroy()
         this.gpsActiveWaypoint.destroy()
         this.gpsApproachActive.destroy()
@@ -158,6 +163,7 @@ export class NavdataStack {
     private fmsLabel(): CDIScaleLabel | null {
         const hasPlan =
             this.fms.hasPrimaryFlightPlan() && this.fms.getPrimaryFlightPlan().length > 0
-        return hasPlan ? this.navdataLabel.get() : null
+        if (!hasPlan || !this.cdiScaleLabelChanged) return null
+        return this.cdiScaleLabel
     }
 }

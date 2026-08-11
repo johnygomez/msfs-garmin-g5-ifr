@@ -23,6 +23,7 @@ export interface G5NavEvents {
     gps_has_glidepath: boolean
     gps_vertical_error: number
     gps_gsi_scaling: number
+    gps_magvar: number
 
     // ---- HSI ----
     hsi_cdi_needle: number
@@ -98,6 +99,7 @@ const NAV_SIMVARS = new Map<keyof G5NavEvents, SimVarPublisherEntry<any>>([
     ['gps_has_glidepath', { name: 'GPS HAS GLIDEPATH', type: SimVarValueType.Bool }],
     ['gps_vertical_error', { name: 'GPS VERTICAL ERROR', type: SimVarValueType.Meters }],
     ['gps_gsi_scaling', { name: 'GPS GSI SCALING', type: SimVarValueType.Meters }],
+    ['gps_magvar', { name: 'MAGVAR', type: SimVarValueType.Degree }],
     ['gps_wp_next_id', { name: 'GPS WP NEXT ID', type: SimVarValueType.String }],
     ['gps_wp_distance', { name: 'GPS WP DISTANCE', type: SimVarValueType.NM }],
     ['gps_wp_bearing', { name: 'GPS WP BEARING', type: SimVarValueType.Degree }],
