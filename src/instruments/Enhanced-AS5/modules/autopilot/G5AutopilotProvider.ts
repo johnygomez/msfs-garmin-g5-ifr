@@ -16,14 +16,15 @@ import {
 import { resolveNavRadioIndex } from '../common/Nav'
 import { ReactiveProvider } from '../common/Reactive'
 import { APInfoBarSubjects } from '../pfd/APInfoBar'
-import { G5CustomEvents } from '../publishers/G5CustomPublisher'
-import { G5NavEvents } from '../publishers/G5NavPublisher'
 import {
+    displayedVerticalArmedLabels,
     FmaModeSlotSource,
     lateralLabel,
     verticalActiveLabel,
     verticalArmedLabels,
-} from './FmaAnnunciations'
+} from '../providers/FmaAnnunciations'
+import { G5CustomEvents } from '../publishers/G5CustomPublisher'
+import { G5NavEvents } from '../publishers/G5NavPublisher'
 
 const formatMach = (mach: number): string =>
     'M ' + (mach < 1 ? fastToFixed(mach, 3).slice(1) : fastToFixed(mach, 3))
@@ -37,10 +38,22 @@ const formatVerticalSpeed = (fpm: number): string => fastToFixed(fpm, 0)
 /** Mirrors the disconnect flash of `FmaMasterSlot`, whose duration the SDK does not export. */
 const ANNUNCIATION_LINGER_MS = 5000
 
+/** Modes that fly towards an altitude, which is when a Garmin arms the selected-altitude capture. */
+const ALTITUDE_CAPTURE_ARMING_MODES: readonly APVerticalModes[] = [
+    APVerticalModes.PITCH,
+    APVerticalModes.VS,
+    APVerticalModes.FLC,
+]
+
 const masterSlotState = (engaged: boolean): FmaMasterSlotState =>
     engaged ? FmaMasterSlotState.On : FmaMasterSlotState.Off
 
-export class AutopilotAnnunciationProvider extends ReactiveProvider {
+interface LateralModes {
+    active: APLateralModes
+    armed: APLateralModes
+}
+
+export class G5AutopilotProvider extends ReactiveProvider {
     private readonly inputs: Subscribable<unknown>[] = []
 
     private readonly lateralSlot = new FmaModeSlotSource()
@@ -187,35 +200,44 @@ export class AutopilotAnnunciationProvider extends ReactiveProvider {
     }
 
     private resolve(): FmaData {
+        const lateral = this.resolveLateralModes()
+        const verticalActive = this.resolveVerticalActive()
+        const verticalAltitudeArmed = this.resolveAltitudeArmed(verticalActive)
+
+        const isCapturing = verticalActive === APVerticalModes.CAP
+
         return {
             ...GarminAPUtils.createEmptyFmaData(),
-            lateralActive: this.resolveLateralActive(),
-            lateralArmed: this.resolveLateralArmed(),
-            verticalActive: this.resolveVerticalActive(),
+            lateralActive: lateral.active,
+            lateralArmed: lateral.armed,
+            verticalActive,
+            verticalArmed: isCapturing ? APVerticalModes.ALT : APVerticalModes.NONE,
             verticalApproachArmed: this.resolveApproachArmed(),
-            verticalAltitudeArmed: this.altitudeArm.get()
-                ? APAltitudeModes.ALTS
-                : APAltitudeModes.NONE,
-            altitudeCaptureArmed: this.altitudeArm.get() && !this.altitudeHold.get(),
+            verticalAltitudeArmed,
+            altitudeCaptureArmed: verticalAltitudeArmed !== APAltitudeModes.NONE && !isCapturing,
         }
     }
 
-    private resolveLateralActive(): APLateralModes {
-        if (this.wingLeveler.get()) return APLateralModes.LEVEL
-        if (this.bankHold.get()) return APLateralModes.ROLL
-        if (this.headingHold.get()) return APLateralModes.HEADING
-        return this.resolveCoupledMode()
+    /** A coupled mode awaiting course capture is armed behind whatever is steering meanwhile. */
+    private resolveLateralModes(): LateralModes {
+        const coupled = this.resolveCoupledMode()
+        const steering = this.resolveSteeringMode()
+
+        return steering === APLateralModes.NONE
+            ? { active: coupled, armed: APLateralModes.NONE }
+            : { active: steering, armed: coupled }
     }
 
-    private resolveLateralArmed(): APLateralModes {
-        const steersItself = this.wingLeveler.get() || this.headingHold.get()
-        return steersItself ? this.resolveCoupledMode() : APLateralModes.NONE
+    private resolveSteeringMode(): APLateralModes {
+        if (this.wingLeveler.get()) return APLateralModes.LEVEL
+        if (this.headingHold.get()) return APLateralModes.HEADING
+        if (this.bankHold.get()) return APLateralModes.ROLL
+        return APLateralModes.NONE
     }
 
     private resolveCoupledMode(): APLateralModes {
-        if (this.navHold.get()) return this.navLateralMode()
         if (this.backcourseHold.get()) return APLateralModes.BC
-        if (this.approachHold.get()) return this.navLateralMode()
+        if (this.navHold.get() || this.approachHold.get()) return this.navLateralMode()
         return APLateralModes.NONE
     }
 
@@ -231,18 +253,25 @@ export class AutopilotAnnunciationProvider extends ReactiveProvider {
     }
 
     private resolveVerticalActive(): APVerticalModes {
-        if (this.pitchHold.get()) return APVerticalModes.PITCH
-        if (this.flcActive.get() || this.machHold.get()) return APVerticalModes.FLC
+        if (this.glideslopeActive.get()) return this.glidepathMode()
         if (this.altitudeHold.get()) {
             return this.altitudeArm.get() ? APVerticalModes.CAP : APVerticalModes.ALT
         }
+        if (this.flcActive.get() || this.machHold.get()) return APVerticalModes.FLC
         if (this.verticalSpeedHold.get()) return APVerticalModes.VS
-        if (this.glideslopeActive.get()) return this.glidepathMode()
+        if (this.pitchHold.get()) return APVerticalModes.PITCH
         return APVerticalModes.NONE
     }
 
     private resolveApproachArmed(): APVerticalModes {
         return this.glideslopeArm.get() ? this.glidepathMode() : APVerticalModes.NONE
+    }
+
+    private resolveAltitudeArmed(verticalActive: APVerticalModes): APAltitudeModes {
+        if (verticalActive === APVerticalModes.CAP) return APAltitudeModes.ALTS
+        return ALTITUDE_CAPTURE_ARMING_MODES.includes(verticalActive)
+            ? APAltitudeModes.ALTS
+            : APAltitudeModes.NONE
     }
 
     private glidepathMode(): APVerticalModes {
@@ -279,8 +308,10 @@ export class AutopilotAnnunciationProvider extends ReactiveProvider {
             verticalActiveLabel(data.verticalActive, data.verticalAltitudeArmed),
             verticalArmed
         )
-        this.verticalArmedPrimary.set(verticalArmed[0] ?? '')
-        this.verticalArmedSecondary.set(verticalArmed[1] ?? '')
+
+        const displayed = displayedVerticalArmedLabels(verticalArmed)
+        this.verticalArmedPrimary.set(displayed[0] ?? '')
+        this.verticalArmedSecondary.set(displayed[1] ?? '')
         this.verticalReference.set(this.resolveReference(data.verticalActive))
     }
 }

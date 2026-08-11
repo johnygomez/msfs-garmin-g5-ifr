@@ -272,9 +272,8 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
     }
 
     public render(): VNode {
-        // NOTE: Until full AP support, the FD will not be functional, not to confuse the users.
         return (
-            <g class="flight-director" transform={this.bankRotation} display="none">
+            <g class="flight-director" transform={this.bankRotation} display={this.visibility}>
                 <path
                     class="flight-director-outer-left"
                     d="M-100 40 -100 20 0 0 -85 40 Z"

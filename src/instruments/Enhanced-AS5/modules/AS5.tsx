@@ -14,12 +14,12 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
+import { G5AutopilotProvider } from './autopilot/G5AutopilotProvider'
 import { AvionicsInteractionManager } from './common/AvionicsInteractionManager'
 import { AvionicsPage, PageId } from './common/AvionicsPage'
 import { MfdContent } from './mfd/MFD'
 import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
-import { AutopilotAnnunciationProvider } from './providers/AutopilotAnnunciationProvider'
 import { GpsSteerSynchronizer } from './providers/GpsSteerSynchronizer'
 import { NavdataStack } from './providers/NavdataStack'
 import { NavSourceDataProvider } from './providers/NavSourceDataProvider'
@@ -33,7 +33,7 @@ interface AS5InstrumentProps extends ComponentProps {
     pageState: Subscribable<string>
     pfdRef: NodeReference<PfdContent>
     mfdRef: NodeReference<MfdContent>
-    autopilot: AutopilotAnnunciationProvider
+    autopilot: G5AutopilotProvider
     airspeedData: AirspeedDataProvider
     navData: NavSourceDataProvider
 }
@@ -106,7 +106,7 @@ export class AS5 extends BaseInstrument {
     private navSourceProvider?: NavSourceDataProvider
     private airspeedProvider?: AirspeedDataProvider
     private navdataStack?: NavdataStack
-    private apAnnunciationProvider?: AutopilotAnnunciationProvider
+    private apAnnunciationProvider?: G5AutopilotProvider
     private gpsSynchronizer?: GpsSteerSynchronizer
 
     private knobValueSub?: Subscription
@@ -137,7 +137,7 @@ export class AS5 extends BaseInstrument {
             this.gpsSynchronizer = new GpsSteerSynchronizer(this.bus)
             this.gpsSynchronizer.resume()
         }
-        this.apAnnunciationProvider = new AutopilotAnnunciationProvider(this.bus)
+        this.apAnnunciationProvider = new G5AutopilotProvider(this.bus)
         this.apAnnunciationProvider.resume()
 
         this.adcPublisher = new AdcPublisher(this.bus)
