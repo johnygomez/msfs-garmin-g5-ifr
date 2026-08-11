@@ -217,6 +217,8 @@ class PitchLadder extends DisplayComponent<PitchLadderProps> {
 
 interface FlightDirectorProps extends ComponentProps {
     bus: EventBus
+    /** Aircraft pitch, in degrees. */
+    pitch: Subscribable<number>
     /** SVG units per degree of pitch. */
     pitchScale: number
 }
@@ -248,7 +250,14 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
         const pitchScale = props.pitchScale
         this.visibility = this.fdActive.map(a => (a ? 'inherit' : 'none')).pause()
         this.bankRotation = this.fdBank.map(b => `rotate(${b})`).pause()
-        this.pitchTransform = this.fdPitch.map(p => `translate(0, ${p * pitchScale})`).pause()
+        this.pitchTransform = MappedSubject.create(
+            ([pitch, fdPitch]) => {
+                const pitchError = fdPitch + pitch
+                return `translate(0, ${pitchError * pitchScale})`
+            },
+            props.pitch,
+            this.fdPitch
+        ).pause()
     }
 
     public onAfterRender(): void {
@@ -274,36 +283,34 @@ class FlightDirector extends DisplayComponent<FlightDirectorProps> {
     public render(): VNode {
         return (
             <g class="flight-director" transform={this.bankRotation} display={this.visibility}>
-                <path
-                    class="flight-director-outer-left"
-                    d="M-100 40 -100 20 0 0 -85 40 Z"
-                    fill={Colors.MAGENTA}
-                    stroke={Colors.BLACK}
-                    stroke-width="1.5"
-                    transform={this.pitchTransform}
-                />
-                <path
-                    class="flight-director-outer-left-line"
-                    d="M-100 20 L-85 40 Z"
-                    stroke={Colors.BLACK}
-                    stroke-width="1.5"
-                    transform={this.pitchTransform}
-                />
-                <path
-                    class="flight-director-outer-right"
-                    d="M100 40 100 20 0 0 85 40 Z"
-                    fill={Colors.MAGENTA}
-                    stroke={Colors.BLACK}
-                    stroke-width="1.5"
-                    transform={this.pitchTransform}
-                />
-                <path
-                    class="flight-director-outer-right-line"
-                    d="M100 20 L85 40 Z"
-                    stroke={Colors.BLACK}
-                    stroke-width="1.5"
-                    transform={this.pitchTransform}
-                />
+                <g transform={this.pitchTransform}>
+                    <path
+                        class="flight-director-outer-left"
+                        d="M-100 40 -100 20 0 0 -85 40 Z"
+                        fill={Colors.MAGENTA}
+                        stroke={Colors.BLACK}
+                        stroke-width="1.5"
+                    />
+                    <path
+                        class="flight-director-outer-left-line"
+                        d="M-100 20 L-85 40 Z"
+                        stroke={Colors.BLACK}
+                        stroke-width="1.5"
+                    />
+                    <path
+                        class="flight-director-outer-right"
+                        d="M100 40 100 20 0 0 85 40 Z"
+                        fill={Colors.MAGENTA}
+                        stroke={Colors.BLACK}
+                        stroke-width="1.5"
+                    />
+                    <path
+                        class="flight-director-outer-right-line"
+                        d="M100 20 L85 40 Z"
+                        stroke={Colors.BLACK}
+                        stroke-width="1.5"
+                    />
+                </g>
             </g>
         )
     }
@@ -716,7 +723,11 @@ export class AttitudeIndicatorComponent extends DisplayComponent<AttitudeIndicat
                                 pitchScale={this.PITCH_SCALE}
                                 transform={this.pitchTransform}
                             />
-                            <FlightDirector bus={this.props.bus} pitchScale={this.PITCH_SCALE} />
+                            <FlightDirector
+                                bus={this.props.bus}
+                                pitch={this.pitch}
+                                pitchScale={this.PITCH_SCALE}
+                            />
                         </svg>
 
                         <BankScale

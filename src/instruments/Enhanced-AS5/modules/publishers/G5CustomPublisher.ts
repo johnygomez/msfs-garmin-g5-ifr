@@ -24,9 +24,9 @@ export interface G5CustomEvents {
     ground_speed: number
     /** Whether the flight director is active. */
     flight_director_is_active: boolean
-    /** Flight director pitch command, in degrees. */
+    /** Flight director pitch command, in degrees. Positive values command upward pitch. */
     flight_director_pitch: number
-    /** Flight director bank command, in degrees. */
+    /** Flight director bank command, in degrees. Positive values command rightward bank. */
     flight_director_bank: number
     /** Autopilot max bank angle, in degrees. */
     ap_max_bank_value: number
@@ -78,6 +78,8 @@ export interface G5CustomEvents {
     ap_airspeed_in_mach: boolean
 }
 
+const negate = (value: number): number => -value
+
 /**
  * SimVar definitions for the G5 custom publisher.
  */
@@ -94,11 +96,11 @@ const G5_CUSTOM_SIMVARS = new Map<keyof G5CustomEvents, SimVarPublisherEntry<any
     ],
     [
         'flight_director_pitch',
-        { name: 'AUTOPILOT FLIGHT DIRECTOR PITCH', type: SimVarValueType.Degree },
+        { name: 'AUTOPILOT FLIGHT DIRECTOR PITCH', type: SimVarValueType.Degree, map: negate },
     ],
     [
         'flight_director_bank',
-        { name: 'AUTOPILOT FLIGHT DIRECTOR BANK', type: SimVarValueType.Degree },
+        { name: 'AUTOPILOT FLIGHT DIRECTOR BANK', type: SimVarValueType.Degree, map: negate },
     ],
     ['ap_max_bank_value', { name: 'AUTOPILOT MAX BANK', type: SimVarValueType.Degree }],
     ['ap_heading_selected', { name: 'AUTOPILOT HEADING LOCK DIR:1', type: SimVarValueType.Degree }],
