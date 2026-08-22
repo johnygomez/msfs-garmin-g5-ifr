@@ -72,6 +72,8 @@ You can request support for additional aircraft via GitHub issues.
 
 - *Asobo Cessna 172SP*
     - 2 new presets for the classic C172, with Analog gauges combined with G5 and IFD variant with G5.
+- *Microsoft Cessna 185F Skywagon*
+    - A new preset for the C185F, replacing the vacuum attitude indicator and directional gyro with G5.
 - *Just Flight's PA28 Warrior II*
     - A new aircraft type inheriting from JF PA28. Tested in combination with GTN units.
 - *Just Flight's PA38 Tomahawk*
