@@ -573,8 +573,40 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                 if (isFinite(designSpeeds.Vyse)) this.vyseValue = designSpeeds.Vyse
                 if (isFinite(designSpeeds.Vmc)) this.vmcValue = designSpeeds.Vmc
             }
-        } catch (_e) {
-            /* design speeds not available */
+        } catch (err) {
+            console.error(err)
+        }
+
+        try {
+            const markings: ColorRangeDisplay4 = SimVar.GetGameVarValue(
+                '',
+                'GlassCockpitSettings'
+            )?.AirSpeed
+            const markedSpeeds = [
+                markings?.greenStart,
+                markings?.greenEnd,
+                markings?.whiteStart,
+                markings?.whiteEnd,
+                markings?.yellowStart,
+                markings?.yellowEnd,
+                markings?.redStart,
+                markings?.redEnd,
+                markings?.highLimit,
+            ]
+
+            if (markings?.Initialized && markedSpeeds.every(Number.isFinite)) {
+                this.greenBegin = markings.greenStart
+                this.greenEnd = markings.greenEnd
+                this.flapsBegin = markings.whiteStart
+                this.flapsEnd = markings.whiteEnd
+                this.yellowBegin = markings.yellowStart
+                this.yellowEnd = markings.yellowEnd
+                this.redBegin = markings.redStart
+                this.redEnd = markings.redEnd
+                this.maxValue = markings.highLimit
+            }
+        } catch (err) {
+            console.error(err)
         }
     }
 
