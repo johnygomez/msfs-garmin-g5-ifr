@@ -1,0 +1,7 @@
+<ModelInfo>
+	<LODS Template="..\..\..\microsoft\Function_Interior\model\Interior.xml">
+	</LODS>
+	<Behaviors Compiled="True" Version="2" Revision="0">
+		<IncludeBase RelativeFile="..\..\..\microsoft\Function_Interior\model\Interior.behavior.xml"/>
+	</Behaviors>
+</ModelInfo>
