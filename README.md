@@ -166,4 +166,6 @@ and resources are not leaked or left behind.
 
 - The exterior view of our custom Carenado C182 RG II aircraft, the cockpit texture is not loaded properly, as incompatibility with MSFS 2024 LOD logic breaks the chain.
   As a result, the interior is visible only when zoomed in. Any modifications to LOD mechanism/minSizes are ignored.
+- On *Just Flight's PA28 Warrior II*, the aircraft doesn't allow adding custom electrical circuits, so both G5 units have to share one of its existing ones.
+  As a result, pressing the power knob on either unit turns **both** G5s on or off at the same time.
 - The IFD and legacy MSFS 2020 GPS integrations are a little buggy. They probably don't write the new MSFS 2024 SimVars and as a result, it's not possible to resolve the GPS mode (CDI scale) properly. As a result, the MFD says GPS is in e.g. ENR route, when TERM should already be there. To avoid the issue, I recommend using PMS and modern MSFS 2024 GPS variants.
