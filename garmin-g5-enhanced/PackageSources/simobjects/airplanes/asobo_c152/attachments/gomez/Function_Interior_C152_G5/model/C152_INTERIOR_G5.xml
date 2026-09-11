@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	Inherits Asobo's C152 cockpit by reference (LODS Template for the glTF, IncludeBase for their
+	behaviours), the same way the PA28 Warrior, PA38 and C182RG integrations inherit their hosts'.
+	Unlike those, nothing is hidden on top: the attitude indicator and directional gyro are separate
+	attachments, not nodes of this model, and are dropped in config/attached_objects.cfg instead.
+	This file must exist even though it adds nothing - without it the preset's attachment_file does not
+	resolve and the interior is left as common/model/Helper.gltf.
+-->
+<ModelInfo>
+	<LODS Template="..\..\..\asobo\Function_Interior_C152\model\C152_INTERIOR.xml">
+	</LODS>
+	<Behaviors>
+		<IncludeBase RelativeFile="..\..\..\asobo\Function_Interior_C152\model\C152_INTERIOR.xml"/>
+	</Behaviors>
+</ModelInfo>
