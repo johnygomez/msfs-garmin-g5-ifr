@@ -1,6 +1,6 @@
 {
   "name": "gomez-garmin-g5",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Garmin G5 Enhanced avionics for MSFS 2024",
   "type": "module",
   "scripts": {
