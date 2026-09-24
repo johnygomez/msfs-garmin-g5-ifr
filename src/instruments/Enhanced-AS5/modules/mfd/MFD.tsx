@@ -20,7 +20,7 @@ import { Colors } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
-import { AltimeterSubjects, CourseGuidance } from '../providers/NavSourceDataProvider'
+import { AltimeterSubjects, CDISubjects, CourseGuidance } from '../providers/NavSourceDataProvider'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
 import { LeftInfoPanel } from './LeftInfoPanel'
@@ -92,7 +92,7 @@ export interface MfdContentProps extends ComponentProps {
     navSourceLabel: Subscribable<NavSourceLabel>
     selectedCourse: Subscribable<number>
     currentNavCourse: Subscribable<CourseGuidance>
-    cdiVisible: Subscribable<boolean>
+    cdi: CDISubjects
 }
 
 export class MfdContent extends ReactiveComponent<MfdContentProps> implements AvionicsPage {
@@ -284,7 +284,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
             navSource,
             navSourceLabel,
             selectedCourse,
-            cdiVisible,
+            cdi,
             currentNavCourse,
         } = this.props
 
@@ -298,7 +298,8 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                         currentNavCourse={currentNavCourse}
                         bearing1State={this.bearingPointerProvider.bearing1}
                         bearing2State={this.bearingPointerProvider.bearing2}
-                        cdiVisible={cdiVisible}
+                        cdiVisible={cdi.cdiVisible}
+                        cdiDeviation={cdi.cdiDeviation}
                         noCenterText={false}
                         noBackground={false}
                         noAffectSimRadioNav={false}

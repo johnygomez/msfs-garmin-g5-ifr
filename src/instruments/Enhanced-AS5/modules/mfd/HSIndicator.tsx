@@ -13,6 +13,7 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
+import { DEVIATION_DOT_FRACTIONS, scaleDeflection } from '../common/Deviation'
 import { NavRadioIndex, NavSource, NavSourceLabel } from '../common/Nav'
 import { ReactiveComponent } from '../common/Reactive'
 import { Colors, formatDegrees3, visibilityAttribute } from '../common/Utils'
@@ -22,8 +23,7 @@ import { CourseGuidance } from '../providers/NavSourceDataProvider'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
 
-const clamp = (value: number, min: number, max: number): number =>
-    Math.min(Math.max(value, min), max)
+const CDI_FULL_SCALE_DEFLECTION_PX = 30
 
 /**
  * The gauge renders into a 512 x 350 px panel texture, which the G5 model maps onto a
@@ -161,9 +161,9 @@ class CoursePointer extends DisplayComponent<CoursePointerProps> {
                     stroke-width="1"
                     display={this.props.toVisible}
                 />
-                {[-20, -10, 10, 20].map(pos => (
+                {DEVIATION_DOT_FRACTIONS.map(fraction => (
                     <circle
-                        cx={50 + pos}
+                        cx={50 + CDI_FULL_SCALE_DEFLECTION_PX * fraction}
                         cy="50"
                         r="2"
                         stroke={Colors.WHITE}
@@ -330,6 +330,7 @@ export interface HSIComponentProps extends ComponentProps {
     activeSource: Subscribable<NavSource>
     navSourceLabel: Subscribable<NavSourceLabel>
     cdiVisible: Subscribable<boolean>
+    cdiDeviation: Subscribable<number>
     noCenterText: boolean
     noBackground: boolean
     noAffectSimRadioNav: boolean
@@ -377,8 +378,6 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
         )
     )
 
-    private readonly cdiNeedle = this.consume(this.nav.on('hsi_cdi_needle'), 0)
-
     /** `L:Glasscockpit_DmeSource` is 0 until a source is picked; treat anything but NAV2 as NAV1. */
     private readonly dmeSource: Subscribable<NavRadioIndex> = this.track(
         this.consume(this.nav.on('dme_source'), 1).map(src => (src === 2 ? 2 : 1))
@@ -424,7 +423,9 @@ export class HSIComponent extends ReactiveComponent<HSIComponentProps> {
         this.props.currentNavCourse.map(c => `rotate(${c.course}, 50, 50)`)
     )
     private readonly cdiTransform = this.track(
-        this.cdiNeedle.map(n => `translate(${clamp((n / 127) * 30, -30, 30)}, 0)`)
+        this.props.cdiDeviation.map(
+            deviation => `translate(${scaleDeflection(deviation, CDI_FULL_SCALE_DEFLECTION_PX)}, 0)`
+        )
     )
     private readonly cdiDisplay = this.track(this.props.cdiVisible.map(v => (v ? '' : 'none')))
     private readonly toVisible = this.track(this.toFrom.map(t => (t === 1 ? 'inherit' : 'none')))

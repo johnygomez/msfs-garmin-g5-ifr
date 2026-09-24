@@ -77,7 +77,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         navSourceLabel={navData.navSourceLabel}
                         selectedCourse={navData.selectedCourse}
                         currentNavCourse={navData.currentNavCourse}
-                        cdiVisible={navData.cdiSubjects.cdiVisible}
+                        cdi={navData.cdiSubjects}
                     />
                 </div>
             </div>

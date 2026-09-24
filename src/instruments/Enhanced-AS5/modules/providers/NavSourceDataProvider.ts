@@ -104,7 +104,7 @@ export class NavSourceDataProvider {
         const nav1Cdi = subs.consume(nav.on('nav1_cdi'), 0)
         const nav2Cdi = subs.consume(nav.on('nav2_cdi'), 0)
         const gpsWpNextId = subs.consume(nav.on('gps_wp_next_id'), '')
-        const gpsWpCrossTrack = subs.consume(nav.on('gps_wp_cross_track'), 0)
+        const gpsCdiNeedle = subs.consume(nav.on('hsi_cdi_needle'), 0)
         const gpsHasGlidepath = subs.consume(nav.on('gps_has_glidepath'), false)
         const gpsVerticalError = subs.consume(nav.on('gps_vertical_error'), 0)
         const gpsGsiScaling = subs.consume(nav.on('gps_gsi_scaling'), 0)
@@ -230,20 +230,20 @@ export class NavSourceDataProvider {
 
         this.cdiDeviation = subs.track(
             MappedSubject.create(
-                ([source, cdi1, cdi2, crossTrack]) => {
+                ([source, cdi1, cdi2, gpsNeedle]) => {
                     switch (source) {
                         case NavSource.Nav1:
                             return cdi1 / NEEDLE_FULL_SCALE_DEFLECTION
                         case NavSource.Nav2:
                             return cdi2 / NEEDLE_FULL_SCALE_DEFLECTION
                         default:
-                            return crossTrack
+                            return gpsNeedle / NEEDLE_FULL_SCALE_DEFLECTION
                     }
                 },
                 this.activeSource,
                 nav1Cdi,
                 nav2Cdi,
-                gpsWpCrossTrack
+                gpsCdiNeedle
             )
         )
 

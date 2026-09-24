@@ -7,7 +7,10 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
+import { DEVIATION_DOT_FRACTIONS, scaleDeflection } from '../common/Deviation'
 import { Colors } from '../common/Utils'
+
+const FULL_SCALE_DEFLECTION_PX = 45
 
 type IndicatorShape = 'diamond' | 'triangle'
 
@@ -23,20 +26,12 @@ interface CDIScaleDotsProps extends ComponentProps {
 }
 
 class CDIScaleDots extends DisplayComponent<CDIScaleDotsProps> {
-    private static readonly DOTS_PER_SIDE = 2
-    private static readonly DOT_SPACING = 20
-
     public render(): VNode {
-        const offsets = Array.from(
-            { length: CDIScaleDots.DOTS_PER_SIDE * 2 + 1 },
-            (_, i) => i - CDIScaleDots.DOTS_PER_SIDE
-        ).filter(idx => idx !== 0)
-
         return (
             <>
-                {offsets.map(idx => (
+                {DEVIATION_DOT_FRACTIONS.map(fraction => (
                     <circle
-                        cx={this.props.cx + CDIScaleDots.DOT_SPACING * idx}
+                        cx={this.props.cx + FULL_SCALE_DEFLECTION_PX * fraction}
                         cy={this.props.cy}
                         r="2.5"
                         fill={Colors.NONE}
@@ -59,8 +54,6 @@ interface CDIDeviationIndicatorProps extends ComponentProps {
 }
 
 class CDIDeviationIndicator extends DisplayComponent<CDIDeviationIndicatorProps> {
-    private static readonly MAX_DEFLECTION_PX = 45
-
     private readonly fill: MappedSubject<[number], string>
     private readonly transform: MappedSubject<[number], string>
     private readonly indicatorShape: MappedSubject<[IndicatorShape], string>
@@ -73,10 +66,11 @@ class CDIDeviationIndicator extends DisplayComponent<CDIDeviationIndicatorProps>
             props.source
         ).pause()
 
-        this.transform = MappedSubject.create(([deviation]) => {
-            const clamped = Math.min(1, Math.max(-1, deviation))
-            return `translate(${clamped * CDIDeviationIndicator.MAX_DEFLECTION_PX}, 0)`
-        }, props.deviation).pause()
+        this.transform = MappedSubject.create(
+            ([deviation]) =>
+                `translate(${scaleDeflection(deviation, FULL_SCALE_DEFLECTION_PX)}, 0)`,
+            props.deviation
+        ).pause()
 
         this.indicatorShape = MappedSubject.create(
             ([shape]) => this.buildPath(shape),
