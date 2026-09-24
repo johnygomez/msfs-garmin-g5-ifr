@@ -77,7 +77,7 @@ You can request support for additional aircraft via GitHub issues.
 - *Microsoft Cessna 185F Skywagon*
     - A new preset for the C185F, replacing the vacuum attitude indicator and directional gyro with G5.
 - *Microsoft Piper PA28-236 Dakota*
-    - A new preset for the Dakota, replacing the attitude indicator and HSI with G5.
+    - 2 new presets for the Dakota (Standard and Fairings), replacing the attitude indicator and HSI with G5.
 - *Just Flight's PA28 Warrior II*
     - A new aircraft type inheriting from JF PA28. Tested in combination with GTN units.
 - *Just Flight's PA38 Tomahawk*
