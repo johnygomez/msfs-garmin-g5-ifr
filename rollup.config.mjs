@@ -44,6 +44,11 @@ export default {
                     pathResolve(outDir, "garminsdk.js")
                 )
 
+                copyFileSync(
+                    "node_modules/@microsoft/msfs-sdk/msfssdk-iife.js",
+                    pathResolve(outDir, "msfssdk.js")
+                )
+
                 copyFileSync("src/instruments/Enhanced-AS5/AS5.html", pathResolve(outDir, "AS5.html"))
 
                 const imagesSrc = "src/instruments/Enhanced-AS5/Images"
