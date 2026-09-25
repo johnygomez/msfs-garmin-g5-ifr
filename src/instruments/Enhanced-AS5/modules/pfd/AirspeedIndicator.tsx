@@ -358,13 +358,13 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private readonly vmcY: MappedSubject<[number], number>
     private readonly vmcHeight: MappedSubject<[number], number>
     private readonly isBelowTapeRange: MappedSubject<[number], boolean>
-    private readonly vSpeedOffsets: MappedSubject<[boolean, number], number>[]
+    private readonly vSpeedOffsets: MappedSubject<[boolean, number, OATUnit], number>[]
 
     private readonly numEngines: ConsumerSubject<number>
     private readonly vyseVisibility: MappedSubject<[number], string>
 
     /** Red barber-pole arc above the maximum speed. */
-    private readonly endElementTransform: MappedSubject<[number, number], string>
+    private readonly endElementTransform: MappedSubject<[number], string>
 
     private barY(speed: number, ck: number): number {
         return Math.min(Math.max(-100, this.centerY + -UNITS_PER_KT * (speed - ck)), this.height)
@@ -498,22 +498,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         )
 
         this.endElementTransform = MappedSubject.create(
-            ([v, ck]) => {
-                if (this.maxValue <= 0) return 'translate(0, 0)'
-                const y =
-                    100 +
-                    Math.min(
-                        Math.max(
-                            (ck - this.maxValue + (this.height - 100) / (2 * UNITS_PER_KT)) *
-                                UNITS_PER_KT,
-                            -100
-                        ),
-                        this.height + 100
-                    ) +
-                    (v - ck) * UNITS_PER_KT
-                return `translate(0, ${y})`
-            },
-            ias,
+            ([ck]) => `translate(0, ${this.maxValue > 0 ? this.barY(this.maxValue, ck) : 0})`,
             this.centerKt
         ).pause()
 
@@ -729,7 +714,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                                             <g transform={this.endElementTransform}>
                                                 <rect
                                                     x="0"
-                                                    y={-(height + 200)}
+                                                    y={-(height + 100)}
                                                     width={refBarWidth}
                                                     height={height + 100}
                                                     fill="white"
@@ -784,7 +769,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         return Array.from({ length: count }, (_, i) => (
             <rect
                 x="0"
-                y={-125 - 25 * i}
+                y={-25 - 25 * i}
                 width={width}
                 height={dashHeight}
                 transform="skewY(-30)"
