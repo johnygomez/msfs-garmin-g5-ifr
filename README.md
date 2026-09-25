@@ -104,6 +104,8 @@ A few things that were added/redesigned:
 - Horizontal compass displays varios info, such as ground track or nav course
 - AP info box which displays when AP is active (or any annunciation is available)
 - Flight director, for aircrafts which support it. As of now only MSFS 2024 native C172SP supports it.
+- OAT box below the ground speed, in °C or °F (toggled via *Setup → OAT Units*)
+- TAS box at the top of the airspeed tape (toggled via *Setup → TAS*)
 
 ### MFD
 
@@ -120,6 +122,13 @@ A few things that were added/redesigned:
 - DTK/CRS modes in lower left panel
 - NAV mode and phase indications
 - GPSS mode, which simulates the GPS steering by adjusting the heading
+- Wind box in the top left corner, showing wind direction arrow, speed and direction (toggled via *Setup → Wind*).
+  The wind data is shown only when airborne with TAS of at least 30 kt, otherwise `NO WIND DATA` is displayed.
+
+### Setup Page Differences
+
+On the real G5, the OAT, TAS and wind displays are enabled in the installer configuration mode, not in the pilot-accessible setup menu.
+As the simulated unit has no configuration mode, these options were added to the PFD and MFD setup pages instead.
 
 ## Development
 
