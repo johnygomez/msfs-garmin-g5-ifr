@@ -14,13 +14,19 @@ import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { BaroUnit, formatDegrees3, normalizeDegrees360, OATUnit } from './Utils'
 
 const KNOB_RESET_MS = 600
+const KNOB_BIG_INCREMENT = 5
+const KNOB_ACCEL_DAMPENING_MS = 35
 const ALTITUDE_STEP_FEET = 100
 const MIN_BARO_HPA = 948
 const MAX_BARO_HPA = 1084
 const HPA_TO_KOHLSMAN = 16
 
 class KnobAccelerationHelper {
-    private readonly accel = new InputAcceleration({ increment: 1 })
+    private readonly accel = new InputAcceleration({
+        increment: 1,
+        bigIncrement: KNOB_BIG_INCREMENT,
+        accelDampeningPeriod: KNOB_ACCEL_DAMPENING_MS,
+    })
     private lastTime = 0
     private lastSign = 0
     private target = 0
