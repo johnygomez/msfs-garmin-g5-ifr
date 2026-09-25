@@ -123,41 +123,52 @@ class IASDisplayBox extends DisplayComponent<IASDisplayBoxProps> {
     }
 }
 
-interface VSpeedReferenceProps extends ComponentProps {
-    speed: string
-    x: string
-    centerY: Subscribable<number>
+interface VSpeed {
+    label: string
+    speed: number
 }
 
-class VSpeedReference extends DisplayComponent<VSpeedReferenceProps> {
+interface VSpeedReferenceProps extends ComponentProps {
+    vSpeed: VSpeed
+    x: number
+    centerY: Subscribable<number>
+    isValueVisible: Subscribable<boolean>
+}
+
+class VSpeedReference extends ReactiveComponent<VSpeedReferenceProps> {
     private static readonly HEIGHT = 30
+    private static readonly VALUE_GAP = 5
 
-    private readonly topY: MappedSubject<[number], number>
-
-    constructor(props: VSpeedReferenceProps) {
-        super(props)
-
-        this.topY = MappedSubject.create(
-            ([centerY]) => centerY - VSpeedReference.HEIGHT / 2,
-            props.centerY
-        )
-    }
-
-    public destroy(): void {
-        this.topY.destroy()
-        super.destroy()
-    }
+    private readonly topY = this.track(
+        this.props.centerY.map(centerY => centerY - VSpeedReference.HEIGHT / 2)
+    )
+    private readonly valueVisibility = this.track(
+        this.props.isValueVisible.map(visible => (visible ? 'visible' : 'hidden'))
+    )
 
     public render(): VNode {
+        const { vSpeed, x, centerY } = this.props
         return (
-            <svg
-                x={this.props.x}
-                y={this.topY}
-                width="50"
-                height={VSpeedReference.HEIGHT}
-                viewBox="0 -5 15 10"
-            >
-                <g>
+            <g>
+                <text
+                    x={x - VSpeedReference.VALUE_GAP}
+                    y={centerY}
+                    fill="cyan"
+                    font-size="40"
+                    text-anchor="end"
+                    dominant-baseline="central"
+                    font-family={GF_FONT}
+                    visibility={this.valueVisibility}
+                >
+                    {vSpeed.speed.toFixed(0)}
+                </text>
+                <svg
+                    x={x}
+                    y={this.topY}
+                    width="50"
+                    height={VSpeedReference.HEIGHT}
+                    viewBox="0 -5 15 10"
+                >
                     <polygon points="0,0 5,-5 15,-5 15,5 5,5" fill={Colors.BLACK} opacity="0.9" />
                     <text
                         x="10"
@@ -168,10 +179,10 @@ class VSpeedReference extends DisplayComponent<VSpeedReferenceProps> {
                         dominant-baseline="central"
                         font-family={GF_FONT}
                     >
-                        {this.props.speed}
+                        {vSpeed.label}
                     </text>
-                </g>
-            </svg>
+                </svg>
+            </g>
         )
     }
 }
@@ -318,11 +329,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private maxValue = 0
     private vyseValue = 0
     private vmcValue = 0
-    private Vr = 0
-    private Vx = 0
-    private Vy = 0
-    private Va = 0
-    private Vg = 0
+    private vSpeeds: VSpeed[] = []
 
     private readonly height: number
     private readonly centerY: number
@@ -350,11 +357,8 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private readonly vyseY: MappedSubject<[number], number>
     private readonly vmcY: MappedSubject<[number], number>
     private readonly vmcHeight: MappedSubject<[number], number>
-    private readonly VaOffset: MappedSubject<[number], number>
-    private readonly VrOffset: MappedSubject<[number], number>
-    private readonly VxOffset: MappedSubject<[number], number>
-    private readonly VyOffset: MappedSubject<[number], number>
-    private readonly VgOffset: MappedSubject<[number], number>
+    private readonly isBelowTapeRange: MappedSubject<[number], boolean>
+    private readonly vSpeedOffsets: MappedSubject<[boolean, number], number>[]
 
     private readonly numEngines: ConsumerSubject<number>
     private readonly vyseVisibility: MappedSubject<[number], string>
@@ -364,6 +368,17 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
 
     private barY(speed: number, ck: number): number {
         return Math.min(Math.max(-100, this.centerY + -UNITS_PER_KT * (speed - ck)), this.height)
+    }
+
+    private tapeOffset(speed: number, ck: number): number {
+        return (Math.max(speed, MIN_DISPLAYED_AIRSPEED_KT) - ck) * UNITS_PER_KT
+    }
+
+    private stackedVSpeedY(stackIndex: number, ck: number, oatVisible: boolean): number {
+        const bottomOffset = oatVisible ? 250 : 330
+        const spacing = 45
+        const screenY = this.centerY + bottomOffset - stackIndex * spacing
+        return screenY - this.tapeOffset(0, ck)
     }
 
     constructor(props: AirspeedIndicatorComponentProps) {
@@ -392,8 +407,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         ).pause()
 
         this.tapeTransform = MappedSubject.create(
-            ([v, ck]) =>
-                `translate(0, ${(Math.max(v, MIN_DISPLAYED_AIRSPEED_KT) - ck) * UNITS_PER_KT})`,
+            ([v, ck]) => `translate(0, ${this.tapeOffset(v, ck)})`,
             ias,
             this.centerKt
         ).pause()
@@ -467,26 +481,21 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
             ([ck]) => Math.max(0, this.barY(0, ck) - this.barY(this.vmcValue, ck)),
             this.centerKt
         ).pause()
-        this.VaOffset = MappedSubject.create(
-            ([ck]) => this.barY(this.Va, ck),
-            this.centerKt
+        this.isBelowTapeRange = MappedSubject.create(
+            ([v]) => v < MIN_DISPLAYED_AIRSPEED_KT,
+            ias
         ).pause()
-        this.VrOffset = MappedSubject.create(
-            ([ck]) => this.barY(this.Vr, ck),
-            this.centerKt
-        ).pause()
-        this.VxOffset = MappedSubject.create(
-            ([ck]) => this.barY(this.Vx, ck),
-            this.centerKt
-        ).pause()
-        this.VyOffset = MappedSubject.create(
-            ([ck]) => this.barY(this.Vy, ck),
-            this.centerKt
-        ).pause()
-        this.VgOffset = MappedSubject.create(
-            ([ck]) => this.barY(this.Vg, ck),
-            this.centerKt
-        ).pause()
+        this.vSpeedOffsets = this.vSpeeds.map(({ speed }, stackIndex) =>
+            MappedSubject.create(
+                ([isBelow, ck, oatUnit]) =>
+                    isBelow
+                        ? this.stackedVSpeedY(stackIndex, ck, oatUnit !== 'None')
+                        : this.barY(speed, ck),
+                this.isBelowTapeRange,
+                this.centerKt,
+                this.props.oatUnit
+            ).pause()
+        )
 
         this.endElementTransform = MappedSubject.create(
             ([v, ck]) => {
@@ -535,16 +544,13 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         this.vyseY.resume()
         this.vmcY.resume()
         this.vmcHeight.resume()
-        this.VaOffset.resume()
-        this.VrOffset.resume()
-        this.VxOffset.resume()
-        this.VyOffset.resume()
-        this.VgOffset.resume()
+        this.isBelowTapeRange.resume()
         this.endElementTransform.resume()
         this.numEngines.resume()
         this.vyseVisibility.resume()
 
         this.gradTextSubjects.forEach(s => s.resume())
+        this.vSpeedOffsets.forEach(s => s.resume())
     }
 
     public destroy(): void {
@@ -571,6 +577,8 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         this.vyseVisibility.destroy()
 
         this.gradTextSubjects.forEach(s => s.destroy())
+        this.vSpeedOffsets.forEach(s => s.destroy())
+        this.isBelowTapeRange.destroy()
 
         super.destroy()
     }
@@ -588,11 +596,15 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                 this.redBegin = designSpeeds.VNe ?? 0
                 this.redEnd = designSpeeds.VMax ?? 0
                 this.maxValue = designSpeeds.VNe ?? 0
-                this.Vr = Math.floor(designSpeeds.Vr ?? 0)
-                this.Vx = Math.floor(designSpeeds.Vx ?? 0)
-                this.Vy = Math.floor(designSpeeds.Vy ?? 0)
-                this.Va = this.getManeuveringSpeed()
-                this.Vg = Math.floor(designSpeeds.BestGlide ?? 0)
+                this.vSpeeds = [
+                    { label: 'A', speed: this.getManeuveringSpeed() },
+                    { label: 'G', speed: Math.floor(designSpeeds.BestGlide ?? 0) },
+                    { label: 'R', speed: Math.floor(designSpeeds.Vr ?? 0) },
+                    { label: 'X', speed: Math.floor(designSpeeds.Vx ?? 0) },
+                    { label: 'Y', speed: Math.floor(designSpeeds.Vy ?? 0) },
+                ]
+                    .filter(({ speed }) => speed > 0)
+                    .sort((first, second) => first.speed - second.speed)
                 if (isFinite(designSpeeds.Vyse)) this.vyseValue = designSpeeds.Vyse
                 if (isFinite(designSpeeds.Vmc)) this.vmcValue = designSpeeds.Vmc
             }
@@ -745,12 +757,15 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                                     </>
                                 )}
                                 {this.buildGraduations(center)}
-                                <VSpeedReference speed="A" x="200" centerY={this.VaOffset} />
-                                <VSpeedReference speed="G" x="200" centerY={this.VgOffset} />
-                                <VSpeedReference speed="R" x="200" centerY={this.VrOffset} />
-                                <VSpeedReference speed="X" x="200" centerY={this.VxOffset} />
-                                <VSpeedReference speed="Y" x="200" centerY={this.VyOffset} />
                             </g>
+                            {this.vSpeeds.map((vSpeed, index) => (
+                                <VSpeedReference
+                                    vSpeed={vSpeed}
+                                    x={200}
+                                    centerY={this.vSpeedOffsets[index]}
+                                    isValueVisible={this.isBelowTapeRange}
+                                />
+                            ))}
                         </g>
                     </svg>
                     <AirspeedTrendVector trend={this.props.airspeedTrend} center={center} />
