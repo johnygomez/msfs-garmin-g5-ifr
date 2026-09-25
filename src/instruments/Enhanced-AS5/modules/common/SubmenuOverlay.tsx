@@ -61,11 +61,16 @@ interface SubmenuOverlayProps extends ComponentProps {
 
 export class SubmenuOverlay extends DisplayComponent<SubmenuOverlayProps> {
     static readonly item = SubmenuItem
+    static readonly MAX_VISIBLE = 2
+    static readonly ITEM_HEIGHT_EM = 4.5
 
     private readonly itemNodes = this.collectChildren()
     private readonly items = this.itemNodes.map(node => node.instance as SubmenuItem)
 
+    private readonly cursorMin = Subject.create(0)
+    private readonly cursorMax = Subject.create(SubmenuOverlay.MAX_VISIBLE - 1)
     private readonly cursorIndex = Subject.create(0)
+    private readonly scrollTransform = Subject.create('')
     private readonly state: MappedSubscribable<string>
     private readonly resetWatcher: MappedSubscribable<void>
 
@@ -89,6 +94,9 @@ export class SubmenuOverlay extends DisplayComponent<SubmenuOverlayProps> {
 
     reset(): void {
         this.cursorIndex.set(0)
+        this.cursorMin.set(0)
+        this.cursorMax.set(SubmenuOverlay.MAX_VISIBLE - 1)
+        this.scrollTransform.set('')
         this.syncItemStates()
     }
 
@@ -116,7 +124,11 @@ export class SubmenuOverlay extends DisplayComponent<SubmenuOverlayProps> {
         return (
             <div id="SubmenuOverlay" state={this.state} style={this.props.style}>
                 <div id="SubmenuOverlayTitle">{this.props.title}</div>
-                <div id="SubmenuOverlayItems">{this.itemNodes}</div>
+                <div id="SubmenuOverlayItems">
+                    <div id="SubmenuOverlayItemsList" style={this.scrollTransform}>
+                        {this.itemNodes}
+                    </div>
+                </div>
             </div>
         )
     }
@@ -143,7 +155,20 @@ export class SubmenuOverlay extends DisplayComponent<SubmenuOverlayProps> {
         let index = this.cursorIndex.get()
         index = Math.max(0, Math.min(index + direction, count - 1))
         this.cursorIndex.set(index)
+        this.scrollToCursor(index)
         this.syncItemStates()
+    }
+
+    private scrollToCursor(index: number): void {
+        if (index < this.cursorMin.get()) {
+            this.cursorMin.set(index)
+            this.cursorMax.set(index + SubmenuOverlay.MAX_VISIBLE - 1)
+        } else if (index > this.cursorMax.get()) {
+            this.cursorMax.set(index)
+            this.cursorMin.set(index - SubmenuOverlay.MAX_VISIBLE + 1)
+        }
+        const translateEM = this.cursorMin.get() * -SubmenuOverlay.ITEM_HEIGHT_EM
+        this.scrollTransform.set(`transform: translateY(${translateEM}em)`)
     }
 
     private syncItemStates(): void {

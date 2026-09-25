@@ -903,11 +903,18 @@ as5-element #SubmenuOverlay #SubmenuOverlayTitle {
 as5-element #SubmenuOverlay #SubmenuOverlayItems {
     height: calc(100% - 2em);
     width: 100%;
+    overflow: hidden;
+}
+as5-element #SubmenuOverlay #SubmenuOverlayItems #SubmenuOverlayItemsList {
+    height: 100%;
+    width: 100%;
     display: flex;
     flex-direction: column;
 }
 as5-element #SubmenuOverlay #SubmenuOverlayItems .SubmenuItem {
-    height: 100%;
+    height: 4.5em;
+    flex-shrink: 0;
+    box-sizing: border-box;
     width: 100%;
     display: flex;
     flex-direction: row;
