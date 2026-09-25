@@ -36,6 +36,7 @@ The project was switched to TypeScript and modern tooling, keeping the Rollup bu
   <img src="images/img7.jpg" width="16.5%" />
   <img src="images/img8.jpg" width="16.5%" />
   <img src="images/img9.jpg" width="16.5%" />
+  <img src="images/img10.jpg" width="16.5%" />
 </div>
 
 ## Disclaimer
