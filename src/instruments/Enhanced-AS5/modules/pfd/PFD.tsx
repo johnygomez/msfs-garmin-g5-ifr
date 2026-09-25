@@ -17,7 +17,7 @@ import { DropdownOverlay } from '../common/DropdownOverlay'
 import { GPSSIndicator } from '../common/GPSSIndicator'
 import { Menu } from '../common/Menu'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
-import { BARO_UNITS, BaroUnit } from '../common/Utils'
+import { BARO_UNITS, BaroUnit, OAT_UNITS, OATUnit } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { AirspeedSubjects } from '../providers/AirspeedDataProvider'
@@ -32,7 +32,7 @@ import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSl
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
-type PfdOverlay = 'heading' | 'altitude' | 'setup' | 'baro'
+type PfdOverlay = 'heading' | 'altitude' | 'setup' | 'baro' | 'oat'
 
 export interface PfdContentProps extends ComponentProps {
     bus: EventBus
@@ -49,6 +49,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     private readonly menu = FSComponent.createRef<Menu>()
     private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
     private readonly baroSelector = FSComponent.createRef<DropdownOverlay<BaroUnit>>()
+    private readonly oatSelector = FSComponent.createRef<DropdownOverlay<OATUnit>>()
 
     private readonly activeOverlay = Subject.create<PfdOverlay | null>(null)
 
@@ -59,21 +60,25 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     })
 
     readonly knobValue = MappedSubject.create(
-        ([overlay, heading, altitude, baro]) => {
+        ([overlay, heading, altitude, baro, oat]) => {
             if (overlay === 'heading') return heading
             if (overlay === 'altitude') return altitude
+            if (overlay === 'baro') return baro
+            if (overlay === 'oat') return oat
             return baro
         },
         this.activeOverlay,
         this.props.manager.selectedHeading,
         this.props.manager.selectedAltitude,
-        this.props.manager.baroInHg
+        this.props.manager.baroInHg,
+        this.props.manager.oatCelsius
     )
 
     private readonly headingActive = this.activeOverlay.map(overlay => overlay === 'heading')
     private readonly altitudeActive = this.activeOverlay.map(overlay => overlay === 'altitude')
     private readonly setupActive = this.activeOverlay.map(overlay => overlay === 'setup')
     private readonly baroSelectorActive = this.activeOverlay.map(overlay => overlay === 'baro')
+    private readonly oatSelectorActive = this.activeOverlay.map(overlay => overlay === 'oat')
 
     private readonly closeMenu = (): void => this.menu.instance.close()
     private readonly openHeading = (): void => this.openOverlay('heading')
@@ -81,10 +86,17 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     private readonly openSetup = (): void => this.openOverlay('setup')
     private readonly openMfd = (): void => this.props.switchPage('MFD')
     private readonly openBaro = (): void => this.openOverlay('baro')
+    private readonly openOAT = (): void => this.openOverlay('oat')
     private readonly closeOverlays = (): void => this.closeModals()
     private readonly onBaroSelected = (unit?: BaroUnit) => {
         if (unit !== undefined && unit !== null) {
             this.props.manager.changeBaroUnits(unit)
+        }
+        this.closeModals()
+    }
+    private readonly onOATSelected = (unit?: OATUnit) => {
+        if (unit !== undefined && unit !== null) {
+            this.props.manager.changeOATUnits(unit)
         }
         this.closeModals()
     }
@@ -140,6 +152,9 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     break
                 case 'baro':
                     this.baroSelector.instance.onEvent(event)
+                    break
+                case 'oat':
+                    this.oatSelector.instance.onEvent(event)
                     break
             }
         } else if (this.menu.instance.isOpen.get()) {
@@ -235,6 +250,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                                 indicatedAirspeed={airspeed.indicatedAirspeed}
                                 refSpeed={airspeed.refSpeed}
                                 airspeedTrend={airspeed.airspeedTrend}
+                                oatUnit={manager.OATUnit}
                             />
                         </div>
                         <div id="Compass">
@@ -303,12 +319,16 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     active={this.setupActive}
                     ref={this.setupSubmenu}
                     onLongPush={this.closeOverlays}
-                    style="height: 35%;"
                 >
                     <SubmenuOverlay.item
                         title="Baro Units"
                         onSelect={this.openBaro}
                         value={manager.baroUnit}
+                    />
+                    <SubmenuOverlay.item
+                        title="OAT Units"
+                        onSelect={this.openOAT}
+                        value={manager.OATUnit}
                     />
                 </SubmenuOverlay>
 
@@ -319,6 +339,16 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     options={BARO_UNITS}
                     active={this.baroSelectorActive}
                     onSelected={this.onBaroSelected}
+                    onLongPush={this.closeOverlays}
+                />
+
+                <DropdownOverlay
+                    ref={this.oatSelector}
+                    title="OAT Units"
+                    selected={manager.OATUnit}
+                    options={OAT_UNITS}
+                    active={this.oatSelectorActive}
+                    onSelected={this.onOATSelected}
                     onLongPush={this.closeOverlays}
                 />
             </>

@@ -51,6 +51,10 @@
     --airspeed-gs-box-label-font-size: 15px;
     --airspeed-gs-box-value-font-size: 20px;
 
+    /* OAT readout box (overlaid at the bottom of the airspeed column) */
+    --airspeed-oat-box-label-font-size: 15px;
+    --airspeed-oat-box-value-font-size: 15px;
+
     /* Colors — aligned with G3X Touch reference values (G3XTouch.css) */
     --black: black;
     --white: white;
@@ -1130,11 +1134,15 @@ as5-element .DropdownOverlay .DropdownOptions .DropdownOption[state='Selected'] 
     );
 }
 
-.airspeed-gs-box {
+.airspeed-indicator-bottom-boxes {
     position: absolute;
     left: 0;
     bottom: 0;
     width: var(--airspeed-gs-box-width);
+}
+
+.airspeed-gs-box {
+    width: 100%;
     height: var(--airspeed-gs-box-height);
     box-sizing: border-box;
     padding: 0 5px;
@@ -1168,6 +1176,35 @@ as5-element .DropdownOverlay .DropdownOptions .DropdownOption[state='Selected'] 
     width: 0.1em;
     white-space: pre-wrap;
     word-break: break-all;
+}
+
+.airspeed-oat-box {
+    width: 100%;
+    height: var(--airspeed-gs-box-height);
+    box-sizing: border-box;
+    padding: 0 2px 0 5px;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-items: center;
+    background: #1a1d21;
+    border: 1px solid white;
+    color: white;
+}
+.airspeed-oat-box[state='Inactive'] {
+    display: none;
+}
+
+.airspeed-oat-box-label {
+    font-size: var(--airspeed-oat-box-label-font-size);
+    font-family: 'OpenSans-Bold';
+}
+
+.airspeed-oat-box-value {
+    display: inline-block;
+    font-size: var(--airspeed-oat-box-value-font-size);
+    color: var(--white);
+    font-family: 'OpenSans';
 }
 
 /* AP info bar */

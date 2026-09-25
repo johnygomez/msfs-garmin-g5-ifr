@@ -1,4 +1,5 @@
 import {
+    AdcEvents,
     ComponentProps,
     ConsumerSubject,
     DigitScroller,
@@ -11,7 +12,8 @@ import {
     VNode,
 } from '@microsoft/msfs-sdk'
 
-import { Colors } from '../common/Utils'
+import { ReactiveComponent } from '../common/Reactive'
+import { Colors, OATUnit } from '../common/Utils'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
 const GF_FONT = 'OpenSans-Bold'
@@ -32,6 +34,7 @@ export interface AirspeedIndicatorComponentProps extends ComponentProps {
     indicatedAirspeed: Subscribable<number>
     refSpeed: Subscribable<number>
     airspeedTrend: Subscribable<number>
+    oatUnit: Subscribable<OATUnit>
 }
 
 interface IASDisplayBoxProps extends ComponentProps {
@@ -293,6 +296,44 @@ class GroundSpeedDisplay extends DisplayComponent<GroundSpeedDisplayProps> {
                 <span class="airspeed-gs-box-value">
                     {this.gs.map(g => fastToFixed(g, 0))}
                     <span class="airspeed-gs-box-value-units">kt</span>
+                </span>
+            </div>
+        )
+    }
+}
+
+interface OATDisplayProps extends ComponentProps {
+    bus: EventBus
+    oatUnit: Subscribable<OATUnit>
+}
+
+class OATDisplay extends ReactiveComponent<OATDisplayProps> {
+    private readonly oat = this.consume(
+        this.props.bus.getSubscriber<AdcEvents>().on('ambient_temp_c').withPrecision(1),
+        0
+    )
+    private readonly oatValue = this.track(
+        MappedSubject.create(
+            ([oatCelsius, unit]) => this.calculateOATValue(oatCelsius, unit),
+            this.oat,
+            this.props.oatUnit
+        )
+    )
+    private readonly state = this.track(
+        this.props.oatUnit.map(u => (u === 'None' ? 'Inactive' : 'Active'))
+    )
+
+    private calculateOATValue(oatCelsius: number, unit: OATUnit): number {
+        return unit === 'F' ? (oatCelsius * 9) / 5 + 32 : oatCelsius
+    }
+
+    public render(): VNode {
+        return (
+            <div class="airspeed-oat-box" state={this.state}>
+                <span class="airspeed-oat-box-label">OAT</span>
+                <span class="airspeed-oat-box-value">
+                    {this.oatValue.map(v => fastToFixed(v, 0))}
+                    <span class="airspeed-oat-box-value-units">°{this.props.oatUnit}</span>
                 </span>
             </div>
         )
@@ -726,7 +767,10 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                     <AirspeedTrendVector trend={this.props.airspeedTrend} center={center} />
                 </svg>
                 <IASDisplayBox ias={this.iasBoxValue} isOffScale={this.isOffScale} />
-                <GroundSpeedDisplay bus={this.props.bus} />
+                <div class="airspeed-indicator-bottom-boxes">
+                    <GroundSpeedDisplay bus={this.props.bus} />
+                    <OATDisplay bus={this.props.bus} oatUnit={this.props.oatUnit} />
+                </div>
             </>
         )
     }

@@ -11,7 +11,7 @@ import {
 
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
-import { BaroUnit, formatDegrees3, normalizeDegrees360 } from './Utils'
+import { BaroUnit, formatDegrees3, normalizeDegrees360, OATUnit } from './Utils'
 
 const KNOB_RESET_MS = 600
 const ALTITUDE_STEP_FEET = 100
@@ -50,6 +50,7 @@ export class AvionicsInteractionManager {
     readonly selectedCourse: Subscribable<number>
     readonly selectedAltitude: ConsumerSubject<number>
     readonly baroInHg: ConsumerSubject<number>
+    readonly oatCelsius: ConsumerSubject<number>
 
     readonly headingText: MappedSubscribable<string>
     readonly courseText: MappedSubscribable<string>
@@ -62,6 +63,8 @@ export class AvionicsInteractionManager {
 
     private readonly baroUnitSub = Subject.create<BaroUnit>('hPa')
 
+    private readonly OATUnitSub = Subject.create<OATUnit>('None')
+
     readonly gpssEnabled: ConsumerSubject<boolean>
 
     constructor(bus: EventBus) {
@@ -73,6 +76,7 @@ export class AvionicsInteractionManager {
         this.selectedAltitude = ConsumerSubject.create(sub.on('ap_altitude_selected'), 0)
         this.baroInHg = ConsumerSubject.create(sub.on('altimeter_baro_setting_inhg'), 29.92)
         this.gpssEnabled = ConsumerSubject.create(sub.on('gpss_enabled'), false)
+        this.oatCelsius = ConsumerSubject.create(sub.on('ambient_temp_c').withPrecision(1), 0)
 
         this.selectedHeading = headingSelected.map(normalizeDegrees360)
         this.selectedCourse = nav1Obs.map(normalizeDegrees360)
@@ -85,6 +89,10 @@ export class AvionicsInteractionManager {
 
     get baroUnit(): Subscribable<BaroUnit> {
         return this.baroUnitSub
+    }
+
+    get OATUnit(): Subscribable<OATUnit> {
+        return this.OATUnitSub
     }
 
     incrementHeading(): void {
@@ -130,6 +138,10 @@ export class AvionicsInteractionManager {
 
     changeBaroUnits(unit: BaroUnit): void {
         this.baroUnitSub.set(unit)
+    }
+
+    changeOATUnits(unit: OATUnit): void {
+        this.OATUnitSub.set(unit)
     }
 
     increaseBaro(): void {
