@@ -1,10 +1,17 @@
-import { ComponentProps, FSComponent, Subscribable, VNode } from '@microsoft/msfs-sdk'
+import {
+    ComponentProps,
+    FSComponent,
+    MappedSubject,
+    Subscribable,
+    VNode,
+} from '@microsoft/msfs-sdk'
 
 import { ReactiveComponent } from '../common/Reactive'
-import { ToggleMode } from '../common/Utils'
+import { MIN_DISPLAYED_AIRSPEED_KT, ToggleMode } from '../common/Utils'
 
 export interface TrueAirspeedDisplayProps extends ComponentProps {
     trueAirspeed: Subscribable<number>
+    indicatedAirspeed: Subscribable<number>
     mode: Subscribable<ToggleMode>
 }
 
@@ -12,7 +19,13 @@ export class TrueAirspeedDisplay extends ReactiveComponent<TrueAirspeedDisplayPr
     private readonly state = this.track(
         this.props.mode.map(mode => (mode === 'ON' ? 'Active' : 'Inactive'))
     )
-    private readonly tasText = this.track(this.props.trueAirspeed.map(tas => fastToFixed(tas, 0)))
+    private readonly tasText = this.track(
+        MappedSubject.create(
+            ([tas, ias]) => (ias < MIN_DISPLAYED_AIRSPEED_KT ? '---' : fastToFixed(tas, 0)),
+            this.props.trueAirspeed,
+            this.props.indicatedAirspeed
+        )
+    )
 
     render(): VNode {
         return (

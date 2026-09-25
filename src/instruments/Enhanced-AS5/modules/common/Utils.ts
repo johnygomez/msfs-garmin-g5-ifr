@@ -69,6 +69,8 @@ export enum Colors {
     SHADOW_COMPASS_BLUE = 'rgb(9, 39, 61)',
 }
 
+export const MIN_DISPLAYED_AIRSPEED_KT = 20
+
 export const BARO_UNITS = ['hPa', 'inHg'] as const
 export type BaroUnit = (typeof BARO_UNITS)[number]
 

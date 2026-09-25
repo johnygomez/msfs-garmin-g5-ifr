@@ -293,6 +293,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                             <GPSSIndicator gpssEnabled={manager.gpssEnabled} />
                             <TrueAirspeedDisplay
                                 trueAirspeed={airspeed.trueAirspeed}
+                                indicatedAirspeed={airspeed.indicatedAirspeed}
                                 mode={this.tasMode}
                             />
                         </div>

@@ -13,7 +13,7 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { ReactiveComponent } from '../common/Reactive'
-import { Colors, OATUnit } from '../common/Utils'
+import { Colors, MIN_DISPLAYED_AIRSPEED_KT, OATUnit } from '../common/Utils'
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 
 const GF_FONT = 'OpenSans-Bold'
@@ -26,6 +26,9 @@ const GF_FONT = 'OpenSans-Bold'
  * knots, so 12 ≈ 70 kt.
  */
 const UNITS_PER_KT = 12
+
+/** Tape units kept visible below the minimum-speed mark so its label is not cut off. */
+const TAPE_BOTTOM_MARGIN = 24
 
 export interface AirspeedIndicatorComponentProps extends ComponentProps {
     bus: EventBus
@@ -78,6 +81,7 @@ class IASDisplayBox extends DisplayComponent<IASDisplayBoxProps> {
                             base={10}
                             factor={100}
                             scrollThreshold={99}
+                            nanString=""
                             renderDigit={(digit): string =>
                                 digit === 0 ? ' ' : (Math.abs(digit) % 10).toString()
                             }
@@ -231,44 +235,6 @@ class AirspeedTrendVector extends DisplayComponent<AirspeedTrendVectorProps> {
     }
 }
 
-interface SelectedSpeedBugProps extends ComponentProps {
-    ias: Subscribable<number>
-    refSpeed: Subscribable<number>
-    /** Vertical centre of the tape, in tape pixels. */
-    center: number
-}
-
-/** The cyan reference-speed bug that rides the airspeed tape. */
-class SelectedSpeedBug extends DisplayComponent<SelectedSpeedBugProps> {
-    private readonly transform: MappedSubject<[number, number], string>
-
-    constructor(props: SelectedSpeedBugProps) {
-        super(props)
-
-        this.transform = MappedSubject.create(
-            ([ias, ref]) => `translate(0, ${(ias - ref) * UNITS_PER_KT})`,
-            props.ias,
-            props.refSpeed
-        )
-    }
-
-    public destroy(): void {
-        this.transform.destroy()
-        super.destroy()
-    }
-
-    public render(): VNode {
-        const c = this.props.center
-        return (
-            <polygon
-                points={`200,${c - 20} 180,${c - 20} 180,${c - 15} 190,${c} 180,${c + 15} 180,${c + 20} 200,${c + 20}`}
-                fill="#36c8d2"
-                transform={this.transform}
-            />
-        )
-    }
-}
-
 interface GroundSpeedDisplayProps extends ComponentProps {
     bus: EventBus
 }
@@ -368,6 +334,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
     private readonly iasBoxValue: MappedSubject<[number], number>
     private readonly isOffScale: MappedSubject<[number], boolean>
     private readonly tapeTransform: MappedSubject<[number, number], string>
+    private readonly tapeClipHeight: MappedSubject<[number], number>
     private readonly gradTextSubjects: MappedSubject<[number], string>[] = []
 
     private readonly greenBarY: MappedSubject<[number], number>
@@ -414,16 +381,29 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
             ias
         ).pause()
 
-        this.iasBoxValue = MappedSubject.create(([v]) => Math.max(v, 20), ias).pause()
+        this.iasBoxValue = MappedSubject.create(
+            ([v]) => (v < MIN_DISPLAYED_AIRSPEED_KT ? NaN : v),
+            ias
+        ).pause()
 
         this.isOffScale = MappedSubject.create(
-            ([v]) => this.maxValue > 0 && Math.max(v, 20) > this.maxValue,
+            ([v]) => this.maxValue > 0 && v > this.maxValue,
             ias
         ).pause()
 
         this.tapeTransform = MappedSubject.create(
-            ([v, ck]) => `translate(0, ${(Math.max(v, 20) - ck) * UNITS_PER_KT})`,
+            ([v, ck]) =>
+                `translate(0, ${(Math.max(v, MIN_DISPLAYED_AIRSPEED_KT) - ck) * UNITS_PER_KT})`,
             ias,
+            this.centerKt
+        ).pause()
+
+        this.tapeClipHeight = MappedSubject.create(
+            ([ck]) =>
+                this.height +
+                this.centerY +
+                (ck - MIN_DISPLAYED_AIRSPEED_KT) * UNITS_PER_KT +
+                TAPE_BOTTOM_MARGIN,
             this.centerKt
         ).pause()
 
@@ -541,6 +521,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         this.iasBoxValue.resume()
         this.isOffScale.resume()
         this.tapeTransform.resume()
+        this.tapeClipHeight.resume()
         this.greenBarY.resume()
         this.greenBarHeight.resume()
         this.yellowBarY.resume()
@@ -571,6 +552,7 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
         this.iasBoxValue.destroy()
         this.isOffScale.destroy()
         this.tapeTransform.destroy()
+        this.tapeClipHeight.destroy()
         this.greenBarY.destroy()
         this.greenBarHeight.destroy()
         this.yellowBarY.destroy()
@@ -676,92 +658,99 @@ export class AirspeedIndicatorComponent extends DisplayComponent<AirspeedIndicat
                     />
                     <svg x="0" y="0" width="250" height={height} viewBox={`0 0 250 ${height}`}>
                         <g transform={this.tapeTransform}>
-                            {!noColor && (
-                                <>
+                            <defs>
+                                <clipPath id="airspeedTapeClip">
                                     <rect
-                                        x="175"
-                                        y={this.redBarY}
-                                        width={refBarWidth}
-                                        height={this.redBarHeight}
-                                        fill={Colors.RED}
+                                        x="0"
+                                        y={-height}
+                                        width="250"
+                                        height={this.tapeClipHeight}
                                     />
-                                    <rect
-                                        x="175"
-                                        y={this.yellowBarY}
-                                        width={refBarWidth}
-                                        height={this.yellowBarHeight}
-                                        fill={Colors.YELLOW}
-                                    />
-                                    <rect
-                                        x="175"
-                                        y={this.greenBarY}
-                                        width={refBarWidth}
-                                        height={this.greenBarHeight}
-                                        fill={Colors.DARK_GREEN}
-                                    />
-                                    <rect
-                                        x="190"
-                                        y={this.flapsBarY}
-                                        width={10}
-                                        height={this.flapsBarHeight}
-                                        fill={Colors.WHITE}
-                                    />
-                                    <rect
-                                        x="175"
-                                        y={this.flapsBarFullY}
-                                        width={refBarWidth}
-                                        height={this.flapsBarFullHeight}
-                                        fill={Colors.WHITE}
-                                    />
-                                    <svg
-                                        id="DASH"
-                                        x="175"
-                                        y="0"
-                                        width={refBarWidth}
-                                        height={height - 100}
-                                        viewBox={`0 0 25 ${height - 100}`}
-                                    >
-                                        <g transform={this.endElementTransform}>
-                                            <rect
-                                                x="0"
-                                                y={-(height + 200)}
-                                                width={refBarWidth}
-                                                height={height + 100}
-                                                fill="white"
-                                            />
-                                            {this.buildDashLines(refBarWidth, 12.5)}
-                                        </g>
-                                    </svg>
-                                    <rect
-                                        id="vyse-pointer"
-                                        x="170"
-                                        y={this.vyseY}
-                                        width="40"
-                                        height="8"
-                                        fill={Colors.CYAN}
-                                        visibility={this.vyseVisibility}
-                                    />
-                                    <rect
-                                        id="vmc-pointer"
-                                        x="175"
-                                        y={this.vmcY}
-                                        width={refBarWidth}
-                                        height={this.vmcHeight}
-                                        fill={Colors.RED}
-                                    />
-                                </>
-                            )}
-                            {this.buildGraduations(center)}
-                            <SelectedSpeedBug
-                                ias={this.props.indicatedAirspeed}
-                                refSpeed={this.props.refSpeed}
-                                center={center}
-                            />
-                            <VSpeedReference speed="A" x="200" centerY={this.VaOffset} />
-                            <VSpeedReference speed="G" x="200" centerY={this.VgOffset} />
-                            <VSpeedReference speed="R" x="200" centerY={this.VrOffset} />
-                            <VSpeedReference speed="X" x="200" centerY={this.VxOffset} />
-                            <VSpeedReference speed="Y" x="200" centerY={this.VyOffset} />
+                                </clipPath>
+                            </defs>
+                            <g clip-path="url(#airspeedTapeClip)">
+                                {!noColor && (
+                                    <>
+                                        <rect
+                                            x="175"
+                                            y={this.redBarY}
+                                            width={refBarWidth}
+                                            height={this.redBarHeight}
+                                            fill={Colors.RED}
+                                        />
+                                        <rect
+                                            x="175"
+                                            y={this.yellowBarY}
+                                            width={refBarWidth}
+                                            height={this.yellowBarHeight}
+                                            fill={Colors.YELLOW}
+                                        />
+                                        <rect
+                                            x="175"
+                                            y={this.greenBarY}
+                                            width={refBarWidth}
+                                            height={this.greenBarHeight}
+                                            fill={Colors.DARK_GREEN}
+                                        />
+                                        <rect
+                                            x="190"
+                                            y={this.flapsBarY}
+                                            width={10}
+                                            height={this.flapsBarHeight}
+                                            fill={Colors.WHITE}
+                                        />
+                                        <rect
+                                            x="175"
+                                            y={this.flapsBarFullY}
+                                            width={refBarWidth}
+                                            height={this.flapsBarFullHeight}
+                                            fill={Colors.WHITE}
+                                        />
+                                        <svg
+                                            id="DASH"
+                                            x="175"
+                                            y="0"
+                                            width={refBarWidth}
+                                            height={height - 100}
+                                            viewBox={`0 0 25 ${height - 100}`}
+                                        >
+                                            <g transform={this.endElementTransform}>
+                                                <rect
+                                                    x="0"
+                                                    y={-(height + 200)}
+                                                    width={refBarWidth}
+                                                    height={height + 100}
+                                                    fill="white"
+                                                />
+                                                {this.buildDashLines(refBarWidth, 12.5)}
+                                            </g>
+                                        </svg>
+                                        <rect
+                                            id="vyse-pointer"
+                                            x="170"
+                                            y={this.vyseY}
+                                            width="40"
+                                            height="8"
+                                            fill={Colors.CYAN}
+                                            visibility={this.vyseVisibility}
+                                        />
+                                        <rect
+                                            id="vmc-pointer"
+                                            x="175"
+                                            y={this.vmcY}
+                                            width={refBarWidth}
+                                            height={this.vmcHeight}
+                                            fill={Colors.RED}
+                                        />
+                                    </>
+                                )}
+                                {this.buildGraduations(center)}
+                                <VSpeedReference speed="A" x="200" centerY={this.VaOffset} />
+                                <VSpeedReference speed="G" x="200" centerY={this.VgOffset} />
+                                <VSpeedReference speed="R" x="200" centerY={this.VrOffset} />
+                                <VSpeedReference speed="X" x="200" centerY={this.VxOffset} />
+                                <VSpeedReference speed="Y" x="200" centerY={this.VyOffset} />
+                            </g>
                         </g>
                     </svg>
                     <AirspeedTrendVector trend={this.props.airspeedTrend} center={center} />
