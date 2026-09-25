@@ -17,7 +17,7 @@ import { DropdownOverlay } from '../common/DropdownOverlay'
 import { GPSSIndicator } from '../common/GPSSIndicator'
 import { Menu } from '../common/Menu'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
-import { BARO_UNITS, BaroUnit, OAT_UNITS, OATUnit } from '../common/Utils'
+import { BARO_UNITS, BaroUnit, OAT_UNITS, OATUnit, TOGGLE_MODES, ToggleMode } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { AirspeedSubjects } from '../providers/AirspeedDataProvider'
@@ -28,11 +28,12 @@ import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
 import { AttitudeIndicatorComponent } from './AttitudeIndicator'
 import { CDIComponent } from './CDI'
 import { HorizontalCompassComponent } from './HorizontalCompass'
+import { TrueAirspeedDisplay } from './TrueAirspeedDisplay'
 import { SlipSkidIndicatorComponent, TurnRateIndicatorComponent } from './TurnSlipIndicator'
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
-type PfdOverlay = 'heading' | 'altitude' | 'setup' | 'baro' | 'oat'
+type PfdOverlay = 'heading' | 'altitude' | 'setup' | 'baro' | 'oat' | 'tas'
 
 export interface PfdContentProps extends ComponentProps {
     bus: EventBus
@@ -50,8 +51,10 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
     private readonly baroSelector = FSComponent.createRef<DropdownOverlay<BaroUnit>>()
     private readonly oatSelector = FSComponent.createRef<DropdownOverlay<OATUnit>>()
+    private readonly tasSelector = FSComponent.createRef<DropdownOverlay<ToggleMode>>()
 
     private readonly activeOverlay = Subject.create<PfdOverlay | null>(null)
+    private readonly tasMode = Subject.create<ToggleMode>('OFF')
 
     readonly knobUnit = this.activeOverlay.map(overlay => {
         if (overlay === 'heading') return KnobValueUnit.Degrees
@@ -79,6 +82,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     private readonly setupActive = this.activeOverlay.map(overlay => overlay === 'setup')
     private readonly baroSelectorActive = this.activeOverlay.map(overlay => overlay === 'baro')
     private readonly oatSelectorActive = this.activeOverlay.map(overlay => overlay === 'oat')
+    private readonly tasSelectorActive = this.activeOverlay.map(overlay => overlay === 'tas')
 
     private readonly closeMenu = (): void => this.menu.instance.close()
     private readonly openHeading = (): void => this.openOverlay('heading')
@@ -87,6 +91,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     private readonly openMfd = (): void => this.props.switchPage('MFD')
     private readonly openBaro = (): void => this.openOverlay('baro')
     private readonly openOAT = (): void => this.openOverlay('oat')
+    private readonly openTAS = (): void => this.openOverlay('tas')
     private readonly closeOverlays = (): void => this.closeModals()
     private readonly onBaroSelected = (unit?: BaroUnit) => {
         if (unit !== undefined && unit !== null) {
@@ -97,6 +102,12 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     private readonly onOATSelected = (unit?: OATUnit) => {
         if (unit !== undefined && unit !== null) {
             this.props.manager.changeOATUnits(unit)
+        }
+        this.closeModals()
+    }
+    private readonly onTASSelected = (mode?: ToggleMode) => {
+        if (mode !== undefined && mode !== null) {
+            this.tasMode.set(mode)
         }
         this.closeModals()
     }
@@ -155,6 +166,9 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     break
                 case 'oat':
                     this.oatSelector.instance.onEvent(event)
+                    break
+                case 'tas':
+                    this.tasSelector.instance.onEvent(event)
                     break
             }
         } else if (this.menu.instance.isOpen.get()) {
@@ -275,7 +289,13 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                             <SlipSkidIndicatorComponent slipSkid={this.slipSkid} />
                             <TurnRateIndicatorComponent turnRate={this.turnRate} />
                         </div>
-                        <GPSSIndicator gpssEnabled={manager.gpssEnabled} />
+                        <div id="TopLeftBoxes">
+                            <GPSSIndicator gpssEnabled={manager.gpssEnabled} />
+                            <TrueAirspeedDisplay
+                                trueAirspeed={airspeed.trueAirspeed}
+                                mode={this.tasMode}
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -330,6 +350,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                         onSelect={this.openOAT}
                         value={manager.OATUnit}
                     />
+                    <SubmenuOverlay.item title="TAS" onSelect={this.openTAS} value={this.tasMode} />
                 </SubmenuOverlay>
 
                 <DropdownOverlay
@@ -349,6 +370,16 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     options={OAT_UNITS}
                     active={this.oatSelectorActive}
                     onSelected={this.onOATSelected}
+                    onLongPush={this.closeOverlays}
+                />
+
+                <DropdownOverlay
+                    ref={this.tasSelector}
+                    title="TAS"
+                    selected={this.tasMode}
+                    options={TOGGLE_MODES}
+                    active={this.tasSelectorActive}
+                    onSelected={this.onTASSelected}
                     onLongPush={this.closeOverlays}
                 />
             </>

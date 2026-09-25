@@ -10,14 +10,20 @@ import {
 } from '@microsoft/msfs-sdk'
 
 import { ReactiveComponent } from '../common/Reactive'
-import { Colors, displayStyle, formatCourse, visibilityAttribute, WindMode } from '../common/Utils'
+import {
+    Colors,
+    displayStyle,
+    formatCourse,
+    visibilityAttribute,
+    ToggleMode,
+} from '../common/Utils'
 
 const MIN_TRUE_AIRSPEED_KNOTS = 30
 const MIN_WIND_SPEED_KNOTS = 1
 
 export interface WindIndicatorProps extends ComponentProps {
     bus: EventBus
-    mode: Subscribable<WindMode>
+    mode: Subscribable<ToggleMode>
 }
 
 export class WindIndicator extends ReactiveComponent<WindIndicatorProps> {

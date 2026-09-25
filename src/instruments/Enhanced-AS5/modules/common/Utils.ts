@@ -75,8 +75,8 @@ export type BaroUnit = (typeof BARO_UNITS)[number]
 export const OAT_UNITS = ['None', 'C', 'F'] as const
 export type OATUnit = (typeof OAT_UNITS)[number]
 
-export const WIND_MODES = ['OFF', 'ON'] as const
-export type WindMode = (typeof WIND_MODES)[number]
+export const TOGGLE_MODES = ['OFF', 'ON'] as const
+export type ToggleMode = (typeof TOGGLE_MODES)[number]
 
 /**
  * Rounds a heading/course value to a whole degree in the `1..360` range,

@@ -16,7 +16,7 @@ import { Menu } from '../common/Menu'
 import { BEARING_POINTERS, BearingPointerValue, NavSource, NavSourceLabel } from '../common/Nav'
 import { ReactiveComponent } from '../common/Reactive'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
-import { Colors, WIND_MODES, WindMode } from '../common/Utils'
+import { Colors, TOGGLE_MODES, ToggleMode } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
@@ -101,7 +101,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
     private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
     private readonly bp1Selector = FSComponent.createRef<DropdownOverlay<BearingPointerValue>>()
     private readonly bp2Selector = FSComponent.createRef<DropdownOverlay<BearingPointerValue>>()
-    private readonly windSelector = FSComponent.createRef<DropdownOverlay<WindMode>>()
+    private readonly windSelector = FSComponent.createRef<DropdownOverlay<ToggleMode>>()
     private readonly hsi = Subject.create<HSIComponent | null>(null)
 
     private readonly activeOverlay = Subject.create<MfdOverlay | null>(null)
@@ -110,7 +110,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
 
     private readonly bearingPointer1 = Subject.create<BearingPointerValue>('VLOC1')
     private readonly bearingPointer2 = Subject.create<BearingPointerValue>('NONE')
-    private readonly windMode = Subject.create<WindMode>('OFF')
+    private readonly windMode = Subject.create<ToggleMode>('OFF')
 
     readonly knobValue = this.track(
         MappedSubject.create(
@@ -193,7 +193,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
         }
         this.closeModals()
     }
-    private readonly onWindSelected = (mode?: WindMode) => {
+    private readonly onWindSelected = (mode?: ToggleMode) => {
         if (mode !== undefined && mode !== null) {
             this.windMode.set(mode)
         }
@@ -450,7 +450,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                     ref={this.windSelector}
                     title="Wind"
                     selected={this.windMode}
-                    options={WIND_MODES}
+                    options={TOGGLE_MODES}
                     active={this.windSelectorActive}
                     onSelected={this.onWindSelected}
                     onLongPush={this.closeOverlays}

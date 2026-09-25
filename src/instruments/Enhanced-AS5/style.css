@@ -458,6 +458,20 @@ as5-element #PageContainer #MFD #Infos #TopLeftBoxes {
 as5-element #PageContainer #MFD #Infos #TopLeftBoxes #GPSSIndicator {
     position: relative;
 }
+as5-element #PageContainer #PFD #TopLeftBoxes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--airspeed-gs-box-width);
+    display: flex;
+    flex-direction: column;
+}
+as5-element #PageContainer #PFD #TopLeftBoxes #GPSSIndicator {
+    position: relative;
+}
+as5-element #PageContainer #PFD #TopLeftBoxes #TASIndicator[state='Inactive'] {
+    display: none;
+}
 as5-element #PageContainer #MFD #Infos #WindIndicator {
     width: 82px;
     height: 44px;
@@ -1221,6 +1235,9 @@ as5-element .DropdownOverlay .DropdownOptions .DropdownOption[state='Selected'] 
     font-size: var(--airspeed-gs-box-value-font-size);
     color: magenta;
     font-family: 'OpenSans-Bold';
+}
+.airspeed-tas-box-value {
+    color: var(--white);
 }
 .airspeed-gs-box-value-units {
     display: inline-block;
