@@ -411,6 +411,9 @@ as5-element #PageContainer #MFD #HSICompass {
     width: 90%;
     height: 90%;
 }
+as5-element #PageContainer #MFD #HSICompass > svg {
+    overflow: visible;
+}
 as5-element #PageContainer #MFD #Infos {
     position: absolute;
     top: 0;
