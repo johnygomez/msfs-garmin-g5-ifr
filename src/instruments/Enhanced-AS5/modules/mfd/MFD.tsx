@@ -16,7 +16,7 @@ import { Menu } from '../common/Menu'
 import { BEARING_POINTERS, BearingPointerValue, NavSource, NavSourceLabel } from '../common/Nav'
 import { ReactiveComponent } from '../common/Reactive'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
-import { Colors } from '../common/Utils'
+import { Colors, WIND_MODES, WindMode } from '../common/Utils'
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { BearingPointerDataProvider } from '../providers/BearingPointerDataProvider'
@@ -25,10 +25,11 @@ import { G5NavEvents } from '../publishers/G5NavPublisher'
 import { HSIComponent } from './HSIndicator'
 import { LeftInfoPanel } from './LeftInfoPanel'
 import { RightInfoPanel } from './RightInfoPanel'
+import { WindIndicator } from './WindIndicator'
 
 const IMAGES = '/Pages/VCockpit/Instruments/NavSystems/AS5/Images'
 
-type MfdOverlay = 'heading' | 'course' | 'obs' | 'setup' | 'bp-1' | 'bp-2'
+type MfdOverlay = 'heading' | 'course' | 'obs' | 'setup' | 'bp-1' | 'bp-2' | 'wind'
 
 interface WaypointDistanceInfoProps extends ComponentProps {
     bus: EventBus
@@ -100,6 +101,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
     private readonly setupSubmenu = FSComponent.createRef<SubmenuOverlay>()
     private readonly bp1Selector = FSComponent.createRef<DropdownOverlay<BearingPointerValue>>()
     private readonly bp2Selector = FSComponent.createRef<DropdownOverlay<BearingPointerValue>>()
+    private readonly windSelector = FSComponent.createRef<DropdownOverlay<WindMode>>()
     private readonly hsi = Subject.create<HSIComponent | null>(null)
 
     private readonly activeOverlay = Subject.create<MfdOverlay | null>(null)
@@ -108,6 +110,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
 
     private readonly bearingPointer1 = Subject.create<BearingPointerValue>('VLOC1')
     private readonly bearingPointer2 = Subject.create<BearingPointerValue>('NONE')
+    private readonly windMode = Subject.create<WindMode>('OFF')
 
     readonly knobValue = this.track(
         MappedSubject.create(
@@ -135,6 +138,9 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
     )
     private readonly bearingPointerSelector2Active = this.track(
         this.activeOverlay.map(overlay => overlay === 'bp-2')
+    )
+    private readonly windSelectorActive = this.track(
+        this.activeOverlay.map(overlay => overlay === 'wind')
     )
 
     private readonly obsActive = this.consume(
@@ -173,6 +179,7 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
     private readonly openSetup = (): void => this.openOverlay('setup')
     private readonly openBP1 = (): void => this.openOverlay('bp-1')
     private readonly openBP2 = (): void => this.openOverlay('bp-2')
+    private readonly openWind = (): void => this.openOverlay('wind')
     private readonly closeOverlays = (): void => this.closeModals()
     private readonly onBearing1Selected = (source?: BearingPointerValue) => {
         if (source !== undefined && source !== null) {
@@ -183,6 +190,12 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
     private readonly onBearing2Selected = (source?: BearingPointerValue) => {
         if (source !== undefined && source !== null) {
             this.bearingPointer2.set(source)
+        }
+        this.closeModals()
+    }
+    private readonly onWindSelected = (mode?: WindMode) => {
+        if (mode !== undefined && mode !== null) {
+            this.windMode.set(mode)
         }
         this.closeModals()
     }
@@ -218,6 +231,9 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                     break
                 case 'bp-2':
                     this.bp2Selector.instance.onEvent(event)
+                    break
+                case 'wind':
+                    this.windSelector.instance.onEvent(event)
                     break
             }
         } else if (this.menu.instance.isOpen.get()) {
@@ -308,7 +324,10 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                     />
                 </div>
                 <div id="Infos">
-                    <GPSSIndicator gpssEnabled={manager.gpssEnabled} />
+                    <div id="TopLeftBoxes">
+                        <GPSSIndicator gpssEnabled={manager.gpssEnabled} />
+                        <WindIndicator bus={bus} mode={this.windMode} />
+                    </div>
                     <LeftInfoPanel
                         bus={bus}
                         navSource={navSource}
@@ -400,6 +419,11 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                         onSelect={this.openBP2}
                         value={this.bearingPointer2}
                     />
+                    <SubmenuOverlay.item
+                        title="Wind"
+                        onSelect={this.openWind}
+                        value={this.windMode}
+                    />
                 </SubmenuOverlay>
 
                 <DropdownOverlay
@@ -419,6 +443,16 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
                     options={BEARING_POINTERS}
                     active={this.bearingPointerSelector2Active}
                     onSelected={this.onBearing2Selected}
+                    onLongPush={this.closeOverlays}
+                />
+
+                <DropdownOverlay
+                    ref={this.windSelector}
+                    title="Wind"
+                    selected={this.windMode}
+                    options={WIND_MODES}
+                    active={this.windSelectorActive}
+                    onSelected={this.onWindSelected}
                     onLongPush={this.closeOverlays}
                 />
             </>

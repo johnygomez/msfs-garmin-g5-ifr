@@ -432,7 +432,7 @@ as5-element #PageContainer #GPSSIndicator {
     background-color: var(--black);
 }
 as5-element #PageContainer #GPSSIndicator[state='Inactive'] {
-    visibility: hidden;
+    display: none;
 }
 as5-element #PageContainer #GPSSIndicator #GPSSIndicatorIcon {
     width: 40px;
@@ -440,6 +440,52 @@ as5-element #PageContainer #GPSSIndicator #GPSSIndicatorIcon {
 }
 as5-element #PageContainer #GPSSIndicator #GPSSIndicatorLabel {
     font-size: 14px;
+    color: var(--white);
+    font-family: 'OpenSans-Bold';
+}
+as5-element #PageContainer #MFD #Infos #TopLeftBoxes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    transform: scale(1.3);
+    transform-origin: top left;
+}
+as5-element #PageContainer #MFD #Infos #TopLeftBoxes #GPSSIndicator {
+    position: relative;
+}
+as5-element #PageContainer #MFD #Infos #WindIndicator {
+    width: 82px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 4px;
+    border: 2px solid var(--light-grey);
+    background-color: var(--black);
+}
+as5-element #PageContainer #MFD #Infos #WindIndicator[state='Inactive'] {
+    display: none;
+}
+as5-element #PageContainer #MFD #Infos #WindIndicator #WindIndicatorArrow {
+    width: 30px;
+    height: 30px;
+}
+as5-element #PageContainer #MFD #Infos #WindIndicator #WindIndicatorValues {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--white);
+    font-family: 'OpenSans-Bold';
+}
+as5-element #PageContainer #MFD #Infos #WindIndicator #WindIndicatorNoData {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.2;
     color: var(--white);
     font-family: 'OpenSans-Bold';
 }
