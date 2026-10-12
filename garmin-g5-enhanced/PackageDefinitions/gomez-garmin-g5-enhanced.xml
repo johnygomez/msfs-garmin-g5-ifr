@@ -11,9 +11,6 @@
 		<CanBeReferenced>false</CanBeReferenced>
 	</Flags>
 	<PackageOrderHint>CUSTOM_SIMOBJECTS_PATCH</PackageOrderHint>
-	<GloballyOverridenBaseSimFiles>
-		<GloballyOverridenBaseSimFile>html_ui/Pages/VCockpit/Instruments/NavSystems/AS5/AS5.html</GloballyOverridenBaseSimFile>
-	</GloballyOverridenBaseSimFiles>
 	<AssetGroups>
 		<AssetGroup Name="ContentInfo">
 			<Type Version="0">ContentInfo</Type>

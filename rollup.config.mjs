@@ -1,11 +1,10 @@
 import typescript from "@rollup/plugin-typescript"
 import resolve from "@rollup/plugin-node-resolve"
-import { copyFileSync, mkdirSync, cpSync, existsSync } from "node:fs"
+import { copyFileSync, cpSync, existsSync } from "node:fs"
 import { resolve as pathResolve } from "node:path"
 
 const baseOutDir = "garmin-g5-enhanced/PackageSources/html_ui/Pages/VCockpit/Instruments/NavSystems"
 const outDir = pathResolve(baseOutDir, "Enhanced-AS5")
-const shimOutDir = pathResolve(baseOutDir, "AS5")
 
 export default {
     input: "src/instruments/Enhanced-AS5/index.ts",
@@ -60,11 +59,6 @@ export default {
                 if (existsSync(fontsSrc)) {
                     cpSync(fontsSrc, pathResolve(outDir, "Fonts"), { recursive: true })
                 }
-
-                if (!existsSync(shimOutDir)) {
-                    mkdirSync(shimOutDir, { recursive: true })
-                }
-                copyFileSync("src/instruments/AS5/AS5.html", pathResolve(shimOutDir, "AS5.html"))
             },
         },
     ],
