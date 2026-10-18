@@ -8,7 +8,7 @@
 		<LOD minSize="1" ModelFile="..\..\..\microsoft\Part_Cockpit\model\Cockpit_LOD05.gltf"/>
 		<LOD minSize="0" ModelFile="..\..\..\microsoft\Part_Cockpit\model\Cockpit_LOD06.gltf"/>
 	</LODS>
-	<Behaviors Compiled="True" Version="2" Revision="0">
+	<Behaviors Compiled="True" Version="2" Revision="1">
 		<IncludeBase RelativeFile="..\..\..\microsoft\Function_Interior\model\Cockpit.behavior.xml"/>
 	</Behaviors>
 </ModelInfo>
