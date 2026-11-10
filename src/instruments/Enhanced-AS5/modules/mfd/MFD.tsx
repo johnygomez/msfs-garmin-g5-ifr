@@ -11,6 +11,7 @@ import {
 import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager'
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
 import { DropdownOverlay } from '../common/DropdownOverlay'
+import { G5Settings } from '../common/G5Settings'
 import { GPSSIndicator } from '../common/GPSSIndicator'
 import { Menu } from '../common/Menu'
 import { BEARING_POINTERS, BearingPointerValue, NavSource, NavSourceLabel } from '../common/Nav'
@@ -87,6 +88,7 @@ class WaypointDistanceInfo extends ReactiveComponent<WaypointDistanceInfoProps> 
 export interface MfdContentProps extends ComponentProps {
     bus: EventBus
     manager: AvionicsInteractionManager
+    settings: G5Settings
     switchPage: (id: PageId) => void
     altimeter: AltimeterSubjects
     navSource: Subscribable<NavSource>
@@ -108,9 +110,9 @@ export class MfdContent extends ReactiveComponent<MfdContentProps> implements Av
 
     readonly knobUnit = Subject.create(KnobValueUnit.Degrees)
 
-    private readonly bearingPointer1 = Subject.create<BearingPointerValue>('VLOC1')
-    private readonly bearingPointer2 = Subject.create<BearingPointerValue>('NONE')
-    private readonly windMode = Subject.create<ToggleMode>('OFF')
+    private readonly bearingPointer1 = this.props.settings.getSetting('g5BearingPointer1')
+    private readonly bearingPointer2 = this.props.settings.getSetting('g5BearingPointer2')
+    private readonly windMode = this.props.settings.getSetting('g5WindMode')
 
     readonly knobValue = this.track(
         MappedSubject.create(

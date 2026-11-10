@@ -11,12 +11,14 @@ import {
     Subject,
     Subscribable,
     Subscription,
+    UserSettingSaveManager,
     VNode,
 } from '@microsoft/msfs-sdk'
 
 import { G5AutopilotProvider } from './autopilot/G5AutopilotProvider'
 import { AvionicsInteractionManager } from './common/AvionicsInteractionManager'
 import { AvionicsPage, PageId } from './common/AvionicsPage'
+import { createG5Settings, G5Settings, loadAndAutoSaveG5Settings } from './common/G5Settings'
 import { MfdContent } from './mfd/MFD'
 import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
@@ -29,6 +31,7 @@ import { G5NavPublisher } from './publishers/G5NavPublisher'
 interface AS5InstrumentProps extends ComponentProps {
     bus: EventBus
     manager: AvionicsInteractionManager
+    settings: G5Settings
     switchPage: (id: PageId) => void
     pageState: Subscribable<string>
     pfdRef: NodeReference<PfdContent>
@@ -43,6 +46,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
         const {
             bus,
             manager,
+            settings,
             switchPage,
             pageState,
             pfdRef,
@@ -58,6 +62,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         ref={pfdRef}
                         bus={bus}
                         manager={manager}
+                        settings={settings}
                         switchPage={switchPage}
                         autopilot={autopilot.subjects}
                         airspeed={airspeedData.subjects}
@@ -71,6 +76,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         ref={mfdRef}
                         bus={bus}
                         manager={manager}
+                        settings={settings}
                         switchPage={switchPage}
                         altimeter={navData.altimeterSubjects}
                         navSource={navData.activeSource}
@@ -89,7 +95,8 @@ export class AS5 extends BaseInstrument {
     DecomposeEventFromPrefix!: (args: string[]) => string | undefined
 
     readonly bus = new EventBus()
-    private readonly manager = new AvionicsInteractionManager(this.bus)
+    private readonly settings = createG5Settings(this.bus)
+    private readonly manager = new AvionicsInteractionManager(this.bus, this.settings)
 
     private readonly pfdRef = FSComponent.createRef<PfdContent>()
     private readonly mfdRef = FSComponent.createRef<MfdContent>()
@@ -109,6 +116,7 @@ export class AS5 extends BaseInstrument {
     private apAnnunciationProvider?: G5AutopilotProvider
     private gpsSynchronizer?: GpsSteerSynchronizer
 
+    private settingsSaveManager?: UserSettingSaveManager
     private knobValueSub?: Subscription
     private knobUnitSub?: Subscription
 
@@ -156,6 +164,7 @@ export class AS5 extends BaseInstrument {
             <AS5Instrument
                 bus={this.bus}
                 manager={this.manager}
+                settings={this.settings}
                 switchPage={this.switchPage}
                 pageState={this.activePageId}
                 pfdRef={this.pfdRef}
@@ -202,6 +211,12 @@ export class AS5 extends BaseInstrument {
         } else if (args[0].startsWith('NavSystem_')) {
             this.dispatch(args[0].slice('NavSystem_'.length))
         }
+    }
+
+    protected onFlightStart(): void {
+        super.onFlightStart()
+        this.settingsSaveManager?.destroy()
+        this.settingsSaveManager = loadAndAutoSaveG5Settings(this.settings)
     }
 
     onPowerOn(): void {

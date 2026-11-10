@@ -5,12 +5,13 @@ import {
     InputAcceleration,
     MappedSubscribable,
     SimVarValueType,
-    Subject,
     Subscribable,
+    UserSetting,
 } from '@microsoft/msfs-sdk'
 
 import { G5CustomEvents } from '../publishers/G5CustomPublisher'
 import { G5NavEvents } from '../publishers/G5NavPublisher'
+import { G5Settings } from './G5Settings'
 import { BaroUnit, formatDegrees3, normalizeDegrees360, OATUnit } from './Utils'
 
 const KNOB_RESET_MS = 600
@@ -67,13 +68,15 @@ export class AvionicsInteractionManager {
     private readonly courseAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
     private readonly obsAccel = new KnobAccelerationHelper(KNOB_RESET_MS)
 
-    private readonly baroUnitSub = Subject.create<BaroUnit>('hPa')
-
-    private readonly OATUnitSub = Subject.create<OATUnit>('None')
+    private readonly baroUnitSub: UserSetting<BaroUnit>
+    private readonly OATUnitSub: UserSetting<OATUnit>
 
     readonly gpssEnabled: ConsumerSubject<boolean>
 
-    constructor(bus: EventBus) {
+    constructor(bus: EventBus, settings: G5Settings) {
+        this.baroUnitSub = settings.getSetting('g5BaroUnit')
+        this.OATUnitSub = settings.getSetting('g5OatUnit')
+
         const sub = bus.getSubscriber<G5CustomEvents & G5NavEvents & AdcEvents>()
 
         const headingSelected = ConsumerSubject.create(sub.on('ap_heading_selected'), 0)

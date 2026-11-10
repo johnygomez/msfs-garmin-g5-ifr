@@ -14,6 +14,7 @@ import {
 import { AvionicsInteractionManager } from '../common/AvionicsInteractionManager'
 import { AvionicsPage, KnobValueUnit, PageId } from '../common/AvionicsPage'
 import { DropdownOverlay } from '../common/DropdownOverlay'
+import { G5Settings } from '../common/G5Settings'
 import { GPSSIndicator } from '../common/GPSSIndicator'
 import { Menu } from '../common/Menu'
 import { SubmenuOverlay } from '../common/SubmenuOverlay'
@@ -38,6 +39,7 @@ type PfdOverlay = 'heading' | 'altitude' | 'setup' | 'baro' | 'oat' | 'tas'
 export interface PfdContentProps extends ComponentProps {
     bus: EventBus
     manager: AvionicsInteractionManager
+    settings: G5Settings
     switchPage: (id: PageId) => void
     autopilot: APInfoBarSubjects
     airspeed: AirspeedSubjects
@@ -54,7 +56,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     private readonly tasSelector = FSComponent.createRef<DropdownOverlay<ToggleMode>>()
 
     private readonly activeOverlay = Subject.create<PfdOverlay | null>(null)
-    private readonly tasMode = Subject.create<ToggleMode>('OFF')
+    private readonly tasMode = this.props.settings.getSetting('g5TasMode')
 
     readonly knobUnit = this.activeOverlay.map(overlay => {
         if (overlay === 'heading') return KnobValueUnit.Degrees
