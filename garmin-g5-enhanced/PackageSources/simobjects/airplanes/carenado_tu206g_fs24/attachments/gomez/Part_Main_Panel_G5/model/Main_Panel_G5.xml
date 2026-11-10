@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	Inherits Carenado's main panel by reference (LODS Template for the glTF, IncludeBase for their
+	compiled behaviours), the same way the PA28 Dakota inherits Microsoft's interior. Nothing is hidden
+	on top: the attitude indicator and HSI are separate attachments, dropped in config/attached_objects.cfg.
+	This file must exist even though it adds nothing - the attachment needs its own model to carry
+	its own attached_objects.cfg.
+	The behaviours are compiled, so IncludeBase has to target the .behavior.xml with matching Compiled
+	attributes; including Main_Panel.xml itself (the C152 pattern) leaves every panel control dead.-->
+<ModelInfo>
+	<LODS Template="..\..\..\carenado\Part_Main_Panel\model\Main_Panel.xml">
+	</LODS>
+	<Behaviors Compiled="True" Version="2" Revision="0">
+		<IncludeBase RelativeFile="..\..\..\carenado\Part_Main_Panel\model\Main_Panel.behavior.xml"/>
+	</Behaviors>
+</ModelInfo>

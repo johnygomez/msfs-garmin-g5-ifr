@@ -56,8 +56,8 @@ Asobo Studio.
 Flight and are not included here. The variants shipped by this addon only reference an installation you
 already own.
 
-**Carenado.** The C182 RG II aircraft is a separate commercial product by Carenado and is not included
-here. The variant shipped by this addon only references an installation you already own.
+**Carenado.** The C182 RG II and CT206G aircraft are separate commercial products by Carenado and are not
+included here. The variants shipped by this addon only reference an installation you already own.
 
 ## Installation
 
@@ -85,6 +85,8 @@ You can request support for additional aircraft via GitHub issues.
     - A new aircraft type inheriting from JF PA38. Tested in combination with GTN units.
 - *Carenado's C182 RG II*
     - A new aircraft type inheriting from the Carenado C182RG, replacing the AI and HSI.
+- *Carenado's CT206G*
+    - A new preset for the Passenger Standard CT206G, replacing the AI and HSI with G5.
 
 The issue with custom variants for third-party aircrafts, such as PA28/38 is that any update to the base aircraft can break the G5 unit.
 Due to that, it's better to request support for custom variants directly from manufacturer of the aircraft.
@@ -182,4 +184,5 @@ and resources are not leaked or left behind.
   As a result, the interior is visible only when zoomed in. Any modifications to LOD mechanism/minSizes are ignored.
 - On *Just Flight's PA28 Warrior II*, the aircraft doesn't allow adding custom electrical circuits, so both G5 units have to share one of its existing ones.
   As a result, pressing the power knob on either unit turns **both** G5s on or off at the same time.
+- On *Carenado's CT206G* G5 variant, weight & balance allows setting only the pilot, copilot and fuel. Passengers and cargo are not available.
 - The IFD and legacy MSFS 2020 GPS integrations are a little buggy. They probably don't write the new MSFS 2024 SimVars and as a result, it's not possible to resolve the GPS mode (CDI scale) properly. As a result, the MFD says GPS is in e.g. ENR route, when TERM should already be there. To avoid the issue, I recommend using PMS and modern MSFS 2024 GPS variants.
