@@ -22,8 +22,10 @@ import { BARO_UNITS, BaroUnit, OAT_UNITS, OATUnit, TOGGLE_MODES, ToggleMode } fr
 import { ValueSelectOverlay } from '../common/ValueSelectOverlay'
 import { VerticalDeviationIndicatorComponent } from '../common/VerticalDeviationIndicator'
 import { AirspeedSubjects } from '../providers/AirspeedDataProvider'
+import { StartupPhase } from '../providers/G5StartupSystem'
 import { AltimeterSubjects, CDISubjects, CourseGuidance } from '../providers/NavSourceDataProvider'
 import { AirspeedIndicatorComponent } from './AirspeedIndicator'
+import { AligningBanner } from './AligningBanner'
 import { AltimeterComponent } from './Altimeter'
 import { APInfoBarComponent, APInfoBarSubjects } from './APInfoBar'
 import { AttitudeIndicatorComponent } from './AttitudeIndicator'
@@ -41,6 +43,7 @@ export interface PfdContentProps extends ComponentProps {
     manager: AvionicsInteractionManager
     settings: G5Settings
     switchPage: (id: PageId) => void
+    startupPhase: Subscribable<StartupPhase>
     autopilot: APInfoBarSubjects
     airspeed: AirspeedSubjects
     altimeter: AltimeterSubjects
@@ -234,7 +237,16 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
     }
 
     render(): VNode {
-        const { bus, manager, autopilot, airspeed, altimeter, cdi, currentNavCourse } = this.props
+        const {
+            bus,
+            manager,
+            startupPhase,
+            autopilot,
+            airspeed,
+            altimeter,
+            cdi,
+            currentNavCourse,
+        } = this.props
         return (
             <>
                 <div id="PfdWrapper">
@@ -244,6 +256,7 @@ export class PfdContent extends DisplayComponent<PfdContentProps> implements Avi
                     <div id="PfdMain">
                         <div id="Horizon">
                             <AttitudeIndicatorComponent tas={airspeed.trueAirspeed} bus={bus} />
+                            <AligningBanner phase={startupPhase} />
                         </div>
                         <div id="Altimeter">
                             <AltimeterComponent

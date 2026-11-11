@@ -18,10 +18,12 @@ import {
 import { G5AutopilotProvider } from './autopilot/G5AutopilotProvider'
 import { AvionicsInteractionManager } from './common/AvionicsInteractionManager'
 import { AvionicsPage, PageId } from './common/AvionicsPage'
+import { BootScreen } from './common/BootScreen'
 import { createG5Settings, G5Settings, loadAndAutoSaveG5Settings } from './common/G5Settings'
 import { MfdContent } from './mfd/MFD'
 import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
+import { G5StartupSystem, StartupPhase } from './providers/G5StartupSystem'
 import { GpsSteerSynchronizer } from './providers/GpsSteerSynchronizer'
 import { NavdataStack } from './providers/NavdataStack'
 import { NavSourceDataProvider } from './providers/NavSourceDataProvider'
@@ -34,6 +36,7 @@ interface AS5InstrumentProps extends ComponentProps {
     settings: G5Settings
     switchPage: (id: PageId) => void
     pageState: Subscribable<string>
+    startupPhase: Subscribable<StartupPhase>
     pfdRef: NodeReference<PfdContent>
     mfdRef: NodeReference<MfdContent>
     autopilot: G5AutopilotProvider
@@ -49,6 +52,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
             settings,
             switchPage,
             pageState,
+            startupPhase,
             pfdRef,
             mfdRef,
             autopilot,
@@ -56,37 +60,41 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
             navData,
         } = this.props
         return (
-            <div id="PageContainer" state={pageState}>
-                <div id="PFD">
-                    <PfdContent
-                        ref={pfdRef}
-                        bus={bus}
-                        manager={manager}
-                        settings={settings}
-                        switchPage={switchPage}
-                        autopilot={autopilot.subjects}
-                        airspeed={airspeedData.subjects}
-                        altimeter={navData.altimeterSubjects}
-                        cdi={navData.cdiSubjects}
-                        currentNavCourse={navData.currentNavCourse}
-                    />
+            <>
+                <div id="PageContainer" state={pageState}>
+                    <div id="PFD">
+                        <PfdContent
+                            ref={pfdRef}
+                            bus={bus}
+                            manager={manager}
+                            settings={settings}
+                            switchPage={switchPage}
+                            startupPhase={startupPhase}
+                            autopilot={autopilot.subjects}
+                            airspeed={airspeedData.subjects}
+                            altimeter={navData.altimeterSubjects}
+                            cdi={navData.cdiSubjects}
+                            currentNavCourse={navData.currentNavCourse}
+                        />
+                    </div>
+                    <div id="MFD">
+                        <MfdContent
+                            ref={mfdRef}
+                            bus={bus}
+                            manager={manager}
+                            settings={settings}
+                            switchPage={switchPage}
+                            altimeter={navData.altimeterSubjects}
+                            navSource={navData.activeSource}
+                            navSourceLabel={navData.navSourceLabel}
+                            selectedCourse={navData.selectedCourse}
+                            currentNavCourse={navData.currentNavCourse}
+                            cdi={navData.cdiSubjects}
+                        />
+                    </div>
                 </div>
-                <div id="MFD">
-                    <MfdContent
-                        ref={mfdRef}
-                        bus={bus}
-                        manager={manager}
-                        settings={settings}
-                        switchPage={switchPage}
-                        altimeter={navData.altimeterSubjects}
-                        navSource={navData.activeSource}
-                        navSourceLabel={navData.navSourceLabel}
-                        selectedCourse={navData.selectedCourse}
-                        currentNavCourse={navData.currentNavCourse}
-                        cdi={navData.cdiSubjects}
-                    />
-                </div>
-            </div>
+                <BootScreen phase={startupPhase} />
+            </>
         )
     }
 }
@@ -115,6 +123,7 @@ export class AS5 extends BaseInstrument {
     private navdataStack?: NavdataStack
     private apAnnunciationProvider?: G5AutopilotProvider
     private gpsSynchronizer?: GpsSteerSynchronizer
+    private startupSystem?: G5StartupSystem
 
     private settingsSaveManager?: UserSettingSaveManager
     private knobValueSub?: Subscription
@@ -160,6 +169,8 @@ export class AS5 extends BaseInstrument {
         this.customPublisher.startPublish()
         this.navPublisher.startPublish()
 
+        this.startupSystem = new G5StartupSystem(this.instrumentIndex, this.bus)
+
         FSComponent.render(
             <AS5Instrument
                 bus={this.bus}
@@ -167,6 +178,7 @@ export class AS5 extends BaseInstrument {
                 settings={this.settings}
                 switchPage={this.switchPage}
                 pageState={this.activePageId}
+                startupPhase={this.startupSystem.phase}
                 pfdRef={this.pfdRef}
                 mfdRef={this.mfdRef}
                 autopilot={this.apAnnunciationProvider}
@@ -225,7 +237,7 @@ export class AS5 extends BaseInstrument {
     }
 
     private dispatch(event: string): void {
-        if (!this.isBootProcedureComplete()) return
+        if (!this.isBootProcedureComplete() || this.startupSystem?.isBooting) return
 
         const page = this.activePage
         if (!page) return

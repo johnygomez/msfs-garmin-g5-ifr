@@ -69,6 +69,7 @@
     --dark-grey: #444;
     --light-grey: #a6a6a6;
     --pfd-box-background: rgba(22, 22, 22, 0.75);
+    --garmin-blue: #007cc3;
 }
 
 @keyframes TemporaryShow {
@@ -1448,4 +1449,78 @@ as5-element #PFD .ap-infobar .fma-mode-alert {
 .selected-altitude-text.alt-alert-deviation-flash {
     animation: alt-alert-deviation-flash 1s infinite;
     fill: var(--yellow);
+}
+
+as5-element #BootScreen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 30;
+    background-color: var(--black);
+    color: var(--white);
+}
+as5-element #BootScreen[state='Inactive'] {
+    display: none;
+}
+as5-element #BootScreen #BootScreenLogo {
+    position: absolute;
+    top: 43%;
+    left: 48.5%;
+    transform: translate(-50%, -50%) scaleX(1.3);
+    padding-left: 0.08em;
+    font-family: 'OpenSans-Bold';
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: 0.08em;
+}
+as5-element #BootScreen #BootScreenLogoDelta {
+    position: absolute;
+    top: -0.56em;
+    right: 0.26em;
+    width: 0.45em;
+    height: 0.54em;
+}
+as5-element #BootScreen #BootScreenLogoDelta polygon {
+    fill: var(--garmin-blue);
+    stroke: var(--garmin-blue);
+    stroke-width: 7;
+    stroke-linejoin: round;
+}
+as5-element #BootScreen #BootScreenLogoTrademark {
+    position: absolute;
+    left: 100%;
+    bottom: 0.11em;
+    font-family: 'OpenSans';
+    font-size: 0.15em;
+    line-height: 1;
+    letter-spacing: 0;
+}
+as5-element #BootScreen #BootScreenInfo {
+    position: absolute;
+    bottom: 3%;
+    left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'OpenSans-Bold';
+    font-size: 11px;
+    line-height: 16px;
+}
+
+as5-element #PageContainer #PFD #AligningBanner {
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 2px 8px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: var(--yellow);
+    font-size: 18px;
+    white-space: nowrap;
+}
+as5-element #PageContainer #PFD #AligningBanner[state='Inactive'] {
+    display: none;
 }
