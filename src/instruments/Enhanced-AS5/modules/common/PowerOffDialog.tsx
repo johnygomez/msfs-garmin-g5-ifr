@@ -16,7 +16,7 @@ export class PowerOffDialog extends ReactiveComponent<PowerOffDialogProps> {
 
     render(): VNode {
         return (
-            <div id="PowerOffDialog" state={this.state}>
+            <div id="PowerOffDialog" class="G5Dialog" state={this.state}>
                 <span>Power Off</span>
                 <span id="PowerOffDialogCountdown">{this.remainingLabel}</span>
                 <span>Hold To Power Off</span>

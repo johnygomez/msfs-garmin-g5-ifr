@@ -13,7 +13,7 @@ import { ReactiveComponent } from './Reactive'
 import { Colors } from './Utils'
 
 export interface MenuItemProps extends ComponentProps {
-    title: string
+    title: string | Subscribable<string>
     onSelect?: () => void
     icon?: string
     value?: Subscribable<string | boolean>
@@ -92,12 +92,14 @@ export class MenuItem extends ReactiveComponent<MenuItemProps> {
                         </div>
                     )
                 ) : null}
+                {this.props.children}
             </div>
         )
     }
 }
 
 interface MenuProps extends ComponentProps {
+    title?: string
     maxVisible?: number
     onLongPush?: () => void
 }
@@ -263,6 +265,7 @@ export class Menu extends DisplayComponent<MenuProps> {
     render(): VNode {
         return (
             <div id="ContextualMenu" state={this.state}>
+                {this.props.title ? <div id="ContextualMenuTitle">{this.props.title}</div> : null}
                 <div id="ContextualMenuElements" style={this.scrollTransform}>
                     {this.itemNodes}
                 </div>

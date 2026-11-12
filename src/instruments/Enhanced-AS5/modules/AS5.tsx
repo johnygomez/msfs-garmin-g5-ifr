@@ -8,10 +8,8 @@ import {
     FSComponent,
     NavComSimVarPublisher,
     NodeReference,
-    SimVarValueType,
     Subject,
     Subscribable,
-    Subscription,
     UserSettingSaveManager,
     VNode,
 } from '@microsoft/msfs-sdk'
@@ -19,18 +17,21 @@ import {
 import { G5AutopilotProvider } from './autopilot/G5AutopilotProvider'
 import { AvionicsInteractionManager } from './common/AvionicsInteractionManager'
 import { AvionicsPage, PageId } from './common/AvionicsPage'
+import { BacklightDialog } from './common/BacklightDialog'
 import { BootScreen } from './common/BootScreen'
 import { createG5Settings, G5Settings, loadAndAutoSaveG5Settings } from './common/G5Settings'
 import { PowerOffDialog } from './common/PowerOffDialog'
 import { MfdContent } from './mfd/MFD'
 import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
+import { G5Backlight } from './providers/G5Backlight'
 import { G5PowerSwitch } from './providers/G5PowerSwitch'
 import { G5StartupSystem, StartupPhase } from './providers/G5StartupSystem'
 import { GpsSteerSynchronizer } from './providers/GpsSteerSynchronizer'
 import { NavdataStack } from './providers/NavdataStack'
 import { NavSourceDataProvider } from './providers/NavSourceDataProvider'
 import { G5CustomPublisher } from './publishers/G5CustomPublisher'
+import { G5ModelVarWriter } from './publishers/G5ModelVarWriter'
 import { G5NavPublisher } from './publishers/G5NavPublisher'
 
 interface AS5InstrumentProps extends ComponentProps {
@@ -41,6 +42,7 @@ interface AS5InstrumentProps extends ComponentProps {
     pageState: Subscribable<string>
     startupPhase: Subscribable<StartupPhase>
     powerOffCountdown: Subscribable<number | null>
+    backlight: G5Backlight
     pfdRef: NodeReference<PfdContent>
     mfdRef: NodeReference<MfdContent>
     autopilot: G5AutopilotProvider
@@ -58,6 +60,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
             pageState,
             startupPhase,
             powerOffCountdown,
+            backlight,
             pfdRef,
             mfdRef,
             autopilot,
@@ -98,6 +101,11 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         />
                     </div>
                 </div>
+                <BacklightDialog
+                    isOpen={backlight.isPageOpen}
+                    isManual={backlight.isManual}
+                    level={backlight.level}
+                />
                 <PowerOffDialog countdown={powerOffCountdown} />
                 <BootScreen phase={startupPhase} />
             </>
@@ -131,11 +139,11 @@ export class AS5 extends BaseInstrument {
     private apAnnunciationProvider?: G5AutopilotProvider
     private gpsSynchronizer?: GpsSteerSynchronizer
     private powerSwitch?: G5PowerSwitch
+    private backlight?: G5Backlight
     private startupSystem?: G5StartupSystem
+    private modelVarWriter?: G5ModelVarWriter
 
     private settingsSaveManager?: UserSettingSaveManager
-    private knobValueSub?: Subscription
-    private knobUnitSub?: Subscription
 
     get templateID(): string {
         return 'AS5'
@@ -180,6 +188,14 @@ export class AS5 extends BaseInstrument {
         this.navPublisher.startPublish()
 
         this.powerSwitch = new G5PowerSwitch(this.bus)
+        const backlight = new G5Backlight(this.bus, this.instrumentIndex, this.powerSwitch.isOn)
+        this.powerSwitch.shortPressed.on(() => backlight.pressPowerButton())
+        this.backlight = backlight
+        this.modelVarWriter = new G5ModelVarWriter(
+            this.instrumentIndex,
+            this.powerSwitch.isOn,
+            backlight
+        )
         this.startupSystem = new G5StartupSystem(
             this.instrumentIndex,
             this.bus,
@@ -195,6 +211,7 @@ export class AS5 extends BaseInstrument {
                 pageState={this.activePageId}
                 startupPhase={this.startupSystem.phase}
                 powerOffCountdown={this.powerSwitch.powerOffCountdown}
+                backlight={backlight}
                 pfdRef={this.pfdRef}
                 mfdRef={this.mfdRef}
                 autopilot={this.apAnnunciationProvider}
@@ -204,8 +221,7 @@ export class AS5 extends BaseInstrument {
             this.getChildById('Electricity')
         )
 
-        this.bindKnobTooltip()
-        this.bindDisplayPower(this.powerSwitch.isOn)
+        this.activePageId.sub(() => this.modelVarWriter?.showKnobTooltipOf(this.activePage), true)
     }
 
     protected Update(): void {
@@ -267,6 +283,7 @@ export class AS5 extends BaseInstrument {
 
     private dispatch(event: string): void {
         if (!this.isBootProcedureComplete() || this.startupSystem?.isBooting) return
+        if (this.backlight?.handleKnobEvent(event)) return
 
         const page = this.activePage
         if (!page) return
@@ -294,34 +311,6 @@ export class AS5 extends BaseInstrument {
         const count = this.pageOrder.length
         const index = this.pageOrder.indexOf(this.activePageId.get())
         this.setActivePage(this.pageOrder[(index + direction + count) % count])
-    }
-
-    private bindKnobTooltip(): void {
-        this.activePageId.sub(() => {
-            const page = this.activePage
-            this.knobValueSub?.destroy()
-            this.knobUnitSub?.destroy()
-            this.knobValueSub = page?.knobValue.sub(
-                v => this.setInstrumentSimVar('Knob_Value', v),
-                true
-            )
-            this.knobUnitSub = page?.knobUnit.sub(
-                u => this.setInstrumentSimVar('Knob_Unit', u),
-                true
-            )
-        }, true)
-    }
-
-    private bindDisplayPower(isOn: Subscribable<boolean>): void {
-        isOn.sub(on => this.setInstrumentSimVar('Display_On', on ? 1 : 0), true)
-    }
-
-    private setInstrumentSimVar(name: string, value: number): void {
-        SimVar.SetSimVarValue(
-            `L:AS5_${this.instrumentIndex}_${name}`,
-            SimVarValueType.Number,
-            value
-        )
     }
 }
 

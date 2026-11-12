@@ -3,6 +3,7 @@ import {
     ElectricalEvents,
     EventBus,
     MappedSubject,
+    SubEvent,
     Subject,
     Subscribable,
 } from '@microsoft/msfs-sdk'
@@ -19,7 +20,8 @@ const MIN_AVIONICS_BUS_VOLTAGE = 10
  *
  * The unit runs only while the avionics bus is powered and it has not been switched off. Any
  * change of avionics power switches it back on, so it starts with the avionics. The power button
- * switches it on, or off when held through the power-off countdown.
+ * switches it on, or off when held through the power-off countdown. A short press of a running unit
+ * is reported through {@link shortPressed}.
  */
 export class G5PowerSwitch extends ReactiveProvider {
     private readonly switchedOn = Subject.create(true)
@@ -32,6 +34,7 @@ export class G5PowerSwitch extends ReactiveProvider {
     readonly isOn: Subscribable<boolean>
     /** Seconds left until power off while the button is held, or `null` when not counting down. */
     readonly powerOffCountdown: Subscribable<number | null> = this.countdown
+    readonly shortPressed = new SubEvent<G5PowerSwitch, void>()
 
     constructor(bus: EventBus) {
         super()
@@ -69,8 +72,12 @@ export class G5PowerSwitch extends ReactiveProvider {
     }
 
     release(): void {
+        if (!this.isPressed) return
+
         this.isPressed = false
+        const isShortPress = this.countdownTimer.isPending() && this.countdown.get() === null
         this.cancelCountdown()
+        if (isShortPress) this.shortPressed.notify(this)
     }
 
     private countDown(remaining: number): void {

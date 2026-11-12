@@ -756,6 +756,21 @@ as5-element #ContextualMenu::after {
 as5-element #ContextualMenu[state='Inactive'] {
     visibility: hidden;
 }
+as5-element #ContextualMenu #ContextualMenuTitle {
+    position: relative;
+    z-index: 11;
+    height: 1.5em;
+    margin: -1% -2% 0;
+    text-align: center;
+    color: var(--white);
+    font-size: 1.2em;
+    line-height: 1.5em;
+    font-family: 'OpenSans-Bold';
+    background: linear-gradient(to bottom, var(--dark-grey), var(--black));
+}
+as5-element #ContextualMenu #ContextualMenuTitle + #ContextualMenuElements {
+    height: calc(100% - 1.5em * 1.2);
+}
 as5-element #ContextualMenu #ContextualMenuElements {
     position: relative;
     top: 0;
@@ -872,9 +887,9 @@ as5-element #ContextualMenu #SliderMenu[state='Inactive'] {
 as5-element #SelectionValueWindow {
     position: absolute;
     height: 30%;
-    width: 35%;
+    width: 40%;
     bottom: 0;
-    left: 32.5%;
+    left: 30%;
     background: linear-gradient(grey, black 20%);
     border: 2px solid grey;
     border-radius: 10px;
@@ -1510,7 +1525,7 @@ as5-element #BootScreen #BootScreenInfo {
     line-height: 16px;
 }
 
-as5-element #PowerOffDialog {
+as5-element .G5Dialog {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -1531,12 +1546,52 @@ as5-element #PowerOffDialog {
     font-family: 'OpenSans-Bold';
     font-size: 22px;
 }
-as5-element #PowerOffDialog[state='Inactive'] {
+as5-element .G5Dialog[state='Inactive'] {
     display: none;
 }
 as5-element #PowerOffDialog #PowerOffDialogCountdown {
     font-size: 60px;
     line-height: 1;
+}
+as5-element #BacklightDialog #ContextualMenu {
+    height: 32%;
+    z-index: 40;
+    font-family: 'OpenSans-Bold';
+}
+as5-element #BacklightDialog #ContextualMenu .ContextualMenuElement[state='Inactive'] {
+    color: var(--white);
+}
+as5-element
+    #BacklightDialog
+    #ContextualMenu
+    #ContextualMenuElements
+    .ContextualMenuElement:last-child {
+    flex: 1 1 auto;
+    background: var(--dark-grey);
+    text-align: left;
+}
+as5-element #BacklightDialog .ContextualMenuElement:last-child .ContextualMenuElementName {
+    position: relative;
+    z-index: 1;
+    padding-left: 4px;
+}
+as5-element #BacklightDialog #BacklightLevelFill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(to right, var(--garmin-blue), var(--cyan));
+}
+as5-element #BacklightDialog[mode='Auto'] #BacklightLevelFill {
+    background: linear-gradient(to right, var(--dark-green), var(--green));
+}
+as5-element #BacklightDialog #BacklightLevelMask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    fill: var(--black);
 }
 as5-element #PageContainer #PFD #AligningBanner {
     position: absolute;
