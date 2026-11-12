@@ -2,14 +2,12 @@ import {
     AvionicsSystemState,
     AvionicsSystemStateEvent,
     BasicAvionicsSystem,
-    ConsumerSubject,
     DebounceTimer,
     EventBus,
     Subject,
     Subscribable,
+    Wait,
 } from '@microsoft/msfs-sdk'
-
-import { G5CustomIndexedEvents } from '../publishers/G5CustomPublisher'
 
 export type StartupPhase = 'off' | 'booting' | 'aligning' | 'ready'
 
@@ -31,21 +29,26 @@ export class G5StartupSystem extends BasicAvionicsSystem<G5StartupEvents> {
     private readonly alignmentTimer = new DebounceTimer()
 
     readonly phase: Subscribable<StartupPhase> = this.currentPhase
-    readonly power: Subscribable<boolean>
+    private haveUpdatesStarted = false
 
-    constructor(index: number, bus: EventBus) {
+    constructor(index: number, bus: EventBus, unitOn: Subscribable<boolean>) {
         super(index, bus, 'g5_startup_state')
         this.initializationTime = BOOT_DURATION_MS + ALIGNMENT_DURATION_MS
-        this.power = ConsumerSubject.create(
-            this.bus.getSubscriber<G5CustomIndexedEvents>().on(`g5_powered_${index}`),
-            false
-        )
+        this.connectToPower(unitOn)
+    }
 
-        this.connectToPower(this.power)
+    onUpdate(): void {
+        this.haveUpdatesStarted = true
+        super.onUpdate()
     }
 
     get isBooting(): boolean {
         return this.currentPhase.get() === 'booting'
+    }
+
+    /** Defers the first power reading until the publishers have published on the first update. */
+    protected onPowerValid(): void {
+        void Wait.awaitCondition(() => this.haveUpdatesStarted).then(() => super.onPowerValid())
     }
 
     protected onStateChanged(

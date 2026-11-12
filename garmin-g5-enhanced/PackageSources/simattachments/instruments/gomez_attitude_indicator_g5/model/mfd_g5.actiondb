@@ -60,32 +60,32 @@
 			<TT_Category_Sub/>
 			<TT_Tag/>
 		</Action>
-		<Action Name="ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_INC">
+		<Action Name="AS5_[MFD_ID]_POWER_BUTTON_INC">
 			<Context>INPUT_EVENTS</Context>
 			<Type>DIGITAL</Type>
-			<TT_Name>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_INC</TT_Name>
-			<TT_Description>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_INC_DESC</TT_Description>
-			<TT_Function>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_INC_FUNC</TT_Function>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_INC</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_INC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_INC_FUNC</TT_Function>
 			<TT_Category_Main/>
 			<TT_Category_Sub/>
 			<TT_Tag/>
 		</Action>
-		<Action Name="ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_DEC">
+		<Action Name="AS5_[MFD_ID]_POWER_BUTTON_DEC">
 			<Context>INPUT_EVENTS</Context>
 			<Type>DIGITAL</Type>
-			<TT_Name>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_DEC</TT_Name>
-			<TT_Description>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_DEC_DESC</TT_Description>
-			<TT_Function>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_DEC_FUNC</TT_Function>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_DEC</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_DEC_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_DEC_FUNC</TT_Function>
 			<TT_Category_Main/>
 			<TT_Category_Sub/>
 			<TT_Tag/>
 		</Action>
-		<Action Name="ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_SET">
+		<Action Name="AS5_[MFD_ID]_POWER_BUTTON_SET">
 			<Context>INPUT_EVENTS</Context>
 			<Type>DIGITAL</Type>
-			<TT_Name>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_SET</TT_Name>
-			<TT_Description>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_SET_DESC</TT_Description>
-			<TT_Function>TT:INPUT.ELECTRICAL_CIRCUIT_[CIRCUIT_NAME]_SET_FUNC</TT_Function>
+			<TT_Name>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_SET</TT_Name>
+			<TT_Description>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_SET_DESC</TT_Description>
+			<TT_Function>TT:INPUT.AS5_[MFD_ID]_POWER_BUTTON_SET_FUNC</TT_Function>
 			<TT_Category_Main/>
 			<TT_Category_Sub/>
 			<TT_Tag/>

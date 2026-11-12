@@ -1,6 +1,5 @@
 import {
     EventBus,
-    IndexedEventType,
     SimVarPublisher,
     SimVarPublisherEntry,
     SimVarValueType,
@@ -81,17 +80,6 @@ export interface G5CustomEvents {
     ap_airspeed_in_mach: boolean
 }
 
-/** Root topics of indexed G5 events. Only their index-suffixed variants are published. */
-interface G5CustomIndexedEventRoots {
-    /** Whether the G5 receives electrical power. */
-    g5_powered: boolean
-}
-
-/** Indexed G5 events, suffixed with the instrument index (e.g. `g5_powered_1`). */
-export type G5CustomIndexedEvents = {
-    [Topic in keyof G5CustomIndexedEventRoots as IndexedEventType<Topic>]: G5CustomIndexedEventRoots[Topic]
-}
-
 const negate = (value: number): number => -value
 
 const invert = (value: number): boolean => !value
@@ -99,10 +87,7 @@ const invert = (value: number): boolean => !value
 /**
  * SimVar definitions for the G5 custom publisher.
  */
-const G5_CUSTOM_SIMVARS = new Map<
-    keyof (G5CustomEvents & G5CustomIndexedEventRoots),
-    SimVarPublisherEntry<any>
->([
+const G5_CUSTOM_SIMVARS = new Map<keyof G5CustomEvents, SimVarPublisherEntry<any>>([
     ['gps_drives_nav1', { name: 'GPS DRIVES NAV1', type: SimVarValueType.Bool }],
     ['track_angle_magnetic', { name: 'GPS GROUND MAGNETIC TRACK', type: SimVarValueType.Degree }],
     ['nav1_obs', { name: 'NAV OBS:1', type: SimVarValueType.Degree }],
@@ -149,24 +134,12 @@ const G5_CUSTOM_SIMVARS = new Map<
     ['ap_wing_leveler', { name: 'AUTOPILOT WING LEVELER', type: SimVarValueType.Bool }],
     ['ap_bank_hold', { name: 'AUTOPILOT BANK HOLD', type: SimVarValueType.Bool }],
     ['ap_airspeed_in_mach', { name: 'L:XMLVAR_AirSpeedIsInMach', type: SimVarValueType.Bool }],
-    [
-        'g5_powered',
-        {
-            name: 'L:AS5_#index#_Power',
-            type: SimVarValueType.Bool,
-            indexed: true,
-            defaultIndex: null,
-        },
-    ],
 ])
 
 /**
  * A publisher for G5-specific SimVars not covered by the built-in SDK publishers.
  */
-export class G5CustomPublisher extends SimVarPublisher<
-    G5CustomEvents & G5CustomIndexedEvents,
-    G5CustomIndexedEventRoots
-> {
+export class G5CustomPublisher extends SimVarPublisher<G5CustomEvents> {
     constructor(bus: EventBus) {
         super(G5_CUSTOM_SIMVARS, bus)
     }

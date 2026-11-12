@@ -3,6 +3,7 @@ import {
     AhrsPublisher,
     ComponentProps,
     DisplayComponent,
+    ElectricalPublisher,
     EventBus,
     FSComponent,
     NavComSimVarPublisher,
@@ -20,9 +21,11 @@ import { AvionicsInteractionManager } from './common/AvionicsInteractionManager'
 import { AvionicsPage, PageId } from './common/AvionicsPage'
 import { BootScreen } from './common/BootScreen'
 import { createG5Settings, G5Settings, loadAndAutoSaveG5Settings } from './common/G5Settings'
+import { PowerOffDialog } from './common/PowerOffDialog'
 import { MfdContent } from './mfd/MFD'
 import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
+import { G5PowerSwitch } from './providers/G5PowerSwitch'
 import { G5StartupSystem, StartupPhase } from './providers/G5StartupSystem'
 import { GpsSteerSynchronizer } from './providers/GpsSteerSynchronizer'
 import { NavdataStack } from './providers/NavdataStack'
@@ -37,6 +40,7 @@ interface AS5InstrumentProps extends ComponentProps {
     switchPage: (id: PageId) => void
     pageState: Subscribable<string>
     startupPhase: Subscribable<StartupPhase>
+    powerOffCountdown: Subscribable<number | null>
     pfdRef: NodeReference<PfdContent>
     mfdRef: NodeReference<MfdContent>
     autopilot: G5AutopilotProvider
@@ -53,6 +57,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
             switchPage,
             pageState,
             startupPhase,
+            powerOffCountdown,
             pfdRef,
             mfdRef,
             autopilot,
@@ -93,6 +98,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                         />
                     </div>
                 </div>
+                <PowerOffDialog countdown={powerOffCountdown} />
                 <BootScreen phase={startupPhase} />
             </>
         )
@@ -116,6 +122,7 @@ export class AS5 extends BaseInstrument {
     private adcPublisher?: AdcPublisher
     private ahrsPublisher?: AhrsPublisher
     private navComPublisher?: NavComSimVarPublisher
+    private electricalPublisher?: ElectricalPublisher
     private customPublisher?: G5CustomPublisher
     private navPublisher?: G5NavPublisher
     private navSourceProvider?: NavSourceDataProvider
@@ -123,6 +130,7 @@ export class AS5 extends BaseInstrument {
     private navdataStack?: NavdataStack
     private apAnnunciationProvider?: G5AutopilotProvider
     private gpsSynchronizer?: GpsSteerSynchronizer
+    private powerSwitch?: G5PowerSwitch
     private startupSystem?: G5StartupSystem
 
     private settingsSaveManager?: UserSettingSaveManager
@@ -160,16 +168,23 @@ export class AS5 extends BaseInstrument {
         this.adcPublisher = new AdcPublisher(this.bus)
         this.ahrsPublisher = new AhrsPublisher(this.bus)
         this.navComPublisher = new NavComSimVarPublisher(this.bus)
+        this.electricalPublisher = new ElectricalPublisher(this.bus)
         this.customPublisher = new G5CustomPublisher(this.bus)
         this.navPublisher = new G5NavPublisher(this.bus)
 
         this.adcPublisher.startPublish()
         this.ahrsPublisher.startPublish()
         this.navComPublisher.startPublish()
+        this.electricalPublisher.startPublish()
         this.customPublisher.startPublish()
         this.navPublisher.startPublish()
 
-        this.startupSystem = new G5StartupSystem(this.instrumentIndex, this.bus)
+        this.powerSwitch = new G5PowerSwitch(this.bus)
+        this.startupSystem = new G5StartupSystem(
+            this.instrumentIndex,
+            this.bus,
+            this.powerSwitch.isOn
+        )
 
         FSComponent.render(
             <AS5Instrument
@@ -179,6 +194,7 @@ export class AS5 extends BaseInstrument {
                 switchPage={this.switchPage}
                 pageState={this.activePageId}
                 startupPhase={this.startupSystem.phase}
+                powerOffCountdown={this.powerSwitch.powerOffCountdown}
                 pfdRef={this.pfdRef}
                 mfdRef={this.mfdRef}
                 autopilot={this.apAnnunciationProvider}
@@ -189,6 +205,7 @@ export class AS5 extends BaseInstrument {
         )
 
         this.bindKnobTooltip()
+        this.bindDisplayPower(this.powerSwitch.isOn)
     }
 
     protected Update(): void {
@@ -197,8 +214,10 @@ export class AS5 extends BaseInstrument {
         this.adcPublisher?.onUpdate()
         this.ahrsPublisher?.onUpdate()
         this.navComPublisher?.onUpdate()
+        this.electricalPublisher?.onUpdate()
         this.customPublisher?.onUpdate()
         this.navPublisher?.onUpdate()
+        this.startupSystem?.onUpdate()
         this.navdataStack?.onUpdate()
         this.airspeedProvider?.onUpdate(this.deltaTime)
         if (this.isElectricityAvailable()) {
@@ -207,15 +226,13 @@ export class AS5 extends BaseInstrument {
     }
 
     protected isElectricityAvailable(): boolean {
-        return (
-            SimVar.GetSimVarValue(`L:AS5_${this.instrumentIndex}_Power`, SimVarValueType.Bool) !== 0
-        )
+        return this.powerSwitch?.isOn.get() ?? false
     }
 
     onInteractionEvent(args: string[]): void {
-        if (!this.isElectricityAvailable()) return
-
         const event = this.DecomposeEventFromPrefix(args)
+        if (this.handlePowerEvent(event) || !this.isElectricityAvailable()) return
+
         if (event === 'ElementSetAttribute' && args.length >= 4) {
             this.getChildById(args[1])?.setAttribute(args[2], args[3])
         } else if (event) {
@@ -234,6 +251,18 @@ export class AS5 extends BaseInstrument {
     onPowerOn(): void {
         super.onPowerOn()
         this.setActivePage(this.isMfdInstrument ? 'MFD' : 'PFD')
+    }
+
+    private handlePowerEvent(event: string | undefined): boolean {
+        switch (event) {
+            case 'Power_Push':
+                this.powerSwitch?.press()
+                return true
+            case 'Power_Release':
+                this.powerSwitch?.release()
+                return true
+        }
+        return false
     }
 
     private dispatch(event: string): void {
@@ -272,12 +301,22 @@ export class AS5 extends BaseInstrument {
             const page = this.activePage
             this.knobValueSub?.destroy()
             this.knobUnitSub?.destroy()
-            this.knobValueSub = page?.knobValue.sub(v => this.setKnobSimVar('Knob_Value', v), true)
-            this.knobUnitSub = page?.knobUnit.sub(u => this.setKnobSimVar('Knob_Unit', u), true)
+            this.knobValueSub = page?.knobValue.sub(
+                v => this.setInstrumentSimVar('Knob_Value', v),
+                true
+            )
+            this.knobUnitSub = page?.knobUnit.sub(
+                u => this.setInstrumentSimVar('Knob_Unit', u),
+                true
+            )
         }, true)
     }
 
-    private setKnobSimVar(name: string, value: number): void {
+    private bindDisplayPower(isOn: Subscribable<boolean>): void {
+        isOn.sub(on => this.setInstrumentSimVar('Display_On', on ? 1 : 0), true)
+    }
+
+    private setInstrumentSimVar(name: string, value: number): void {
         SimVar.SetSimVarValue(
             `L:AS5_${this.instrumentIndex}_${name}`,
             SimVarValueType.Number,
