@@ -4,13 +4,19 @@
 	behaviours), the same way the PA28 Warrior, PA38 and C182RG integrations inherit their hosts'.
 	Unlike those, nothing is hidden on top: the attitude indicator and directional gyro are separate
 	attachments, not nodes of this model, and are dropped in config/attached_objects.cfg instead.
-	This file must exist even though it adds nothing - without it the preset's attachment_file does not
-	resolve and the interior is left as common/model/Helper.gltf.
+	This file must exist - without it the preset's attachment_file does not resolve and the interior is
+	left as common/model/Helper.gltf.
+
+	The C152 has no avionics master, so its avionics circuit (circuit.17, fed in config/systems.cfg)
+	is kept switched on. The stock C152 leaves that switch off on a cold start.
 -->
 <ModelInfo>
 	<LODS Template="..\..\..\asobo\Function_Interior_C152\model\C152_INTERIOR.xml">
 	</LODS>
 	<Behaviors>
 		<IncludeBase RelativeFile="..\..\..\asobo\Function_Interior_C152\model\C152_INTERIOR.xml"/>
+		<Component ID="GOMEZ_C152_AVIONICS_CIRCUIT">
+			<Update Frequency="1">(A:CIRCUIT SWITCH ON:17, Bool) ! if{ 17 (&gt;K:ELECTRICAL_CIRCUIT_TOGGLE) }</Update>
+		</Component>
 	</Behaviors>
 </ModelInfo>
