@@ -1549,9 +1549,23 @@ as5-element .G5Dialog {
 as5-element .G5Dialog[state='Inactive'] {
     display: none;
 }
-as5-element #PowerOffDialog #PowerOffDialogCountdown {
+as5-element .G5Dialog .CountdownDialogValue {
     font-size: 60px;
     line-height: 1;
+}
+as5-element .G5Dialog .CountdownDialogPrompt,
+as5-element #ShutdownDialog .CountdownDialogValue {
+    color: var(--yellow);
+}
+as5-element #ShutdownDialog {
+    width: 72%;
+    height: 62%;
+    font-size: 20px;
+}
+as5-element #ShutdownDialog .CountdownDialogHint {
+    padding: 0 6%;
+    text-align: center;
+    line-height: 1.2;
 }
 as5-element #BacklightDialog #ContextualMenu {
     height: 32%;

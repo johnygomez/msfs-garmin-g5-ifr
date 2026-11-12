@@ -19,8 +19,8 @@ import { AvionicsInteractionManager } from './common/AvionicsInteractionManager'
 import { AvionicsPage, PageId } from './common/AvionicsPage'
 import { BacklightDialog } from './common/BacklightDialog'
 import { BootScreen } from './common/BootScreen'
+import { CountdownDialog } from './common/CountdownDialog'
 import { createG5Settings, G5Settings, loadAndAutoSaveG5Settings } from './common/G5Settings'
-import { PowerOffDialog } from './common/PowerOffDialog'
 import { MfdContent } from './mfd/MFD'
 import { PfdContent } from './pfd/PFD'
 import { AirspeedDataProvider } from './providers/AirspeedDataProvider'
@@ -42,6 +42,7 @@ interface AS5InstrumentProps extends ComponentProps {
     pageState: Subscribable<string>
     startupPhase: Subscribable<StartupPhase>
     powerOffCountdown: Subscribable<number | null>
+    shutdownCountdown: Subscribable<number | null>
     backlight: G5Backlight
     pfdRef: NodeReference<PfdContent>
     mfdRef: NodeReference<MfdContent>
@@ -60,6 +61,7 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
             pageState,
             startupPhase,
             powerOffCountdown,
+            shutdownCountdown,
             backlight,
             pfdRef,
             mfdRef,
@@ -106,7 +108,19 @@ class AS5Instrument extends DisplayComponent<AS5InstrumentProps> {
                     isManual={backlight.isManual}
                     level={backlight.level}
                 />
-                <PowerOffDialog countdown={powerOffCountdown} />
+                <CountdownDialog
+                    id="PowerOffDialog"
+                    title="Power Off"
+                    hint="Hold To Power Off"
+                    countdown={powerOffCountdown}
+                />
+                <CountdownDialog
+                    id="ShutdownDialog"
+                    title="External Power Lost"
+                    prompt="Shutting down in:"
+                    hint="Press any key to continue on battery power"
+                    countdown={shutdownCountdown}
+                />
                 <BootScreen phase={startupPhase} />
             </>
         )
@@ -211,6 +225,7 @@ export class AS5 extends BaseInstrument {
                 pageState={this.activePageId}
                 startupPhase={this.startupSystem.phase}
                 powerOffCountdown={this.powerSwitch.powerOffCountdown}
+                shutdownCountdown={this.powerSwitch.shutdownCountdown}
                 backlight={backlight}
                 pfdRef={this.pfdRef}
                 mfdRef={this.mfdRef}
@@ -282,6 +297,7 @@ export class AS5 extends BaseInstrument {
     }
 
     private dispatch(event: string): void {
+        if (this.powerSwitch?.continueOnBattery()) return
         if (!this.isBootProcedureComplete() || this.startupSystem?.isBooting) return
         if (this.backlight?.handleKnobEvent(event)) return
 
