@@ -128,6 +128,14 @@ A few things that were added/redesigned:
 - Wind box in the top left corner, showing wind direction arrow, speed and direction (toggled via *Setup → Wind*).
   The wind data is shown only when airborne with TAS of at least 30 kt, otherwise `NO WIND DATA` is displayed.
 
+### Power & Backlight
+
+- Boot screen and AHRS alignment on startup
+- Power button with its own on/off state, independent of the avionics power
+- Power off by holding the power button
+- Backlight page with manual brightness and *Auto* mode
+- `External Power Lost` dialog with shutdown countdown and continuing on battery power
+
 ### Setup Page Differences
 
 On the real G5, the OAT, TAS and wind displays are enabled in the installer configuration mode, not in the pilot-accessible setup menu.
@@ -182,7 +190,11 @@ and resources are not leaked or left behind.
 
 - The exterior view of our custom Carenado C182 RG II aircraft, the cockpit texture is not loaded properly, as incompatibility with MSFS 2024 LOD logic breaks the chain.
   As a result, the interior is visible only when zoomed in. Any modifications to LOD mechanism/minSizes are ignored.
-- On *Just Flight's PA28 Warrior II*, the aircraft doesn't allow adding custom electrical circuits, so both G5 units have to share one of its existing ones.
-  As a result, pressing the power knob on either unit turns **both** G5s on or off at the same time.
 - On *Carenado's CT206G* G5 variant, weight & balance allows setting only the pilot, copilot and fuel. Passengers and cargo are not available.
+- The G5 backup battery is not simulated. Every unit behaves as if it had one, there is no battery status, and after continuing on battery power the unit runs until avionics power returns or it's switched off.
 - The IFD and legacy MSFS 2020 GPS integrations are a little buggy. They probably don't write the new MSFS 2024 SimVars and as a result, it's not possible to resolve the GPS mode (CDI scale) properly. As a result, the MFD says GPS is in e.g. ENR route, when TERM should already be there. To avoid the issue, I recommend using PMS and modern MSFS 2024 GPS variants.
+
+## Credits
+
+- `tb110188` and `Sal1800` for the inspiration from the original [Enhanced Garmin G5 Attachment](https://flightsim.to/addon/104825/enhanced-garmin-g5-attachment)
+- `@rescuefps-jfc` for the community update that inspired the boot screen, AHRS alignment, power handling, backlight and external power loss features
